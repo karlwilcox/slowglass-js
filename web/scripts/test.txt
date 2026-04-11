@@ -1,0 +1,52 @@
+# This is a comment
+------------------------------------
+display width 1024
+display height 768
+begin
+    with /slow-glass/web/assets/background
+    load background.png named background
+    put background as background
+    start blinker
+at ${HOURS}:( $MINUTES + 2 )
+    echo Beep!
+after 3 seconds
+    start drive-truck
+after 5 minutes
+    finish
+
+scene drive-truck
+    begin
+        with /slow-glass/web/assets/vehicles
+        load refuse-truck-rtol.png as refuse-truck
+        load truckdriveby.wav as truck-noise
+        place refuse-truck at 400 400 depth 10 size 200 150
+        jiggle refuse-truck by 10, 10, 0 with chance 40
+        play truck-noise
+        move refuse-truck to 200 200 in 10 seconds
+        rotate refuse-truck to 90 in 10 seconds
+    then
+        echo Refuse truck has arrived
+        wait 3 seconds
+    then
+        jiggle refuse-truck stop
+        wait 3 seconds
+    then
+        echo lastKey is $LASTKEY
+        remove refuse-truck
+end scene
+
+scene blinker
+    begin
+        with /slow-glass/web/assets/cafe
+        load star1.png as star1
+        load star2.png as star2
+        place star1 at 100,100
+        place star2 at 200,100
+        place star1 named star3 hidden at 300,100
+        pulse star1 at 2 per second from 10 to 100
+        fade star2 to 50
+        blink star2 at 5 per second with chance 50
+        flicker star2 by 50 with chance 80
+    every 5 seconds
+        flash star3 3 times
+end scene

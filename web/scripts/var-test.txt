@@ -1,0 +1,31 @@
+# Exercise the variables
+begin
+    # Testing built-in variables
+    echo SECOND = $SECOND
+    echo MINUTE = $MINUTE
+    echo HOUR = $HOUR
+    echo DAYOFWEEK = $DAYOFWEEK
+    echo DAYNAME = $DAYNAME
+    echo MONTH = $MONTH
+    echo MONTHNAME = $MONTHNAME
+    echo YEAR = $YEAR
+    echo SEASON = $SEASON
+    echo WIDTH = $WIDTH
+    echo HEIGHT = $HEIGHT
+    echo CENTREX,CENTREY = $CENTREX,$CENTREY
+    echo PERCENT = $PERCENT
+    echo CHANCE = $CHANCE
+    echo MOUSEX,MOUSEY = $MOUSEX,$MOUSEY
+    echo RANDOMX,RANDOMY = $RANDOMX,$RANDOMY
+    echo KEY = $KEY
+    echo LASTKEY = $LASTKEY
+    echo CLICKX,CLICKY = $CLICKX,$CLICKY
+    # test unknown variable
+    echo UNKNOWN = $UNKNOWN
+    # set and use
+    let my_var be hello
+    echo my_var = $my_var
+    # update value 
+    let my_var be $my_var world
+    echo my_var is now = $my_var
+

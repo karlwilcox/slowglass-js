@@ -1,0 +1,77 @@
+---
+layout: "page-fullwidth"
+title               : "Slow Glass Animation System"
+subtitle         : ""
+teaser              : ""
+header:
+   image_fullwidth  : "headers/slow-glass.jpg"
+---
+
+    <div id="sg-id" style="min-height: 600px;"></div>
+
+    <div class="form-outline">
+        <p>
+            <button class="btn btn-primary" type="button" id="sound_button">Run URL</button>
+            &nbsp;
+            <button class="btn btn-primary" type="button" id="url_button">Run URL</button>
+            &nbsp;
+            <button class="btn btn-primary" type="button" id="demo1_button">Demo 1</button>
+            &nbsp;
+            <button class="btn btn-primary" type="button" id="demo2_button">Demo 2</button>
+            &nbsp;
+            <input type="text" id="url_input" class="form-control" />
+            <label class="form-label" for="url_input">URL</label>
+        </p>
+        <p>
+            <button class="btn btn-primary" type="button" id="run_button">Run Script</button>
+            &nbsp;
+            <button class="btn btn-secondary" type="button" id="stop_button">Stop</button>
+            &nbsp;
+        </p>
+    </div>
+
+
+    <div>
+        <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" >
+
+        </textarea>
+    </div>
+
+    <div id="audio"></div>
+
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
+    <script type="module" src="./dist/slow-glass.js";></script>
+    <script>
+        slowGlass.canvas_id = "sg_canvas";
+        document.getElementById("run_button").addEventListener("click",loadFromTextArea);
+        document.getElementById("stop_button").addEventListener("click",clean_up);
+        document.getElementById("sound_button").addEventListener("click",unlockAudio);
+
+        function loadFromURL() {
+            slowGlass.scriptFromText(document.getElementById("url_input").value);
+        }
+
+        function loadFromTextArea() {
+            slowGlass.scriptFromText(document.getElementById("sg_script").value);
+        }
+
+        function clean_up() {
+            slowGlass.setup();
+        }
+    </script>
+
+<script>
+    // Source - https://stackoverflow.com/a/58189464
+// Posted by Paulo Eduardo, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-04-05, License - CC BY-SA 4.0
+
+function unlockAudio() {
+    const sound = new Audio('dist/accessgranted.wav');
+
+    sound.play();
+    sound.pause();
+    sound.currentTime = 0;
+}
+
+</script>
+
