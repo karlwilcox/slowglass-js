@@ -7,7 +7,7 @@ header:
    image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
-    <div id="sg-id" style="min-height: 600px;"></div>
+    <div id="sg_div" style="min-height: 600px;"></div>
 
     <div class="form-outline">
         <p>
@@ -42,10 +42,20 @@ header:
     <script src="https://pixijs.download/release/pixi.min.js"></script>
     <script type="module" src="./dist/slow-glass.js";></script>
     <script>
-        slowGlass.canvas_id = "sg_canvas";
         document.getElementById("run_button").addEventListener("click",loadFromTextArea);
         document.getElementById("stop_button").addEventListener("click",clean_up);
         document.getElementById("sound_button").addEventListener("click",unlockAudio);
+
+        // Source - https://stackoverflow.com/a/58189464
+        // Posted by Paulo Eduardo, modified by community. See post 'Timeline' for change history
+        // Retrieved 2026-04-05, License - CC BY-SA 4.0
+        function unlockAudio() {
+            const sound = new Audio('dist/accessgranted.wav');
+
+            sound.play();
+            sound.pause();
+            sound.currentTime = 0;
+        }
 
         function loadFromURL() {
             slowGlass.scriptFromText(document.getElementById("url_input").value);
@@ -58,20 +68,7 @@ header:
         function clean_up() {
             slowGlass.setup();
         }
+
+        window.onload = function() { slowGlass.setDrawingParent("sg_div") };
     </script>
-
-<script>
-    // Source - https://stackoverflow.com/a/58189464
-// Posted by Paulo Eduardo, modified by community. See post 'Timeline' for change history
-// Retrieved 2026-04-05, License - CC BY-SA 4.0
-
-function unlockAudio() {
-    const sound = new Audio('dist/accessgranted.wav');
-
-    sound.play();
-    sound.pause();
-    sound.currentTime = 0;
-}
-
-</script>
 

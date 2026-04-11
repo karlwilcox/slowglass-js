@@ -1,6 +1,7 @@
 
 import { Globals } from "./globals.js";
 import Defaults from "./defaults.js";
+import * as Utils from "./utils.js";
 
 class Variable {
     constructor(name, value) {
@@ -25,12 +26,13 @@ export class VarList {
     constructor() {
         this.variables = [];
         this.trigger = null;
-        this.hemisphere = Utils.getHemisphere(this.makeHemisphereCallback());
+        this.hemisphere = null;
+        Utils.getHemisphere(this.makeHemisphereCallback(this));
     }
 
-    makeHemisphereCallback() {
+    makeHemisphereCallback(object) {
         return function(hemisphere) {
-            this.hemisphere = hemisphere
+            object.hemisphere = hemisphere
         }
     }
 
@@ -212,7 +214,7 @@ export class VarList {
         } // else
         // can we update it?
         if (!this.variables[index].setValue(0)) {
-            Utils.log.error("Cannot delete readonly variable " + name);
+            Globals.log.error("Cannot delete readonly variable " + name);
             return false;
         } // else
         this.variables.splice(index, 1);

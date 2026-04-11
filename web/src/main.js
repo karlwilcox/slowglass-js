@@ -24,6 +24,7 @@ class SlowGlass {
         // Add canvas to page
         document.onkeydown = function(e) {Globals.event("onkeydown", e.key);};
         document.onkeyup = function(e) {Globals.event("onkeyup", e.key);};
+        const pixi = document.getElementById(SlowGlass.sg_id);
         pixi.appendChild(Globals.app.canvas);
 
         // Root container for scene
@@ -122,9 +123,13 @@ class SlowGlass {
         run();
     }
 
+    setDrawingParent(elementID) {
+        SlowGlass.sg_id = elementID;
+    }
+
     cleanUp() {
         // tidy up previous run
-        const pixi = document.getElementById(SlowGlass.sg_id);
+        // let pixi = document.getElementById(SlowGlass.sg_id);
         AudioManager.deleteAll();
         if (Globals.app != null) {
             Globals.app.destroy(
@@ -137,9 +142,9 @@ class SlowGlass {
             );
         }
         Globals.reset();
-        if (pixi.hasChildNodes()) {
-            pixi.removeChild(pixi.firstChild);
-        }
+        // if (pixi.hasChildNodes()) {
+        //     pixi.removeChild(pixi.firstChild);
+        // }
         Globals.app = new PIXI.Application();
     }
 

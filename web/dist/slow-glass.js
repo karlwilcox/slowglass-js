@@ -26,6 +26,9 @@
     value() {
       return this.current_value + this.jig_step;
     }
+    speed() {
+      return this.delta_value;
+    }
     adjust(delta) {
       let new_value = this.value + delta;
       if (new_value < this.lower_limit) {
@@ -201,12 +204,36 @@
       return false;
     }
   };
+  function getHemisphere(callback) {
+    const DEFAULT = "northern";
+    if (!("geolocation" in navigator)) {
+      callback(DEFAULT);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        if (lat < 0) {
+          callback("southern");
+        } else {
+          callback("northern");
+        }
+      },
+      (error) => {
+        callback(DEFAULT);
+      },
+      {
+        timeout: 5e3
+        // optional safeguard
+      }
+    );
+  }
 
   // src/defaults.js
   var defaults_default = {
     DISPLAY_HEIGHT: 600,
     DISPLAY_WIDTH: 800,
-    HEMISPHERE: "n",
+    HEMISPHERE: "northern",
     // to give the correct calendar season
     DEBUG: true,
     LOCALE: "en-GB",
@@ -243,6 +270,7 @@
     static script_scale_x = 1;
     static script_scale_y = 1;
     static gravity = defaults_default.GRAVITY_PS2;
+    static ground_level = defaults_default.DISPLAY_HEIGHT;
     static lastKey = null;
     static key = null;
     constructor() {
@@ -339,6 +367,7 @@
       this.throw_vy = 0;
       this.throw_time = 0;
       this.falling = false;
+      this.throw_callback = null;
       this.bluriness = new Adjustable(0, 0, 100);
       this.blur_filter = null;
     }
@@ -426,9 +455,15 @@
         this.transparency.jiggle_stop();
       }
     }
-    throw(angle, initial_velocity, now) {
+    throw(angle, initial_velocity, now, callback) {
+      if (arguments.length > 3) {
+        this.throw_callback = callback;
+      }
       if (angle == "stop") {
         this.falling = false;
+        if (this.throw_callback != null) {
+          this.throw_callback();
+        }
       } else {
         this.falling = true;
         const radians = angle * Math.PI / 180;
@@ -489,7 +524,7 @@
       if (!this.enabled) {
         return;
       }
-      if (this.pi_sprite === null) {
+      if (this.pi_sprite === null || this.pi_sprite.texture == PIXI.Texture.EMPTY) {
         let image = get_image(scene, this.image_tag);
         if (image === null) {
           this.enabled = false;
@@ -564,8 +599,11 @@
         const falling_time = (now - this.throw_time) / 1e3;
         const delta_x = this.loc_x.value() + this.thrown_vx * falling_time * Globals.script_scale_x;
         const delta_y = this.loc_y.value() - (this.thrown_vy * falling_time - 0.5 * Globals.gravity * falling_time * falling_time) * Globals.script_scale_y;
-        if (Math.abs(delta_x) > Globals.app.screen.width * 2 || Math.abs(delta_y) > Globals.app.screen.height * 2) {
+        if (Math.abs(delta_x) > Globals.app.screen.width * 2 || Math.abs(delta_y) > Globals.app.screen.height * 2 || Globals.ground_level > 0 && this.loc_y.value + delta_y > Globals.ground_level) {
           this.falling = false;
+          if (this.throw_callback != null) {
+            this.throw_callback();
+          }
         }
         if (this.pi_sprite !== null) {
           this.pi_sprite.position.set(this.loc_x.value() + delta_x, this.loc_y.value() + delta_y);
@@ -1017,6 +1055,13 @@
     constructor() {
       this.variables = [];
       this.trigger = null;
+      this.hemisphere = null;
+      getHemisphere(this.makeHemisphereCallback(this));
+    }
+    makeHemisphereCallback(object) {
+      return function(hemisphere) {
+        object.hemisphere = hemisphere;
+      };
     }
     create(name, value2) {
       if (_VarList.built_in(name)) {
@@ -1038,6 +1083,7 @@
     **************************************************************************************************/
     static built_in(name) {
       const date = /* @__PURE__ */ new Date();
+      const month = date.getMonth() + 1;
       switch (name) {
         case "SECONDS":
         case "SECOND":
@@ -1054,11 +1100,41 @@
         case "DAYNAME":
           return new Intl.DateTimeFormat(defaults_default.LOCALE, { weekday: "long" }).format(date);
         case "MONTH":
-          return date.getMonth() + 1;
+          return month;
         case "MONTHNAME":
           return new Intl.DateTimeFormat(defaults_default.LOCALE, { month: "long" }).format(date);
         case "YEAR":
           return date.getFullYear();
+        case "HEMISPHERE":
+          return this.hemisphere;
+        case "SEASON":
+          switch (month) {
+            case 12:
+            case 1:
+            case 2:
+              return this.hemisphere == "northern" ? "winter" : "summer";
+            case 3:
+            case 4:
+            case 5:
+              return this.hemisphere == "northern" ? "spring" : "autumn";
+            case 6:
+            case 7:
+            case 8:
+              return this.hemisphere == "northern" ? "summer" : "winter";
+            case 9:
+            case 10:
+            case 11:
+              return this.hemisphere == "northern" ? "autumn" : "spring";
+          }
+          break;
+        case "WINTER":
+          return this.hemisphere == "northern" && (month >= 12 || month <= 2) || this.hemisphere == "southern" && (month >= 6 && month <= 8) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "SPRING":
+          return this.hemisphere == "northern" && (month >= 3 && month <= 5) || this.hemisphere == "southern" && (month >= 9 && month <= 11) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "SUMMER":
+          return this.hemisphere == "northern" && (month >= 6 && month <= 8) || this.hemisphere == "southern" && (month >= 12 || month <= 2) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "AUTUMN":
+          return this.hemisphere == "northern" && (month >= 9 && month <= 11) || this.hemisphere == "southern" && (month >= 3 && month <= 5) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
         case "WIDTH":
           return Globals.app.screen.width;
         case "HEIGHT":
@@ -1154,7 +1230,7 @@
         return false;
       }
       if (!this.variables[index].setValue(0)) {
-        Utils.log.error("Cannot delete readonly variable " + name);
+        Globals.log.error("Cannot delete readonly variable " + name);
         return false;
       }
       this.variables.splice(index, 1);
@@ -1503,6 +1579,11 @@
             gravity = defaults_default.GRAVITY_PS2;
           }
           Globals.gravity_ps2 = gravity;
+        } else if (command == "ground") {
+          if (argument == "level") {
+            argument = argument2;
+          }
+          Globals.ground_level = parseInt(argument);
         } else {
           const line = new Line(lineCount, currentLine);
           if (holding == null) {
@@ -1781,6 +1862,7 @@
             } else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
               AudioManager.create(tag, this.folder + filename);
             }
+            action_group.complete_action("load");
             break;
           /**************************************************************************************************
           
@@ -1839,6 +1921,34 @@
               Globals.log.error("Missing place data at line " + line_no);
             }
             action_group.complete_action("place");
+            break;
+          /**************************************************************************************************
+          
+             ########  ######## ########  ##          ###     ######  ######## 
+             ##     ## ##       ##     ## ##         ## ##   ##    ## ##       
+             ##     ## ##       ##     ## ##        ##   ##  ##       ##       
+             ########  ######   ########  ##       ##     ## ##       ######   
+             ##   ##   ##       ##        ##       ######### ##       ##       
+             ##    ##  ##       ##        ##       ##     ## ##    ## ##       
+             ##     ## ######## ##        ######## ##     ##  ######  ######## 
+          
+          **************************************************************************************************/
+          case "replace":
+            if (words.length > 0) {
+              let sprite_tag = words.shift();
+              Parser.test_word(words, "with");
+              let image_tag = words.shift();
+              let hidden = Parser.test_word(words, "hidden");
+              let sg_sprite = SG_sprite.get_sprite(sprite_tag);
+              if (hidden) {
+                sg_sprite.set_visibility(false);
+              }
+              sg_sprite.image_tag = image_tag;
+              sg_sprite.pi_sprite.texture = PIXI.Texture.EMPTY;
+            } else {
+              Globals.log.error("Missing replace data at line " + line_no);
+            }
+            action_group.complete_action("replace");
             break;
           /**************************************************************************************************
           
@@ -2079,12 +2189,35 @@
               if (stop_or_at == "stop") {
                 sprite.throw("stop");
               } else {
-                sprite.throw(angle, initial_velocity, now);
+                sprite.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
               }
             } else {
               Globals.log.error("Missing throw data at line " + line_no);
             }
-            action_group.complete_action("throw");
+            break;
+          /**************************************************************************************************
+          
+             ########  ########   #######  ########  
+             ##     ## ##     ## ##     ## ##     ## 
+             ##     ## ##     ## ##     ## ##     ## 
+             ##     ## ########  ##     ## ########  
+             ##     ## ##   ##   ##     ## ##        
+             ##     ## ##    ##  ##     ## ##        
+             ########  ##     ##  #######  ##        
+          
+          **************************************************************************************************/
+          case "drop":
+            if (words.length > 0) {
+              let sprite_tag = words.shift();
+              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+              if (Parser.test_word(words, "stop")) {
+                sprite.throw("stop");
+              } else {
+                sprite.throw(180, 0, now, makeCompletionCallback(action_group));
+              }
+            } else {
+              Globals.log.error("Missing drop data at line " + line_no);
+            }
             break;
           /**************************************************************************************************
           
@@ -2438,6 +2571,7 @@
   var SlowGlass = class _SlowGlass {
     static next_action_run = 0;
     static next_sprite_update = 0;
+    static sg_id = "body";
     constructor() {
     }
     async run() {
@@ -2453,6 +2587,7 @@
       document.onkeyup = function(e) {
         Globals.event("onkeyup", e.key);
       };
+      const pixi = document.getElementById(_SlowGlass.sg_id);
       pixi.appendChild(Globals.app.canvas);
       Globals.root = new PIXI.Container();
       Globals.app.stage.addChild(Globals.root);
@@ -2516,7 +2651,7 @@
     }
     async scriptFromURL(url) {
       Globals.log.debug("Starting Slow Glass from " + window.sg_filename);
-      this.setup();
+      this.cleanUp();
       const response = await fetch(url);
       if (!response.ok) {
         Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
@@ -2525,9 +2660,10 @@
       Scene2.readFromText(text);
       run();
     }
-    setup() {
-      const pixi2 = document.getElementById("pixi");
-      Globals.scenes = [];
+    setDrawingParent(elementID) {
+      _SlowGlass.sg_id = elementID;
+    }
+    cleanUp() {
       AudioManager.deleteAll();
       if (Globals.app != null) {
         Globals.app.destroy(
@@ -2543,14 +2679,12 @@
           }
         );
       }
-      if (pixi2.hasChildNodes()) {
-        pixi2.removeChild(pixi2.firstChild);
-      }
+      Globals.reset();
       Globals.app = new PIXI.Application();
     }
     scriptFromText(text) {
       Globals.log.debug("Starting Slow Glass from textarea");
-      this.setup();
+      this.cleanUp();
       Scene2.readFromText(text);
       this.run();
     }

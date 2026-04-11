@@ -188,7 +188,7 @@ export class Timer {
     }
 }
 
-export function getHemisphere() {
+export function getHemisphere(callback) {
     // Default to northern hemisphere
     const DEFAULT = "northern";
 

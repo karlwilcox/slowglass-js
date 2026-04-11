@@ -599,7 +599,7 @@ export class Scene {
                         // set the new image and delete existing texture
                         // (will be picked up in the next  update)
                         sg_sprite.image_tag = image_tag;
-                        sg_sprite.pi_sprite.texture = Texture.EMPTY;
+                        sg_sprite.pi_sprite.texture = PIXI.Texture.EMPTY;
                     } else {
                         Globals.log.error("Missing replace data" + " at line " + line_no);
                     }

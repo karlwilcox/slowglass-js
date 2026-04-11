@@ -282,7 +282,7 @@ export class SG_sprite {
             return;
         }
         // First, do we need to load an image (and can we?)
-        if (this.pi_sprite === null || this.pi_sprite.texture == Texture.EMPTY) { // no image loaded
+        if (this.pi_sprite === null || this.pi_sprite.texture == PIXI.Texture.EMPTY) { // no image loaded
             let image = get_image(scene, this.image_tag);
             if (image === null) { // doesn't exist, give up
                 this.enabled = false;
