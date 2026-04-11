@@ -3,6 +3,8 @@ import { Scene } from "./scene.js";
 import Defaults from "./defaults.js";
 import { Globals } from "./globals.js";
 import { AudioManager } from "./audio.js";
+import defaults from "./defaults.js";
+import * as Utils from "./utils.js";
 
 class SlowGlass {
     static next_action_run = 0;
@@ -75,7 +77,6 @@ class SlowGlass {
                     let triggers = current.actionGroups[j].triggers;
                     for ( let k = 0; k < triggers.length; k++) {
                         if (triggers[k].fired(current_millis)) {
-                            // console.log("Firing on " + triggers[k].constructor.name);
                             current.varList.trigger = triggers[k].constructor.name;
                             do_run = true;
                             if (current.actionGroups[j].any_trigger) {
@@ -89,7 +90,7 @@ class SlowGlass {
                         }
                     }
                     if (do_run) {
-                        current.run_actions(j, current_millis);
+                        current.runGroup(j, current_millis);
                     }
                 }
             }
@@ -121,6 +122,13 @@ class SlowGlass {
         const text = await response.text();
         Scene.readFromText(text);
         run();
+    }
+
+    interactiveAction(text) {
+        const dummyLine = new Utils.Line(1, text);
+        const topScene = Scene.find(defaults.MAIN_NAME);
+        const dummyActionGroupIndex = topScene.actionGroups.length - 1;
+        topScene.runAction(dummyLine, topScene.actionGroups[dummyActionGroupIndex], Date.now());
     }
 
     setDrawingParent(elementID) {

@@ -11,16 +11,18 @@ header:
 
     <div class="form-outline">
         <p>
-            <button class="btn btn-primary" type="button" id="sound_button">Run URL</button>
+            <button class="btn btn-primary" type="button" id="sound_button">Enable Audio</button>
             &nbsp;
             <button class="btn btn-primary" type="button" id="url_button">Run URL</button>
+            &nbsp;
+            <button class="btn btn-primary" type="button" id="interactive_button">Run Action</button>
             &nbsp;
             <button class="btn btn-primary" type="button" id="demo1_button">Demo 1</button>
             &nbsp;
             <button class="btn btn-primary" type="button" id="demo2_button">Demo 2</button>
             &nbsp;
-            <input type="text" id="url_input" class="form-control" />
-            <label class="form-label" for="url_input">URL</label>
+            <label class="form-label" for="input_line">URL or action</label>
+            <input type="text" id="input_line" class="form-control" />
         </p>
         <p>
             <button class="btn btn-primary" type="button" id="run_button">Run Script</button>
@@ -43,6 +45,8 @@ header:
     <script type="module" src="./dist/slow-glass.js";></script>
     <script>
         document.getElementById("run_button").addEventListener("click",loadFromTextArea);
+        document.getElementById("url_button").addEventListener("click",loadFromURL);
+        document.getElementById("interactive_button").addEventListener("click",runAction);
         document.getElementById("stop_button").addEventListener("click",clean_up);
         document.getElementById("sound_button").addEventListener("click",unlockAudio);
 
@@ -58,7 +62,11 @@ header:
         }
 
         function loadFromURL() {
-            slowGlass.scriptFromText(document.getElementById("url_input").value);
+            slowGlass.scriptFromText(document.getElementById("input_line").value);
+        }
+
+        function runAction() {
+            slowGlass.interactiveAction(document.getElementById("input_line").value);
         }
 
         function loadFromTextArea() {

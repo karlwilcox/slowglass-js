@@ -1611,6 +1611,8 @@
             break;
         }
         top.start();
+        const dummyActionGroup = new ActionGroup();
+        top.actionGroups.push(dummyActionGroup);
         Globals.scenes.push(top);
       }
     }
@@ -1751,818 +1753,832 @@
     }
     /**************************************************************************************************
     
-       ########  ##     ## ##    ##            ###     ######  ######## 
-       ##     ## ##     ## ###   ##           ## ##   ##    ##    ##    
-       ##     ## ##     ## ####  ##          ##   ##  ##          ##    
-       ########  ##     ## ## ## ##         ##     ## ##          ##    
-       ##   ##   ##     ## ##  ####         ######### ##          ##    
-       ##    ##  ##     ## ##   ###         ##     ## ##    ##    ##    
-       ##     ##  #######  ##    ## ####### ##     ##  ######     ##    
+       ########  ##     ## ##    ##  ######   ########   #######  ##     ## ########  
+       ##     ## ##     ## ###   ## ##    ##  ##     ## ##     ## ##     ## ##     ## 
+       ##     ## ##     ## ####  ## ##        ##     ## ##     ## ##     ## ##     ## 
+       ########  ##     ## ## ## ## ##   #### ########  ##     ## ##     ## ########  
+       ##   ##   ##     ## ##  #### ##    ##  ##   ##   ##     ## ##     ## ##        
+       ##    ##  ##     ## ##   ### ##    ##  ##    ##  ##     ## ##     ## ##        
+       ##     ##  #######  ##    ##  ######   ##     ##  #######   #######  ##        
     
     **************************************************************************************************/
-    run_actions(index, now) {
+    runGroup(index, now) {
       let action_group = this.actionGroups[index];
       action_group.reset_count();
       let actions = action_group.actions;
       for (let i = 0; i < actions.length; i++) {
         let action = actions[i];
-        let words = this.varList.expand_vars(action.text);
-        words = evaluate(words).split(/[\s,]+/);
-        ;
-        let line_no = action.number;
-        if (words[0].match(/^and$/i)) {
-          words.shift();
-        }
-        let command = words.shift().toLowerCase();
-        if (command == "set" && words.length > 1) {
-          switch (words[0]) {
-            case "trans":
-            case "transparency":
-            case "fade":
-              words.shift();
-              Parser.test_word(words, "of");
-              command = "fade";
-              break;
-            case "position":
-            case "pos":
-              words.shift();
-              Parser.test_word(words, "of");
-              command = "move";
-              break;
-            case "volume":
-              words.shift();
-              Parser.test_word(words, "to");
-              command = "volume";
-              break;
-            case "blur":
-            case "fuzz":
-              words.shift();
-              Parser.test_word(words, "of");
-              command = "blur";
-              break;
-            default:
-              command = "make";
-              break;
-          }
-        }
-        switch (command) {
-          /**************************************************************************************************
-          
-             ########  ######  ##     ##  #######  
-             ##       ##    ## ##     ## ##     ## 
-             ##       ##       ##     ## ##     ## 
-             ######   ##       ######### ##     ## 
-             ##       ##       ##     ## ##     ## 
-             ##       ##    ## ##     ## ##     ## 
-             ########  ######  ##     ##  #######  
-          
-          **************************************************************************************************/
-          case "echo":
-          case "log":
-            Globals.log.error(words.join(" "));
-            action_group.complete_action("echo");
-            break;
-          /**************************************************************************************************
-          
-             ##        #######     ###    ########  
-             ##       ##     ##   ## ##   ##     ## 
-             ##       ##     ##  ##   ##  ##     ## 
-             ##       ##     ## ##     ## ##     ## 
-             ##       ##     ## ######### ##     ## 
-             ##       ##     ## ##     ## ##     ## 
-             ########  #######  ##     ## ########  
-          
-          **************************************************************************************************/
-          case "load":
-          case "upload":
-            let tag = null;
-            if (words.count < 1) {
-              Globals.log.error("Missing filename at line " + line_no);
-              break;
-            }
-            let filename = words.shift();
-            Parser.test_word(words, ["named", "as"]);
-            if (words.length > 0) {
-              tag = words.shift();
-            } else {
-              let slash = filename.lastIndexOf("/");
-              let dot = filename.lastIndexOf(".");
-              tag = filename.slice(slash, dot);
-            }
-            action_group.complete_action("load");
-            for (let j = 0; j < this.images.length; j++) {
-              if (this.images[j].tag == tag) {
-                continue;
-              }
-            }
-            if (filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".png")) {
-              const sg_image = new SG_image(this.folder + filename, tag);
-              this.images.push(sg_image);
-              sg_image.load_image();
-            } else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
-              AudioManager.create(tag, this.folder + filename);
-            }
-            action_group.complete_action("load");
-            break;
-          /**************************************************************************************************
-          
-             ######## ########   #######  ##     ## 
-             ##       ##     ## ##     ## ###   ### 
-             ##       ##     ## ##     ## #### #### 
-             ######   ########  ##     ## ## ### ## 
-             ##       ##   ##   ##     ## ##     ## 
-             ##       ##    ##  ##     ## ##     ## 
-             ##       ##     ##  #######  ##     ## 
-          
-          **************************************************************************************************/
-          case "from":
-          case "using":
-          case "with":
-            if (words.length > 0) {
-              this.folder = words[0] + "/";
-            } else {
-              Globals.log.error("Expected folder name at " + line_no);
-            }
-            action_group.complete_action("from");
-            break;
-          /**************************************************************************************************
-          
-             ########  ##          ###     ######  ######## 
-             ##     ## ##         ## ##   ##    ## ##       
-             ##     ## ##        ##   ##  ##       ##       
-             ########  ##       ##     ## ##       ######   
-             ##        ##       ######### ##       ##       
-             ##        ##       ##     ## ##    ## ##       
-             ##        ######## ##     ##  ######  ######## 
-          
-          **************************************************************************************************/
-          case "place":
-            if (words.length > 0) {
-              let image_tag = words.shift();
-              let sprite_tag = image_tag;
-              if (Parser.test_word(words, ["named", "as"])) {
-                sprite_tag = Parser.get_word(words, image_tag);
-              }
-              let sg_sprite = new SG_sprite(image_tag, sprite_tag);
-              let hidden = Parser.test_word(words, "hidden");
-              if (hidden) {
-                sg_sprite.set_visibility(false);
-              }
-              Parser.test_word(words, "at");
-              sg_sprite.loc_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
-              sg_sprite.loc_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
-              Parser.test_word(words, "depth");
-              sg_sprite.depth = Parser.get_int(words, 0);
-              Parser.test_word(words, ["size", "scale"]);
-              sg_sprite.size_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
-              sg_sprite.size_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
-              this.sprites.push(sg_sprite);
-            } else {
-              Globals.log.error("Missing place data at line " + line_no);
-            }
-            action_group.complete_action("place");
-            break;
-          /**************************************************************************************************
-          
-             ########  ######## ########  ##          ###     ######  ######## 
-             ##     ## ##       ##     ## ##         ## ##   ##    ## ##       
-             ##     ## ##       ##     ## ##        ##   ##  ##       ##       
-             ########  ######   ########  ##       ##     ## ##       ######   
-             ##   ##   ##       ##        ##       ######### ##       ##       
-             ##    ##  ##       ##        ##       ##     ## ##    ## ##       
-             ##     ## ######## ##        ######## ##     ##  ######  ######## 
-          
-          **************************************************************************************************/
-          case "replace":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              Parser.test_word(words, "with");
-              let image_tag = words.shift();
-              let hidden = Parser.test_word(words, "hidden");
-              let sg_sprite = SG_sprite.get_sprite(sprite_tag);
-              if (hidden) {
-                sg_sprite.set_visibility(false);
-              }
-              sg_sprite.image_tag = image_tag;
-              sg_sprite.pi_sprite.texture = PIXI.Texture.EMPTY;
-            } else {
-              Globals.log.error("Missing replace data at line " + line_no);
-            }
-            action_group.complete_action("replace");
-            break;
-          /**************************************************************************************************
-          
-             ########  ##     ## ######## 
-             ##     ## ##     ##    ##    
-             ##     ## ##     ##    ##    
-             ########  ##     ##    ##    
-             ##        ##     ##    ##    
-             ##        ##     ##    ##    
-             ##         #######     ##    
-          
-          **************************************************************************************************/
-          case "put":
-            if (words.length > 0) {
-              let image_tag = words.shift();
-              let sprite_tag = null;
-              if (Parser.test_word(words, "named")) {
-                sprite_tag = Parser.get_word(words, image_tag);
-              }
-              let sg_sprite = new SG_sprite(image_tag, sprite_tag);
-              Parser.test_word(words, ["as", "at"]);
-              const location = Parser.test_word(words, ["background", "top", "bottom", "left", "right", "ground", "sky"]);
-              if (location == false) {
-                Globals.log.error("Unknown location at line " + line_no);
-                break;
-              }
-              if (sprite_tag == null) {
-                sprite_tag = location;
-              }
-              Parser.test_word(words, "depth");
-              sg_sprite.depth = Parser.get_int(words, 0);
-              sg_sprite.location = location;
-              this.sprites.push(sg_sprite);
-            } else {
-              Globals.log.error("Missing put data at line " + line_no);
-            }
-            action_group.complete_action("put");
-            break;
-          /**************************************************************************************************
-          
-             ########  ##          ###    ##    ## 
-             ##     ## ##         ## ##    ##  ##  
-             ##     ## ##        ##   ##    ####   
-             ########  ##       ##     ##    ##    
-             ##        ##       #########    ##    
-             ##        ##       ##     ##    ##    
-             ##        ######## ##     ##    ##    
-          
-          **************************************************************************************************/
-          case "play":
-            if (words.length > 0) {
-              const tag2 = words.shift();
-              Parser.test_word(words, "fade");
-              Parser.test_word(words, "in");
-              const fadein = Parser.get_duration(words, 0);
-              Parser.test_word(words, "at");
-              Parser.test_word(words, "volume");
-              const volume = Parser.get_int(words, 50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
-              AudioManager.play(tag2, { fadeInMs: fadein * 1e3, targetVolume: volume });
-            } else {
-              Globals.log.error("Nothing to play at line " + line_no);
-            }
-            action_group.complete_action("play");
-            break;
-          /**************************************************************************************************
-          
-             ##     ##  #######  ##       ##     ## ##     ## ######## 
-             ##     ## ##     ## ##       ##     ## ###   ### ##       
-             ##     ## ##     ## ##       ##     ## #### #### ##       
-             ##     ## ##     ## ##       ##     ## ## ### ## ######   
-              ##   ##  ##     ## ##       ##     ## ##     ## ##       
-               ## ##   ##     ## ##       ##     ## ##     ## ##       
-                ###     #######  ########  #######  ##     ## ######## 
-          
-          **************************************************************************************************/
-          case "volume":
-            if (words.length > 0) {
-              Parser.test_word(words, "of");
-              const tag2 = words.shift();
-              Parser.test_word(words, "to");
-              const volume = Parser.get_int(words, 0, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
-              Parser.test_word(words, "in");
-              const fadein = Parser.get_duration(words, 0);
-              AudioManager.setVolume(tag2, volume, { fadeMs: fadein * 1e3 });
-            } else {
-              Globals.log.error("No volume change at line " + line_no);
-            }
-            action_group.complete_action("volume");
-            break;
-          /**************************************************************************************************
-          
-             ##     ##  #######  ##     ## ######## 
-             ###   ### ##     ## ##     ## ##       
-             #### #### ##     ## ##     ## ##       
-             ## ### ## ##     ## ##     ## ######   
-             ##     ## ##     ##  ##   ##  ##       
-             ##     ## ##     ##   ## ##   ##       
-             ##     ##  #######     ###    ######## 
-          
-          **************************************************************************************************/
-          case "move":
-            if (words.length > 0) {
-              let by_or_to = "to";
-              let sprite_tag = words.shift();
-              by_or_to = Parser.get_word(words, ["by", "to"]);
-              if (by_or_to === false) {
-                Globals.log.error("Expected by or to on line " + line_no);
-                break;
-              }
-              let x = Parser.get_int(words, 0) * Globals.script_scale_x;
-              let y = Parser.get_int(words, 0) * Globals.script_scale_y;
-              let in_or_at = Parser.test_word(words, ["in", "at"]);
-              if (in_or_at === false) {
-                Globals.log.error("Expected in or at on line " + line_no);
-                break;
-              }
-              let duration2 = Parser.get_duration(words, 0);
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              sprite.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
-            } else {
-              Globals.log.error("Missing move data at line " + line_no);
-              action_group.complete_action("moveX");
-            }
-            break;
-          /**************************************************************************************************
-          
-             ########  ########  ######  #### ######## ######## 
-             ##     ## ##       ##    ##  ##       ##  ##       
-             ##     ## ##       ##        ##      ##   ##       
-             ########  ######    ######   ##     ##    ######   
-             ##   ##   ##             ##  ##    ##     ##       
-             ##    ##  ##       ##    ##  ##   ##      ##       
-             ##     ## ########  ######  #### ######## ######## 
-          
-          **************************************************************************************************/
-          case "resize":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let to_or_by = Parser.get_word(words, ["to", "by"]);
-              if (to_or_by === false) {
-                Globals.log.error("Expected to or by on line " + line_no);
-                break;
-              }
-              let w = Parser.get_int(words, 0) * Globals.script_scale_x;
-              let h = Parser.get_int(words, 0) * Globals.script_scale_y;
-              let in_or_at = Parser.test_word(words, ["in", "at"]);
-              if (in_or_at === false) {
-                Globals.log.error("Expected in or at on line " + line_no);
-                break;
-              }
-              let duration2 = Parser.get_duration(words, 0);
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              sprite.resize(
-                w,
-                h,
-                to_or_by,
-                in_or_at,
-                duration2,
-                now,
-                makeCompletionCallback(action_group)
-              );
-            } else {
-              Globals.log.error("Missing resize data at line " + line_no);
-            }
-            break;
-          /**************************************************************************************************
-          
-             ########  ######## ##     ##  #######  ##     ## ######## 
-             ##     ## ##       ###   ### ##     ## ##     ## ##       
-             ##     ## ##       #### #### ##     ## ##     ## ##       
-             ########  ######   ## ### ## ##     ## ##     ## ######   
-             ##   ##   ##       ##     ## ##     ##  ##   ##  ##       
-             ##    ##  ##       ##     ## ##     ##   ## ##   ##       
-             ##     ## ######## ##     ##  #######     ###    ######## 
-          
-          **************************************************************************************************/
-          case "remove":
-          case "erase":
-          case "delete":
-            while (words.length) {
-              const item = words.shift();
-              if (AudioManager.exists(item)) {
-                AudioManager.delete(item);
-              } else {
-                SG_sprite.remove_sprite(this.name, item);
-              }
-            }
-            action_group.complete_action("remove");
-            break;
-          /**************************************************************************************************
-          
-             ########   #######  ########    ###    ######## ######## 
-             ##     ## ##     ##    ##      ## ##      ##    ##       
-             ##     ## ##     ##    ##     ##   ##     ##    ##       
-             ########  ##     ##    ##    ##     ##    ##    ######   
-             ##   ##   ##     ##    ##    #########    ##    ##       
-             ##    ##  ##     ##    ##    ##     ##    ##    ##       
-             ##     ##  #######     ##    ##     ##    ##    ######## 
-          
-          **************************************************************************************************/
-          case "rotate":
-          case "turn":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let turn_type = Parser.test_word(words, ["to", "by", "at"], "to");
-              let value2 = Parser.get_int(words, 0);
-              let dur_type = Parser.test_word(words, ["in", "per"], "in");
-              let duration2 = Parser.get_duration(words, 0);
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              sprite.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
-            } else {
-              Globals.log.error("Missing rotate data at line " + line_no);
-              action_group.complete_action("rotateX");
-            }
-            break;
-          /**************************************************************************************************
-          
-             ######## ##     ## ########   #######  ##      ## 
-                ##    ##     ## ##     ## ##     ## ##  ##  ## 
-                ##    ##     ## ##     ## ##     ## ##  ##  ## 
-                ##    ######### ########  ##     ## ##  ##  ## 
-                ##    ##     ## ##   ##   ##     ## ##  ##  ## 
-                ##    ##     ## ##    ##  ##     ## ##  ##  ## 
-                ##    ##     ## ##     ##  #######   ###  ###  
-          
-          **************************************************************************************************/
-          case "throw":
-          case "launch":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              const stop_or_at = Parser.test_word(words, ["at", "stop"], "at");
-              let angle = Parser.get_int(words, 0);
-              Parser.test_word(words, ["deg", "degs", "degrees"]);
-              Parser.test_word(words, "with");
-              Parser.test_word(words, ["force", "velocity", "speed"]);
-              let initial_velocity = Parser.get_int(words, 10);
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              if (stop_or_at == "stop") {
-                sprite.throw("stop");
-              } else {
-                sprite.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
-              }
-            } else {
-              Globals.log.error("Missing throw data at line " + line_no);
-            }
-            break;
-          /**************************************************************************************************
-          
-             ########  ########   #######  ########  
-             ##     ## ##     ## ##     ## ##     ## 
-             ##     ## ##     ## ##     ## ##     ## 
-             ##     ## ########  ##     ## ########  
-             ##     ## ##   ##   ##     ## ##        
-             ##     ## ##    ##  ##     ## ##        
-             ########  ##     ##  #######  ##        
-          
-          **************************************************************************************************/
-          case "drop":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              if (Parser.test_word(words, "stop")) {
-                sprite.throw("stop");
-              } else {
-                sprite.throw(180, 0, now, makeCompletionCallback(action_group));
-              }
-            } else {
-              Globals.log.error("Missing drop data at line " + line_no);
-            }
-            break;
-          /**************************************************************************************************
-          
-              ######  ##     ##  #######  ##      ##       ## ##     ## #### ########  ######## 
-             ##    ## ##     ## ##     ## ##  ##  ##      ##  ##     ##  ##  ##     ## ##       
-             ##       ##     ## ##     ## ##  ##  ##     ##   ##     ##  ##  ##     ## ##       
-              ######  ######### ##     ## ##  ##  ##    ##    #########  ##  ##     ## ######   
-                   ## ##     ## ##     ## ##  ##  ##   ##     ##     ##  ##  ##     ## ##       
-             ##    ## ##     ## ##     ## ##  ##  ##  ##      ##     ##  ##  ##     ## ##       
-              ######  ##     ##  #######   ###  ###  ##       ##     ## #### ########  ######## 
-          
-          **************************************************************************************************/
-          case "show":
-          case "hide":
-          case "toggle":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              if (command == "show") {
-                sprite.set_visibility(true);
-              } else if (command == "hide") {
-                sprite.set_visibility(false);
-              } else if (command == "toggle") {
-                sprite.set_visibility("toggle");
-              }
-            } else {
-              Globals.log.error("Missing sprite tag at line " + line_no);
-            }
-            action_group.complete_action();
-            break;
-          /**************************************************************************************************
-          
-              ######  ########    ###    ########  ########       ##  ######  ########  #######  ########  
-             ##    ##    ##      ## ##   ##     ##    ##         ##  ##    ##    ##    ##     ## ##     ## 
-             ##          ##     ##   ##  ##     ##    ##        ##   ##          ##    ##     ## ##     ## 
-              ######     ##    ##     ## ########     ##       ##     ######     ##    ##     ## ########  
-                   ##    ##    ######### ##   ##      ##      ##           ##    ##    ##     ## ##        
-             ##    ##    ##    ##     ## ##    ##     ##     ##      ##    ##    ##    ##     ## ##        
-              ######     ##    ##     ## ##     ##    ##    ##        ######     ##     #######  ##        
-          
-          **************************************************************************************************/
-          case "start":
-            if (words.length > 0) {
-              for (let i2 = 0; i2 < words.length; i2++) {
-                const scene = _Scene.find(words[i2]);
-                if (scene !== false) {
-                  this.completion_callback = makeCompletionCallback(action_group);
-                  scene.start();
-                }
-              }
-            } else {
-              Globals.log.error("Missing scene name at line " + line_no);
-            }
-            action_group.complete_action("start");
-            break;
-          /**************************************************************************************************
-          
-              ######  ########  #######  ########  
-             ##    ##    ##    ##     ## ##     ## 
-             ##          ##    ##     ## ##     ## 
-              ######     ##    ##     ## ########  
-                   ##    ##    ##     ## ##        
-             ##    ##    ##    ##     ## ##        
-              ######     ##     #######  ##        
-          
-          **************************************************************************************************/
-          case "stop":
-            this.completion_callback = makeCompletionCallback(action_group);
-            if (words.length > 0) {
-              for (let i2 = 0; i2 < words.length; i2++) {
-                if (AudioManager.exists(words[i2])) {
-                  AudioManager.delete(words[i2]);
-                } else {
-                  const scene = _Scene.find(words[i2]);
-                  if (scene !== false) {
-                    scene.stop();
-                  }
-                }
-              }
-            } else {
-              this.stop();
-            }
-            action_group.complete_action("stop");
-            break;
-          /**************************************************************************************************
-          
-             ##       ######## ########       ## ##     ##    ###    ##    ## ######## 
-             ##       ##          ##         ##  ###   ###   ## ##   ##   ##  ##       
-             ##       ##          ##        ##   #### ####  ##   ##  ##  ##   ##       
-             ##       ######      ##       ##    ## ### ## ##     ## #####    ######   
-             ##       ##          ##      ##     ##     ## ######### ##  ##   ##       
-             ##       ##          ##     ##      ##     ## ##     ## ##   ##  ##       
-             ######## ########    ##    ##       ##     ## ##     ## ##    ## ######## 
-          
-          **************************************************************************************************/
-          case "let":
-          case "make":
-            if (words.length > 0) {
-              let varName = words.shift();
-              Parser.test_word(words, ["be", "to"]);
-              this.varList.create(varName, words.join(" "));
-            } else {
-              Globals.log.error("Missing variable name at line " + line_no);
-            }
-            action_group.complete_action("let");
-            break;
-          /**************************************************************************************************
-          
-             ######## ##       ####  ######  ##    ## ######## ########  
-             ##       ##        ##  ##    ## ##   ##  ##       ##     ## 
-             ##       ##        ##  ##       ##  ##   ##       ##     ## 
-             ######   ##        ##  ##       #####    ######   ########  
-             ##       ##        ##  ##       ##  ##   ##       ##   ##   
-             ##       ##        ##  ##    ## ##   ##  ##       ##    ##  
-             ##       ######## ####  ######  ##    ## ######## ##     ## 
-          
-          **************************************************************************************************/
-          case "flicker":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let on_off = Parser.test_word(words, ["by", "stop"]);
-              if (on_off == "stop") {
-                sprite.flicker(0, 0);
-              } else {
-                let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals.script_scale_x;
-                Parser.test_word(words, "with");
-                Parser.test_word(words, "chance");
-                let flicker_chance = Parser.get_int(words, 50);
-                sprite.flicker(flicker_size, flicker_chance);
-              }
-            } else {
-              Globals.log.error("Missing values at line " + line_no);
-            }
-            action_group.complete_action("flicker");
-            break;
-          /**************************************************************************************************
-          
-                   ## ####  ######    ######   ##       ######## 
-                   ##  ##  ##    ##  ##    ##  ##       ##       
-                   ##  ##  ##        ##        ##       ##       
-                   ##  ##  ##   #### ##   #### ##       ######   
-             ##    ##  ##  ##    ##  ##    ##  ##       ##       
-             ##    ##  ##  ##    ##  ##    ##  ##       ##       
-              ######  ####  ######    ######   ######## ######## 
-          
-          **************************************************************************************************/
-          case "jiggle":
-          case "jitter":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let on_off = Parser.test_word(words, ["by", "stop"]);
-              if (on_off == "stop") {
-                sprite.jiggle(0, 0, 0);
-              } else {
-                let jiggle_x = Parser.get_int(words, 0) * Globals.script_scale_x;
-                let jiggle_y = Parser.get_int(words, 0) * Globals.script_scale_y;
-                let jiggle_r = Parser.get_int(words, 0);
-                Parser.test_word(words, "with");
-                Parser.test_word(words, "chance");
-                let jiggle_chance = Parser.get_int(words, 50);
-                sprite.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
-              }
-            } else {
-              Globals.log.error("Missing values at line " + line_no);
-            }
-            action_group.complete_action("jiggle");
-            break;
-          /**************************************************************************************************
-          
-             ######## ##          ###     ######  ##     ## 
-             ##       ##         ## ##   ##    ## ##     ## 
-             ##       ##        ##   ##  ##       ##     ## 
-             ######   ##       ##     ##  ######  ######### 
-             ##       ##       #########       ## ##     ## 
-             ##       ##       ##     ## ##    ## ##     ## 
-             ##       ######## ##     ##  ######  ##     ## 
-          
-          **************************************************************************************************/
-          case "flash":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let flash_count = Parser.get_int(words, 0, 1, 10);
-              sprite.flash(flash_count, now);
-            } else {
-              Globals.log.error("Missing values at line " + line_no);
-            }
-            action_group.complete_action("flash");
-            break;
-          /**************************************************************************************************
-          
-             ########  ##       #### ##    ## ##    ## 
-             ##     ## ##        ##  ###   ## ##   ##  
-             ##     ## ##        ##  ####  ## ##  ##   
-             ########  ##        ##  ## ## ## #####    
-             ##     ## ##        ##  ##  #### ##  ##   
-             ##     ## ##        ##  ##   ### ##   ##  
-             ########  ######## #### ##    ## ##    ## 
-          
-          **************************************************************************************************/
-          case "blink":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let on_off = Parser.test_word(words, ["at", "stop"]);
-              if (on_off == "stop") {
-                sprite.blink(0, 0, now);
-              } else {
-                let blink_rate = Parser.get_int(words, 0, 1, 10);
-                Parser.test_word(words, "per");
-                Parser.test_word(words, "second");
-                Parser.test_word(words, "with");
-                Parser.test_word(words, "chance");
-                let blink_chance = Parser.get_int(words, 100, 0, 100);
-                sprite.blink(blink_rate, blink_chance, now);
-              }
-            } else {
-              Globals.log.error("Missing values at line " + line_no);
-            }
-            action_group.complete_action("blink");
-            break;
-          /**************************************************************************************************
-          
-             ########  ##     ## ##        ######  ######## 
-             ##     ## ##     ## ##       ##    ## ##       
-             ##     ## ##     ## ##       ##       ##       
-             ########  ##     ## ##        ######  ######   
-             ##        ##     ## ##             ## ##       
-             ##        ##     ## ##       ##    ## ##       
-             ##         #######  ########  ######  ######## 
-          
-          **************************************************************************************************/
-          case "pulse":
-          case "pulsate":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let on_off = Parser.test_word(words, "stop");
-              if (on_off == "stop") {
-                sprite.pulse(0, 0, 100, now);
-              } else {
-                Parser.test_word(words, "at");
-                let pulse_rate = Parser.get_int(words, 0, 1, 10);
-                Parser.test_word(words, "per");
-                Parser.test_word(words, "second");
-                Parser.test_word(words, "from");
-                let pulse_min = Parser.get_int(words, 0, 0, 100);
-                Parser.test_word(words, "to");
-                let pulse_max = Parser.get_int(words, 0, 100, 100);
-                sprite.pulse(pulse_rate, pulse_min, pulse_max, now);
-              }
-            } else {
-              Globals.log.error("Missing values at line " + line_no);
-            }
-            action_group.complete_action("pulse");
-            break;
-          /**************************************************************************************************
-          
-             ########    ###    ########  ######## 
-             ##         ## ##   ##     ## ##       
-             ##        ##   ##  ##     ## ##       
-             ######   ##     ## ##     ## ######   
-             ##       ######### ##     ## ##       
-             ##       ##     ## ##     ## ##       
-             ##       ##     ## ########  ######## 
-          
-          **************************************************************************************************/
-          case "fade":
+        this.runAction(action, action_group, now);
+      }
+    }
+    /**************************************************************************************************
+    
+       ########  ##     ## ##    ##    ###     ######  ######## ####  #######  ##    ## 
+       ##     ## ##     ## ###   ##   ## ##   ##    ##    ##     ##  ##     ## ###   ## 
+       ##     ## ##     ## ####  ##  ##   ##  ##          ##     ##  ##     ## ####  ## 
+       ########  ##     ## ## ## ## ##     ## ##          ##     ##  ##     ## ## ## ## 
+       ##   ##   ##     ## ##  #### ######### ##          ##     ##  ##     ## ##  #### 
+       ##    ##  ##     ## ##   ### ##     ## ##    ##    ##     ##  ##     ## ##   ### 
+       ##     ##  #######  ##    ## ##     ##  ######     ##    ####  #######  ##    ## 
+    
+    **************************************************************************************************/
+    runAction(action, action_group, now) {
+      let words = this.varList.expand_vars(action.text);
+      words = evaluate(words).split(/[\s,]+/);
+      ;
+      let line_no = action.number;
+      if (words[0].match(/^and$/i)) {
+        words.shift();
+      }
+      let command = words.shift().toLowerCase();
+      if (command == "set" && words.length > 1) {
+        switch (words[0]) {
           case "trans":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let fade_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
-              let value2 = Parser.get_int(words, 100);
-              Parser.test_word(words, "in");
-              let duration2 = Parser.get_duration(words, 0);
-              if (sprite != null) {
-                sprite.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
-              }
-            } else {
-              Globals.log.error("Missing fade parameters");
-            }
+          case "transparency":
+          case "fade":
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "fade";
             break;
-          /**************************************************************************************************
-          
-             ########  ##       ##     ## ########  
-             ##     ## ##       ##     ## ##     ## 
-             ##     ## ##       ##     ## ##     ## 
-             ########  ##       ##     ## ########  
-             ##     ## ##       ##     ## ##   ##   
-             ##     ## ##       ##     ## ##    ##  
-             ########  ########  #######  ##     ## 
-          
-          **************************************************************************************************/
+          case "position":
+          case "pos":
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "move";
+            break;
+          case "volume":
+            words.shift();
+            Parser.test_word(words, "to");
+            command = "volume";
+            break;
           case "blur":
           case "fuzz":
-            if (words.length > 0) {
-              let sprite_tag = words.shift();
-              let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-              let blur_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
-              let value2 = Parser.get_int(words, 100);
-              Parser.test_word(words, "in");
-              let duration2 = Parser.get_duration(words, 0);
-              if (sprite != null) {
-                sprite.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
-              }
-            } else {
-              Globals.log.error("Missing fade parameters");
-            }
-            break;
-          /**************************************************************************************************
-          
-             ##      ##    ###    #### ######## 
-             ##  ##  ##   ## ##    ##     ##    
-             ##  ##  ##  ##   ##   ##     ##    
-             ##  ##  ## ##     ##  ##     ##    
-             ##  ##  ## #########  ##     ##    
-             ##  ##  ## ##     ##  ##     ##    
-              ###  ###  ##     ## ####    ##    
-          
-          **************************************************************************************************/
-          case "wait":
-            let duration = Parser.get_duration(words, 5);
-            this.timers.push(new Timer(now, duration, makeCompletionCallback(action_group)));
-            break;
-          /**************************************************************************************************
-          
-             ######## #### ##    ## ####  ######  ##     ## 
-             ##        ##  ###   ##  ##  ##    ## ##     ## 
-             ##        ##  ####  ##  ##  ##       ##     ## 
-             ######    ##  ## ## ##  ##   ######  ######### 
-             ##        ##  ##  ####  ##        ## ##     ## 
-             ##        ##  ##   ###  ##  ##    ## ##     ## 
-             ##       #### ##    ## ####  ######  ##     ## 
-          
-          **************************************************************************************************/
-          case "finish":
-            Globals.app.stop();
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "blur";
             break;
           default:
-            Globals.log.error("Unknown command: " + command);
+            command = "make";
             break;
         }
+      }
+      switch (command) {
+        /**************************************************************************************************
+        
+        ########  ######  ##     ##  #######  
+        ##       ##    ## ##     ## ##     ## 
+        ##       ##       ##     ## ##     ## 
+        ######   ##       ######### ##     ## 
+        ##       ##       ##     ## ##     ## 
+        ##       ##    ## ##     ## ##     ## 
+        ########  ######  ##     ##  #######  
+        
+        **************************************************************************************************/
+        case "echo":
+        case "log":
+          Globals.log.error(words.join(" "));
+          action_group.complete_action("echo");
+          break;
+        /**************************************************************************************************
+        
+        ##        #######     ###    ########  
+        ##       ##     ##   ## ##   ##     ## 
+        ##       ##     ##  ##   ##  ##     ## 
+        ##       ##     ## ##     ## ##     ## 
+        ##       ##     ## ######### ##     ## 
+        ##       ##     ## ##     ## ##     ## 
+        ########  #######  ##     ## ########  
+        
+        **************************************************************************************************/
+        case "load":
+        case "upload":
+          let tag = null;
+          if (words.count < 1) {
+            Globals.log.error("Missing filename at line " + line_no);
+            break;
+          }
+          let filename = words.shift();
+          Parser.test_word(words, ["named", "as"]);
+          if (words.length > 0) {
+            tag = words.shift();
+          } else {
+            let slash = filename.lastIndexOf("/");
+            let dot = filename.lastIndexOf(".");
+            tag = filename.slice(slash, dot);
+          }
+          action_group.complete_action("load");
+          for (let j = 0; j < this.images.length; j++) {
+            if (this.images[j].tag == tag) {
+              continue;
+            }
+          }
+          if (filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".png")) {
+            const sg_image = new SG_image(this.folder + filename, tag);
+            this.images.push(sg_image);
+            sg_image.load_image();
+          } else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
+            AudioManager.create(tag, this.folder + filename);
+          }
+          action_group.complete_action("load");
+          break;
+        /**************************************************************************************************
+        
+        ######## ########   #######  ##     ## 
+        ##       ##     ## ##     ## ###   ### 
+        ##       ##     ## ##     ## #### #### 
+        ######   ########  ##     ## ## ### ## 
+        ##       ##   ##   ##     ## ##     ## 
+        ##       ##    ##  ##     ## ##     ## 
+        ##       ##     ##  #######  ##     ## 
+        
+        **************************************************************************************************/
+        case "from":
+        case "using":
+        case "with":
+          if (words.length > 0) {
+            this.folder = words[0] + "/";
+          } else {
+            Globals.log.error("Expected folder name at " + line_no);
+          }
+          action_group.complete_action("from");
+          break;
+        /**************************************************************************************************
+        
+        ########  ##          ###     ######  ######## 
+        ##     ## ##         ## ##   ##    ## ##       
+        ##     ## ##        ##   ##  ##       ##       
+        ########  ##       ##     ## ##       ######   
+        ##        ##       ######### ##       ##       
+        ##        ##       ##     ## ##    ## ##       
+        ##        ######## ##     ##  ######  ######## 
+        
+        **************************************************************************************************/
+        case "place":
+          if (words.length > 0) {
+            let image_tag = words.shift();
+            let sprite_tag = image_tag;
+            if (Parser.test_word(words, ["named", "as"])) {
+              sprite_tag = Parser.get_word(words, image_tag);
+            }
+            let sg_sprite = new SG_sprite(image_tag, sprite_tag);
+            let hidden = Parser.test_word(words, "hidden");
+            if (hidden) {
+              sg_sprite.set_visibility(false);
+            }
+            Parser.test_word(words, "at");
+            sg_sprite.loc_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
+            sg_sprite.loc_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
+            Parser.test_word(words, "depth");
+            sg_sprite.depth = Parser.get_int(words, 0);
+            Parser.test_word(words, ["size", "scale"]);
+            sg_sprite.size_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
+            sg_sprite.size_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
+            this.sprites.push(sg_sprite);
+          } else {
+            Globals.log.error("Missing place data at line " + line_no);
+          }
+          action_group.complete_action("place");
+          break;
+        /**************************************************************************************************
+        
+        ########  ######## ########  ##          ###     ######  ######## 
+        ##     ## ##       ##     ## ##         ## ##   ##    ## ##       
+        ##     ## ##       ##     ## ##        ##   ##  ##       ##       
+        ########  ######   ########  ##       ##     ## ##       ######   
+        ##   ##   ##       ##        ##       ######### ##       ##       
+        ##    ##  ##       ##        ##       ##     ## ##    ## ##       
+        ##     ## ######## ##        ######## ##     ##  ######  ######## 
+        
+        **************************************************************************************************/
+        case "replace":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            Parser.test_word(words, "with");
+            let image_tag = words.shift();
+            let hidden = Parser.test_word(words, "hidden");
+            let sg_sprite = SG_sprite.get_sprite(sprite_tag);
+            if (hidden) {
+              sg_sprite.set_visibility(false);
+            }
+            sg_sprite.image_tag = image_tag;
+            sg_sprite.pi_sprite.texture = PIXI.Texture.EMPTY;
+          } else {
+            Globals.log.error("Missing replace data at line " + line_no);
+          }
+          action_group.complete_action("replace");
+          break;
+        /**************************************************************************************************
+        
+        ########  ##     ## ######## 
+        ##     ## ##     ##    ##    
+        ##     ## ##     ##    ##    
+        ########  ##     ##    ##    
+        ##        ##     ##    ##    
+        ##        ##     ##    ##    
+        ##         #######     ##    
+        
+        **************************************************************************************************/
+        case "put":
+          if (words.length > 0) {
+            let image_tag = words.shift();
+            let sprite_tag = null;
+            if (Parser.test_word(words, "named")) {
+              sprite_tag = Parser.get_word(words, image_tag);
+            }
+            let sg_sprite = new SG_sprite(image_tag, sprite_tag);
+            Parser.test_word(words, ["as", "at"]);
+            const location = Parser.test_word(words, ["background", "top", "bottom", "left", "right", "ground", "sky"]);
+            if (location == false) {
+              Globals.log.error("Unknown location at line " + line_no);
+              break;
+            }
+            if (sprite_tag == null) {
+              sprite_tag = location;
+            }
+            Parser.test_word(words, "depth");
+            sg_sprite.depth = Parser.get_int(words, 0);
+            sg_sprite.location = location;
+            this.sprites.push(sg_sprite);
+          } else {
+            Globals.log.error("Missing put data at line " + line_no);
+          }
+          action_group.complete_action("put");
+          break;
+        /**************************************************************************************************
+        
+        ########  ##          ###    ##    ## 
+        ##     ## ##         ## ##    ##  ##  
+        ##     ## ##        ##   ##    ####   
+        ########  ##       ##     ##    ##    
+        ##        ##       #########    ##    
+        ##        ##       ##     ##    ##    
+        ##        ######## ##     ##    ##    
+        
+        **************************************************************************************************/
+        case "play":
+          if (words.length > 0) {
+            const tag2 = words.shift();
+            Parser.test_word(words, "fade");
+            Parser.test_word(words, "in");
+            const fadein = Parser.get_duration(words, 0);
+            Parser.test_word(words, "at");
+            Parser.test_word(words, "volume");
+            const volume = Parser.get_int(words, 50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
+            AudioManager.play(tag2, { fadeInMs: fadein * 1e3, targetVolume: volume });
+          } else {
+            Globals.log.error("Nothing to play at line " + line_no);
+          }
+          action_group.complete_action("play");
+          break;
+        /**************************************************************************************************
+        
+        ##     ##  #######  ##       ##     ## ##     ## ######## 
+        ##     ## ##     ## ##       ##     ## ###   ### ##       
+        ##     ## ##     ## ##       ##     ## #### #### ##       
+        ##     ## ##     ## ##       ##     ## ## ### ## ######   
+        ##   ##  ##     ## ##       ##     ## ##     ## ##       
+            ## ##   ##     ## ##       ##     ## ##     ## ##       
+            ###     #######  ########  #######  ##     ## ######## 
+        
+        **************************************************************************************************/
+        case "volume":
+          if (words.length > 0) {
+            Parser.test_word(words, "of");
+            const tag2 = words.shift();
+            Parser.test_word(words, "to");
+            const volume = Parser.get_int(words, 0, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
+            Parser.test_word(words, "in");
+            const fadein = Parser.get_duration(words, 0);
+            AudioManager.setVolume(tag2, volume, { fadeMs: fadein * 1e3 });
+          } else {
+            Globals.log.error("No volume change at line " + line_no);
+          }
+          action_group.complete_action("volume");
+          break;
+        /**************************************************************************************************
+        
+        ##     ##  #######  ##     ## ######## 
+        ###   ### ##     ## ##     ## ##       
+        #### #### ##     ## ##     ## ##       
+        ## ### ## ##     ## ##     ## ######   
+        ##     ## ##     ##  ##   ##  ##       
+        ##     ## ##     ##   ## ##   ##       
+        ##     ##  #######     ###    ######## 
+        
+        **************************************************************************************************/
+        case "move":
+          if (words.length > 0) {
+            let by_or_to = "to";
+            let sprite_tag = words.shift();
+            by_or_to = Parser.get_word(words, ["by", "to"]);
+            if (by_or_to === false) {
+              Globals.log.error("Expected by or to on line " + line_no);
+              break;
+            }
+            let x = Parser.get_int(words, 0) * Globals.script_scale_x;
+            let y = Parser.get_int(words, 0) * Globals.script_scale_y;
+            let in_or_at = Parser.test_word(words, ["in", "at"]);
+            if (in_or_at === false) {
+              Globals.log.error("Expected in or at on line " + line_no);
+              break;
+            }
+            let duration2 = Parser.get_duration(words, 0);
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            sprite.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
+          } else {
+            Globals.log.error("Missing move data at line " + line_no);
+            action_group.complete_action("moveX");
+          }
+          break;
+        /**************************************************************************************************
+        
+        ########  ########  ######  #### ######## ######## 
+        ##     ## ##       ##    ##  ##       ##  ##       
+        ##     ## ##       ##        ##      ##   ##       
+        ########  ######    ######   ##     ##    ######   
+        ##   ##   ##             ##  ##    ##     ##       
+        ##    ##  ##       ##    ##  ##   ##      ##       
+        ##     ## ########  ######  #### ######## ######## 
+        
+        **************************************************************************************************/
+        case "resize":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let to_or_by = Parser.get_word(words, ["to", "by"]);
+            if (to_or_by === false) {
+              Globals.log.error("Expected to or by on line " + line_no);
+              break;
+            }
+            let w = Parser.get_int(words, 0) * Globals.script_scale_x;
+            let h = Parser.get_int(words, 0) * Globals.script_scale_y;
+            let in_or_at = Parser.test_word(words, ["in", "at"]);
+            if (in_or_at === false) {
+              Globals.log.error("Expected in or at on line " + line_no);
+              break;
+            }
+            let duration2 = Parser.get_duration(words, 0);
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            sprite.resize(
+              w,
+              h,
+              to_or_by,
+              in_or_at,
+              duration2,
+              now,
+              makeCompletionCallback(action_group)
+            );
+          } else {
+            Globals.log.error("Missing resize data at line " + line_no);
+          }
+          break;
+        /**************************************************************************************************
+        
+        ########  ######## ##     ##  #######  ##     ## ######## 
+        ##     ## ##       ###   ### ##     ## ##     ## ##       
+        ##     ## ##       #### #### ##     ## ##     ## ##       
+        ########  ######   ## ### ## ##     ## ##     ## ######   
+        ##   ##   ##       ##     ## ##     ##  ##   ##  ##       
+        ##    ##  ##       ##     ## ##     ##   ## ##   ##       
+        ##     ## ######## ##     ##  #######     ###    ######## 
+        
+        **************************************************************************************************/
+        case "remove":
+        case "erase":
+        case "delete":
+          while (words.length) {
+            const item = words.shift();
+            if (AudioManager.exists(item)) {
+              AudioManager.delete(item);
+            } else {
+              SG_sprite.remove_sprite(this.name, item);
+            }
+          }
+          action_group.complete_action("remove");
+          break;
+        /**************************************************************************************************
+        
+        ########   #######  ########    ###    ######## ######## 
+        ##     ## ##     ##    ##      ## ##      ##    ##       
+        ##     ## ##     ##    ##     ##   ##     ##    ##       
+        ########  ##     ##    ##    ##     ##    ##    ######   
+        ##   ##   ##     ##    ##    #########    ##    ##       
+        ##    ##  ##     ##    ##    ##     ##    ##    ##       
+        ##     ##  #######     ##    ##     ##    ##    ######## 
+        
+        **************************************************************************************************/
+        case "rotate":
+        case "turn":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let turn_type = Parser.test_word(words, ["to", "by", "at"], "to");
+            let value2 = Parser.get_int(words, 0);
+            let dur_type = Parser.test_word(words, ["in", "per"], "in");
+            let duration2 = Parser.get_duration(words, 0);
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            sprite.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
+          } else {
+            Globals.log.error("Missing rotate data at line " + line_no);
+            action_group.complete_action("rotateX");
+          }
+          break;
+        /**************************************************************************************************
+        
+        ######## ##     ## ########   #######  ##      ## 
+            ##    ##     ## ##     ## ##     ## ##  ##  ## 
+            ##    ##     ## ##     ## ##     ## ##  ##  ## 
+            ##    ######### ########  ##     ## ##  ##  ## 
+            ##    ##     ## ##   ##   ##     ## ##  ##  ## 
+            ##    ##     ## ##    ##  ##     ## ##  ##  ## 
+            ##    ##     ## ##     ##  #######   ###  ###  
+        
+        **************************************************************************************************/
+        case "throw":
+        case "launch":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            const stop_or_at = Parser.test_word(words, ["at", "stop"], "at");
+            let angle = Parser.get_int(words, 0);
+            Parser.test_word(words, ["deg", "degs", "degrees"]);
+            Parser.test_word(words, "with");
+            Parser.test_word(words, ["force", "velocity", "speed"]);
+            let initial_velocity = Parser.get_int(words, 10);
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            if (stop_or_at == "stop") {
+              sprite.throw("stop");
+            } else {
+              sprite.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
+            }
+          } else {
+            Globals.log.error("Missing throw data at line " + line_no);
+          }
+          break;
+        /**************************************************************************************************
+        
+        ########  ########   #######  ########  
+        ##     ## ##     ## ##     ## ##     ## 
+        ##     ## ##     ## ##     ## ##     ## 
+        ##     ## ########  ##     ## ########  
+        ##     ## ##   ##   ##     ## ##        
+        ##     ## ##    ##  ##     ## ##        
+        ########  ##     ##  #######  ##        
+        
+        **************************************************************************************************/
+        case "drop":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            if (Parser.test_word(words, "stop")) {
+              sprite.throw("stop");
+            } else {
+              sprite.throw(180, 0, now, makeCompletionCallback(action_group));
+            }
+          } else {
+            Globals.log.error("Missing drop data at line " + line_no);
+          }
+          break;
+        /**************************************************************************************************
+        
+        ######  ##     ##  #######  ##      ##       ## ##     ## #### ########  ######## 
+        ##    ## ##     ## ##     ## ##  ##  ##      ##  ##     ##  ##  ##     ## ##       
+        ##       ##     ## ##     ## ##  ##  ##     ##   ##     ##  ##  ##     ## ##       
+        ######  ######### ##     ## ##  ##  ##    ##    #########  ##  ##     ## ######   
+                ## ##     ## ##     ## ##  ##  ##   ##     ##     ##  ##  ##     ## ##       
+        ##    ## ##     ## ##     ## ##  ##  ##  ##      ##     ##  ##  ##     ## ##       
+        ######  ##     ##  #######   ###  ###  ##       ##     ## #### ########  ######## 
+        
+        **************************************************************************************************/
+        case "show":
+        case "hide":
+        case "toggle":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            if (command == "show") {
+              sprite.set_visibility(true);
+            } else if (command == "hide") {
+              sprite.set_visibility(false);
+            } else if (command == "toggle") {
+              sprite.set_visibility("toggle");
+            }
+          } else {
+            Globals.log.error("Missing sprite tag at line " + line_no);
+          }
+          action_group.complete_action();
+          break;
+        /**************************************************************************************************
+        
+        ######  ########    ###    ########  ########       ##  ######  ########  #######  ########  
+        ##    ##    ##      ## ##   ##     ##    ##         ##  ##    ##    ##    ##     ## ##     ## 
+        ##          ##     ##   ##  ##     ##    ##        ##   ##          ##    ##     ## ##     ## 
+        ######     ##    ##     ## ########     ##       ##     ######     ##    ##     ## ########  
+                ##    ##    ######### ##   ##      ##      ##           ##    ##    ##     ## ##        
+        ##    ##    ##    ##     ## ##    ##     ##     ##      ##    ##    ##    ##     ## ##        
+        ######     ##    ##     ## ##     ##    ##    ##        ######     ##     #######  ##        
+        
+        **************************************************************************************************/
+        case "start":
+          if (words.length > 0) {
+            for (let i = 0; i < words.length; i++) {
+              const scene = _Scene.find(words[i]);
+              if (scene !== false) {
+                this.completion_callback = makeCompletionCallback(action_group);
+                scene.start();
+              }
+            }
+          } else {
+            Globals.log.error("Missing scene name at line " + line_no);
+          }
+          action_group.complete_action("start");
+          break;
+        /**************************************************************************************************
+        
+        ######  ########  #######  ########  
+        ##    ##    ##    ##     ## ##     ## 
+        ##          ##    ##     ## ##     ## 
+        ######     ##    ##     ## ########  
+                ##    ##    ##     ## ##        
+        ##    ##    ##    ##     ## ##        
+        ######     ##     #######  ##        
+        
+        **************************************************************************************************/
+        case "stop":
+          this.completion_callback = makeCompletionCallback(action_group);
+          if (words.length > 0) {
+            for (let i = 0; i < words.length; i++) {
+              if (AudioManager.exists(words[i])) {
+                AudioManager.delete(words[i]);
+              } else {
+                const scene = _Scene.find(words[i]);
+                if (scene !== false) {
+                  scene.stop();
+                }
+              }
+            }
+          } else {
+            this.stop();
+          }
+          action_group.complete_action("stop");
+          break;
+        /**************************************************************************************************
+        
+        ##       ######## ########       ## ##     ##    ###    ##    ## ######## 
+        ##       ##          ##         ##  ###   ###   ## ##   ##   ##  ##       
+        ##       ##          ##        ##   #### ####  ##   ##  ##  ##   ##       
+        ##       ######      ##       ##    ## ### ## ##     ## #####    ######   
+        ##       ##          ##      ##     ##     ## ######### ##  ##   ##       
+        ##       ##          ##     ##      ##     ## ##     ## ##   ##  ##       
+        ######## ########    ##    ##       ##     ## ##     ## ##    ## ######## 
+        
+        **************************************************************************************************/
+        case "let":
+        case "make":
+          if (words.length > 0) {
+            let varName = words.shift();
+            Parser.test_word(words, ["be", "to"]);
+            this.varList.create(varName, words.join(" "));
+          } else {
+            Globals.log.error("Missing variable name at line " + line_no);
+          }
+          action_group.complete_action("let");
+          break;
+        /**************************************************************************************************
+        
+        ######## ##       ####  ######  ##    ## ######## ########  
+        ##       ##        ##  ##    ## ##   ##  ##       ##     ## 
+        ##       ##        ##  ##       ##  ##   ##       ##     ## 
+        ######   ##        ##  ##       #####    ######   ########  
+        ##       ##        ##  ##       ##  ##   ##       ##   ##   
+        ##       ##        ##  ##    ## ##   ##  ##       ##    ##  
+        ##       ######## ####  ######  ##    ## ######## ##     ## 
+        
+        **************************************************************************************************/
+        case "flicker":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let on_off = Parser.test_word(words, ["by", "stop"]);
+            if (on_off == "stop") {
+              sprite.flicker(0, 0);
+            } else {
+              let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals.script_scale_x;
+              Parser.test_word(words, "with");
+              Parser.test_word(words, "chance");
+              let flicker_chance = Parser.get_int(words, 50);
+              sprite.flicker(flicker_size, flicker_chance);
+            }
+          } else {
+            Globals.log.error("Missing values at line " + line_no);
+          }
+          action_group.complete_action("flicker");
+          break;
+        /**************************************************************************************************
+        
+                ## ####  ######    ######   ##       ######## 
+                ##  ##  ##    ##  ##    ##  ##       ##       
+                ##  ##  ##        ##        ##       ##       
+                ##  ##  ##   #### ##   #### ##       ######   
+        ##    ##  ##  ##    ##  ##    ##  ##       ##       
+        ##    ##  ##  ##    ##  ##    ##  ##       ##       
+        ######  ####  ######    ######   ######## ######## 
+        
+        **************************************************************************************************/
+        case "jiggle":
+        case "jitter":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let on_off = Parser.test_word(words, ["by", "stop"]);
+            if (on_off == "stop") {
+              sprite.jiggle(0, 0, 0);
+            } else {
+              let jiggle_x = Parser.get_int(words, 0) * Globals.script_scale_x;
+              let jiggle_y = Parser.get_int(words, 0) * Globals.script_scale_y;
+              let jiggle_r = Parser.get_int(words, 0);
+              Parser.test_word(words, "with");
+              Parser.test_word(words, "chance");
+              let jiggle_chance = Parser.get_int(words, 50);
+              sprite.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
+            }
+          } else {
+            Globals.log.error("Missing values at line " + line_no);
+          }
+          action_group.complete_action("jiggle");
+          break;
+        /**************************************************************************************************
+        
+        ######## ##          ###     ######  ##     ## 
+        ##       ##         ## ##   ##    ## ##     ## 
+        ##       ##        ##   ##  ##       ##     ## 
+        ######   ##       ##     ##  ######  ######### 
+        ##       ##       #########       ## ##     ## 
+        ##       ##       ##     ## ##    ## ##     ## 
+        ##       ######## ##     ##  ######  ##     ## 
+        
+        **************************************************************************************************/
+        case "flash":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let flash_count = Parser.get_int(words, 0, 1, 10);
+            sprite.flash(flash_count, now);
+          } else {
+            Globals.log.error("Missing values at line " + line_no);
+          }
+          action_group.complete_action("flash");
+          break;
+        /**************************************************************************************************
+        
+        ########  ##       #### ##    ## ##    ## 
+        ##     ## ##        ##  ###   ## ##   ##  
+        ##     ## ##        ##  ####  ## ##  ##   
+        ########  ##        ##  ## ## ## #####    
+        ##     ## ##        ##  ##  #### ##  ##   
+        ##     ## ##        ##  ##   ### ##   ##  
+        ########  ######## #### ##    ## ##    ## 
+        
+        **************************************************************************************************/
+        case "blink":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let on_off = Parser.test_word(words, ["at", "stop"]);
+            if (on_off == "stop") {
+              sprite.blink(0, 0, now);
+            } else {
+              let blink_rate = Parser.get_int(words, 0, 1, 10);
+              Parser.test_word(words, "per");
+              Parser.test_word(words, "second");
+              Parser.test_word(words, "with");
+              Parser.test_word(words, "chance");
+              let blink_chance = Parser.get_int(words, 100, 0, 100);
+              sprite.blink(blink_rate, blink_chance, now);
+            }
+          } else {
+            Globals.log.error("Missing values at line " + line_no);
+          }
+          action_group.complete_action("blink");
+          break;
+        /**************************************************************************************************
+        
+        ########  ##     ## ##        ######  ######## 
+        ##     ## ##     ## ##       ##    ## ##       
+        ##     ## ##     ## ##       ##       ##       
+        ########  ##     ## ##        ######  ######   
+        ##        ##     ## ##             ## ##       
+        ##        ##     ## ##       ##    ## ##       
+        ##         #######  ########  ######  ######## 
+        
+        **************************************************************************************************/
+        case "pulse":
+        case "pulsate":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let on_off = Parser.test_word(words, "stop");
+            if (on_off == "stop") {
+              sprite.pulse(0, 0, 100, now);
+            } else {
+              Parser.test_word(words, "at");
+              let pulse_rate = Parser.get_int(words, 0, 1, 10);
+              Parser.test_word(words, "per");
+              Parser.test_word(words, "second");
+              Parser.test_word(words, "from");
+              let pulse_min = Parser.get_int(words, 0, 0, 100);
+              Parser.test_word(words, "to");
+              let pulse_max = Parser.get_int(words, 0, 100, 100);
+              sprite.pulse(pulse_rate, pulse_min, pulse_max, now);
+            }
+          } else {
+            Globals.log.error("Missing values at line " + line_no);
+          }
+          action_group.complete_action("pulse");
+          break;
+        /**************************************************************************************************
+        
+        ########    ###    ########  ######## 
+        ##         ## ##   ##     ## ##       
+        ##        ##   ##  ##     ## ##       
+        ######   ##     ## ##     ## ######   
+        ##       ######### ##     ## ##       
+        ##       ##     ## ##     ## ##       
+        ##       ##     ## ########  ######## 
+        
+        **************************************************************************************************/
+        case "fade":
+        case "trans":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let fade_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
+            let value2 = Parser.get_int(words, 100);
+            Parser.test_word(words, "in");
+            let duration2 = Parser.get_duration(words, 0);
+            if (sprite != null) {
+              sprite.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
+            }
+          } else {
+            Globals.log.error("Missing fade parameters");
+          }
+          break;
+        /**************************************************************************************************
+        
+        ########  ##       ##     ## ########  
+        ##     ## ##       ##     ## ##     ## 
+        ##     ## ##       ##     ## ##     ## 
+        ########  ##       ##     ## ########  
+        ##     ## ##       ##     ## ##   ##   
+        ##     ## ##       ##     ## ##    ##  
+        ########  ########  #######  ##     ## 
+        
+        **************************************************************************************************/
+        case "blur":
+        case "fuzz":
+          if (words.length > 0) {
+            let sprite_tag = words.shift();
+            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let blur_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
+            let value2 = Parser.get_int(words, 100);
+            Parser.test_word(words, "in");
+            let duration2 = Parser.get_duration(words, 0);
+            if (sprite != null) {
+              sprite.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
+            }
+          } else {
+            Globals.log.error("Missing fade parameters");
+          }
+          break;
+        /**************************************************************************************************
+        
+        ##      ##    ###    #### ######## 
+        ##  ##  ##   ## ##    ##     ##    
+        ##  ##  ##  ##   ##   ##     ##    
+        ##  ##  ## ##     ##  ##     ##    
+        ##  ##  ## #########  ##     ##    
+        ##  ##  ## ##     ##  ##     ##    
+        ###  ###  ##     ## ####    ##    
+        
+        **************************************************************************************************/
+        case "wait":
+          let duration = Parser.get_duration(words, 5);
+          this.timers.push(new Timer(now, duration, makeCompletionCallback(action_group)));
+          break;
+        /**************************************************************************************************
+        
+        ######## #### ##    ## ####  ######  ##     ## 
+        ##        ##  ###   ##  ##  ##    ## ##     ## 
+        ##        ##  ####  ##  ##  ##       ##     ## 
+        ######    ##  ## ## ##  ##   ######  ######### 
+        ##        ##  ##  ####  ##        ## ##     ## 
+        ##        ##  ##   ###  ##  ##    ## ##     ## 
+        ##       #### ##    ## ####  ######  ##     ## 
+        
+        **************************************************************************************************/
+        case "finish":
+          Globals.app.stop();
+          break;
+        default:
+          Globals.log.error("Unknown command: " + command);
+          break;
       }
     }
   };
@@ -2630,7 +2646,7 @@
               }
             }
             if (do_run) {
-              current.run_actions(j, current_millis);
+              current.runGroup(j, current_millis);
             }
           }
         }
@@ -2659,6 +2675,12 @@
       const text = await response.text();
       Scene2.readFromText(text);
       run();
+    }
+    interactiveAction(text) {
+      const dummyLine = new Line(1, text);
+      const topScene = Scene2.find(defaults_default.MAIN_NAME);
+      const dummyActionGroupIndex = topScene.actionGroups.length - 1;
+      topScene.runAction(dummyLine, topScene.actionGroups[dummyActionGroupIndex], Date.now());
     }
     setDrawingParent(elementID) {
       _SlowGlass.sg_id = elementID;

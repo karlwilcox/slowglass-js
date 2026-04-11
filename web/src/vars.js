@@ -139,13 +139,13 @@ export class VarList {
             case "WEEKEND":
                 return date.getDay() == 0 || date.getDay() == 6 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
             case "MORNING":
-                return date.getHour() > 6 && date.getHour() < 13 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 6 && date.getHour() < 13 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
             case "AFTERNOON":
-                return date.getHour() > 11 && date.getHour() < 18 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 11 && date.getHour() < 18 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
             case "EVENING":
-                return date.getHour() > 18 && date.getHour() < 22 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 18 && date.getHour() < 22 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
             case "NIGHT":
-                return date.getHour() > 22 || date.getHour() < 6 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 22 || date.getHour() < 6 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
             case "KEY":
                 return Globals.key == null ? Defaults.NOTFOUND : Globals.key;
             case "LASTKEY":

@@ -80,9 +80,6 @@ export class ActionGroup {
 
     complete_action(action) {
         this.completed_actions += 1;
-        // if (arguments.length > 0) {
-        //     console.log("completing task " + action + " " + this.completed_actions);
-        // }
     }
 
     addAction(action) {
