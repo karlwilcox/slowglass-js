@@ -1,5 +1,6 @@
 
 
+import { VarList } from "./vars.js";
 
 /**************************************************************************************************
 #                     
@@ -11,6 +12,8 @@
 #######  ####   ####  
                       
 **************************************************************************************************/
+
+import defaults from "./defaults";
 
 
 export class Log {
@@ -34,6 +37,10 @@ export class Log {
         } // else
         console.log(text);
         this.errors.push(text);
+    }
+
+    log(text) {
+        console.log(text);
     }
 }
 
@@ -200,17 +207,21 @@ export function getHemisphere(callback) {
             const lat = position.coords.latitude;
 
             if (lat < 0) {
-                callback("southern");
+                VarList.hemisphere = "southern";
             } else {
-                callback("northern");
+                VarList.hemisphere = "northern";
             }
         },
         (error) => {
             // Permission denied or other failure → default
-            callback(DEFAULT);
+            VarList.hemisphere = DEFAULT;
         },
         {
             timeout: 5000 // optional safeguard
         }
     );
+}
+
+export function t_or_f(value) {
+    return value ? defaults.TRUEVALUE : defaults.FALSEVALUE;
 }

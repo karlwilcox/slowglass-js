@@ -21,7 +21,10 @@
       this.jig_step = 0;
       this.jig_limit = 0;
       this.jig_chance = 0;
-      this.callback = null;
+      this.acceleration_rate = 0;
+      this.acceleration_time = 0;
+      this.position_callback = null;
+      this.accelerate_callback = null;
     }
     value() {
       return this.current_value + this.jig_step;
@@ -29,15 +32,44 @@
     speed() {
       return this.delta_value;
     }
-    adjust(delta) {
-      let new_value = this.value + delta;
-      if (new_value < this.lower_limit) {
-        new_value = this.wrap ? this.upper_limit : this.lower_limit;
-      } else if (new_value > this.upper_limit) {
-        new_value = this.wrap ? this.lower_limit : this.upper_limit;
+    stop() {
+      if (typeof this.position_callback === "function") {
+        this.position_callback("stop");
       }
-      this.value = this.new_value;
+      if (typeof this.acceleration_callback === "function") {
+        this.acceleration_callback("stop");
+      }
+      this.delta_value = 0;
+      this.changing = false;
     }
+    set_speed(delta) {
+      if (Math.abs(delta) > 0) {
+        this.delta_value = delta;
+        this.changing = true;
+      }
+    }
+    accelerate(rate, seconds, timestamp, callback) {
+      if (arguments.length == 1) {
+        seconds = 0;
+      }
+      if (arguments.length == 2) {
+        timestamp = Date.now();
+      }
+      if (arguments.length > 3) {
+        this.acceleration_callback = callback;
+      }
+      this.acceleration_rate = rate;
+    }
+    // adjust(delta) {
+    //     let new_value = this.value + delta;
+    //     // but check limits
+    //     if ( new_value < this.lower_limit ) {
+    //         new_value = this.wrap ? this.upper_limit : this.lower_limit;
+    //     } else if ( new_value > this.upper_limit ) {
+    //         new_value = this.wrap ? this.lower_limit : this.upper_limit;
+    //     }
+    //     this.value = this.new_value;
+    // }
     set_target_value(target, seconds, timestamp, callback) {
       if (arguments.length == 1) {
         seconds = 0;
@@ -46,7 +78,7 @@
         timestamp = Date.now();
       }
       if (arguments.length > 3) {
-        this.callback = callback;
+        this.position_callback = callback;
       }
       if (target < this.lower_limit) {
         target = this.lower_limit;
@@ -58,7 +90,7 @@
         this.current_value = target;
         this.delta_value = 0;
         if (this.callback != null) {
-          this.callback("adjustable");
+          this.position_callback("adjustable");
         }
       } else {
         this.delta_value = (this.target_value - this.current_value) / (seconds * 1e3);
@@ -87,7 +119,7 @@
         this.delta_value = 0;
         this.changing = false;
         if (this.callback != null) {
-          this.callback("adjustable");
+          this.position_callback("adjustable");
         }
       } else {
         let this_adjustment = Date.now();
@@ -104,6 +136,359 @@
     jiggle_start(limit, chance) {
       this.jig_limit = limit;
       this.jig_chance = chance;
+    }
+  };
+
+  // src/defaults.js
+  var defaults_default = {
+    DISPLAY_HEIGHT: 600,
+    DISPLAY_WIDTH: 800,
+    HEMISPHERE: "northern",
+    // to give the correct calendar season
+    DEBUG: true,
+    LOCALE: "en-GB",
+    TRUEVALUE: "YES",
+    FALSEVALUE: "NO",
+    NOTFOUND: "NONE",
+    TRIGGER_RATE: 500,
+    // milliseconds between trigger tests
+    SPRITE_RATE: 40,
+    // milliseconds between sprite updates
+    MAIN_NAME: "_MAIN_",
+    VOLUME_MIN: 0,
+    VOLUME_MAX: 100,
+    // scaling types
+    SCALE_FIT: "fit",
+    SCALE_STRETCH: "stretch",
+    SCALE_NONE: "none",
+    GRAVITY_PS2: 100,
+    // force of gravity in pixels per second per second
+    BOUNDS_X: 2,
+    // Multiplier for display width for bounds checking
+    BOUNDS_Y: 2,
+    // Multiplier for display height for bounds checking
+    DEPTH_BACKGROUND: 1,
+    DEPTH_SKY: 100,
+    DEPTH_GROUND: 200,
+    DEPTH_LEFT: 300,
+    DEPTH_RIGHT: 301,
+    DEPTH_FOREGROUND: 400,
+    DEPTH_FRAME: 1e3
+  };
+
+  // src/vars.js
+  var Variable = class {
+    constructor(name, value2) {
+      this.name = name;
+      this.value = value2;
+    }
+    getValue() {
+      return this.value;
+    }
+    setValue(value2) {
+      this.value = value2;
+      return true;
+    }
+  };
+  var VarList = class _VarList {
+    static key = null;
+    static lastKey = null;
+    static hemisphere = null;
+    constructor(sceneName) {
+      this.variables = [];
+      this.trigger = null;
+      this.sceneName = sceneName;
+      getHemisphere();
+    }
+    create(name, value2) {
+      if (_VarList.built_in(name)) {
+        Globals.log.error("Cannot create built-in variable " + name);
+      } else if (name.match(/[\.:]/)) {
+        Globals.log.error("Cannot create variable with dot or colon in name " + name);
+      } else {
+        this.variables.push(new Variable(name, value2));
+      }
+    }
+    /**************************************************************************************************
+    
+       ########  ##     ## #### ##       ########         #### ##    ##  ######  
+       ##     ## ##     ##  ##  ##          ##             ##  ###   ## ##    ## 
+       ##     ## ##     ##  ##  ##          ##             ##  ####  ## ##       
+       ########  ##     ##  ##  ##          ##    #######  ##  ## ## ##  ######  
+       ##     ## ##     ##  ##  ##          ##             ##  ##  ####       ## 
+       ##     ## ##     ##  ##  ##          ##             ##  ##   ### ##    ## 
+       ########   #######  #### ########    ##            #### ##    ##  ######  
+    
+    **************************************************************************************************/
+    static built_in(name) {
+      const date = /* @__PURE__ */ new Date();
+      const month = date.getMonth() + 1;
+      switch (name) {
+        case "SECONDS":
+        case "SECOND":
+          return new Intl.DateTimeFormat(defaults_default.LOCALE, { second: "numeric" }).format(date);
+        case "MINUTES":
+        case "MINUTE":
+          return new Intl.DateTimeFormat(defaults_default.LOCALE, { minute: "numeric" }).format(date);
+        case "HOUR":
+        case "HOURS":
+          return new Intl.DateTimeFormat(defaults_default.LOCALE, { hour: "numeric" }).format(date);
+        case "DAYOFWEEK":
+          return date.getDay() + 1;
+        // Sunday = 1
+        case "DAYNAME":
+          return new Intl.DateTimeFormat(defaults_default.LOCALE, { weekday: "long" }).format(date);
+        case "MONTH":
+          return month;
+        case "MONTHNAME":
+          return new Intl.DateTimeFormat(defaults_default.LOCALE, { month: "long" }).format(date);
+        case "YEAR":
+          return date.getFullYear();
+        case "HEMISPHERE":
+          return this.hemisphere;
+        case "SEASON":
+          switch (month) {
+            case 12:
+            case 1:
+            case 2:
+              return this.hemisphere == "northern" ? "winter" : "summer";
+            case 3:
+            case 4:
+            case 5:
+              return this.hemisphere == "northern" ? "spring" : "autumn";
+            case 6:
+            case 7:
+            case 8:
+              return this.hemisphere == "northern" ? "summer" : "winter";
+            case 9:
+            case 10:
+            case 11:
+              return this.hemisphere == "northern" ? "autumn" : "spring";
+          }
+          break;
+        case "WINTER":
+          return this.hemisphere == "northern" && (month >= 12 || month <= 2) || this.hemisphere == "southern" && (month >= 6 && month <= 8) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "SPRING":
+          return this.hemisphere == "northern" && (month >= 3 && month <= 5) || this.hemisphere == "southern" && (month >= 9 && month <= 11) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "SUMMER":
+          return this.hemisphere == "northern" && (month >= 6 && month <= 8) || this.hemisphere == "southern" && (month >= 12 || month <= 2) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "AUTUMN":
+          return this.hemisphere == "northern" && (month >= 9 && month <= 11) || this.hemisphere == "southern" && (month >= 3 && month <= 5) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "WIDTH":
+          return Globals.app.screen.width;
+        case "HEIGHT":
+          return Globals.app.screen.height;
+        case "CENTREX":
+        case "CENTERX":
+          return Math.floor(Globals.app.screen.width / 2);
+        case "CENTREY":
+        case "CENTERY":
+          return Math.floor(Globals.app.screen.height / 2);
+        case "RANDOMX":
+          return Math.floor(Math.random() * Globals.app.screen.width);
+        case "RANDOMY":
+          return Math.floor(Math.random() * Globals.app.screen.height);
+        case "CHANCE":
+          return Math.random();
+        case "PERCENT":
+        case "PERCENTAGE":
+          return Math.floor(Math.random() * 101);
+        case "TRIGGER":
+          return this.trigger;
+        case "WEEKDAY":
+          return date.getDay() > 0 && date.getDay() < 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "WEEKEND":
+          return date.getDay() == 0 || date.getDay() == 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "MORNING":
+          return date.getHours() > 6 && date.getHour() < 13 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "AFTERNOON":
+          return date.getHours() > 11 && date.getHour() < 18 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "EVENING":
+          return date.getHours() > 18 && date.getHour() < 22 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+        case "NIGHT":
+          return t_or_f(date.getHours() > 22 || date.getHour() < 6);
+        case "KEY":
+          return Globals.key == null ? defaults_default.NOTFOUND : Globals.key;
+        case "LASTKEY":
+          return Globals.lastKey == null ? defaults_default.NOTFOUND : Globals.lastKey;
+        case "SCALEX":
+          return Globals.script_scale_x;
+        case "SCALEY":
+          return Globals.script_scale_y;
+        default:
+          return false;
+      }
+    }
+    static scene_var(varName) {
+      let value2 = "NONE";
+      const parts = varName.split(/:/);
+      const scene2 = Scene.find(parts[0]);
+      if (scene2 !== false) {
+        value2 = scene2.varList.get_value(parts[1]);
+      }
+      return value2;
+    }
+    find(name) {
+      for (let i = 0; i < this.variables.length; i++) {
+        let variable = this.variables[i];
+        if (variable.name == name) {
+          return i;
+        }
+      }
+      return false;
+    }
+    get_value(varName) {
+      let value2 = false;
+      let sceneName = this.sceneName;
+      if (varName.match(/:/)) {
+        const colonParts = varName.split(/:/);
+        varName = colonParts[1];
+        sceneName = colonParts[0];
+      }
+      if (varName.match(/\./)) {
+        const parts = varName.split(/\./, 2);
+        const sprite = SG_sprite.get_sprite(sceneName, parts[0], false);
+        if (sprite != null) {
+          switch (parts[1]) {
+            case "x":
+            case "loc.x":
+            case "location.x":
+            case "pos.x":
+            case "position.x":
+              value2 = sprite.loc_x.value();
+              break;
+            case "y":
+            case "loc.y":
+            case "location.y":
+            case "pos.y":
+            case "position.y":
+              value2 = sprite.loc_y.value();
+              break;
+            case "z":
+            case "depth":
+              value2 = sprite.depth;
+              break;
+            case "sx":
+            case "size.x":
+              value2 = sprite.size_x.value();
+              break;
+            case "sy":
+            case "size.y":
+              value2 = sprite.size_y.value();
+              break;
+            case "angle":
+            case "rotation":
+              value2 = sprite.angle.value();
+              break;
+            case "visible":
+              value2 = t_or_f(sprite.visible);
+              break;
+            case "role":
+              if (sprite.role == null) {
+                value2 = defaults_default.NOTFOUND;
+              } else {
+                value2 = sprite.role;
+              }
+              break;
+            // More still to do
+            default:
+          }
+        }
+      }
+      if (value2 == false) {
+        value2 = _VarList.built_in(varName);
+      }
+      if (value2 == false) {
+        if (sceneName != this.sceneName) {
+          const otherScene = Scene.find(sceneName);
+          if (scene !== false) {
+            value2 = otherScene.varList.get_value(varName);
+          }
+        } else {
+          let index = this.find(varName);
+          if (index !== false) {
+            value2 = this.variables[index].getValue();
+          }
+        }
+      }
+      if (value2 == false) {
+        Globals.log.error("Variable not found " + varName);
+        value2 = defaults_default.NOTFOUND;
+      }
+      return value2;
+    }
+    update(name, value2) {
+      if (_VarList.built_in(name)) {
+        Globals.log.error("Cannot update built-in variable " + name);
+        return false;
+      }
+      let index = this.find(name);
+      if (index === false) {
+        Globals.log.error("Variable not found " + name);
+        return defaults_default.NOTFOUND;
+      }
+      return this.variables[index].setValue(value2);
+    }
+    delete(name) {
+      let index = this.find(name);
+      if (index === false) {
+        Globals.log.error("Variable not found " + name);
+        return false;
+      }
+      if (!this.variables[index].setValue(0)) {
+        Globals.log.error("Cannot delete readonly variable " + name);
+        return false;
+      }
+      this.variables.splice(index, 1);
+      return true;
+    }
+    expand_vars(input) {
+      let output = "";
+      let i = 0;
+      while (i < input.length) {
+        if (input[i] === "\\" && input[i + 1] === "$") {
+          output += "$";
+          i += 2;
+          continue;
+        }
+        if (input[i] === "$") {
+          let j = i + 1;
+          let varName = "";
+          if (input[j] === "{") {
+            j++;
+            const start = j;
+            while (j < input.length && input[j] !== "}") {
+              j++;
+            }
+            if (j < input.length && input[j] === "}") {
+              varName = input.slice(start, j);
+              j++;
+            } else {
+              output += "$";
+              i++;
+              continue;
+            }
+          } else {
+            const start = j;
+            while (j < input.length && /[a-zA-Z0-9_:]/.test(input[j])) {
+              j++;
+            }
+            varName = input.slice(start, j);
+          }
+          let replacement = "";
+          if (varName.match(/:/)) {
+            replacement = _VarList.scene_var(varName);
+          } else {
+            replacement = this.get_value(varName);
+          }
+          output += replacement;
+          i = j;
+          continue;
+        }
+        output += input[i];
+        i++;
+      }
+      return output;
     }
   };
 
@@ -214,13 +599,13 @@
       (position) => {
         const lat = position.coords.latitude;
         if (lat < 0) {
-          callback("southern");
+          VarList.hemisphere = "southern";
         } else {
-          callback("northern");
+          VarList.hemisphere = "northern";
         }
       },
       (error) => {
-        callback(DEFAULT);
+        VarList.hemisphere = DEFAULT;
       },
       {
         timeout: 5e3
@@ -228,32 +613,9 @@
       }
     );
   }
-
-  // src/defaults.js
-  var defaults_default = {
-    DISPLAY_HEIGHT: 600,
-    DISPLAY_WIDTH: 800,
-    HEMISPHERE: "northern",
-    // to give the correct calendar season
-    DEBUG: true,
-    LOCALE: "en-GB",
-    TRUEVALUE: "YES",
-    FALSEVALUE: "NO",
-    NOTFOUND: "NONE",
-    TRIGGER_RATE: 500,
-    // milliseconds between trigger tests
-    SPRITE_RATE: 40,
-    // milliseconds between sprite updates
-    MAIN_NAME: "_MAIN_",
-    VOLUME_MIN: 0,
-    VOLUME_MAX: 100,
-    // scaling types
-    SCALE_FIT: "fit",
-    SCALE_STRETCH: "stretch",
-    SCALE_NONE: "none",
-    GRAVITY_PS2: 100
-    // force of gravity in pixels per second per second
-  };
+  function t_or_f(value2) {
+    return value2 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+  }
 
   // src/globals.js
   var Globals = class _Globals {
@@ -306,14 +668,14 @@
   };
 
   // src/sg_sprite.js
-  function get_image(scene, tag) {
+  function get_image(scene2, tag) {
     let parts = tag.split(":");
     if (parts.length > 1) {
-      scene = parts[0];
+      scene2 = parts[0];
       tag = parts[1];
     }
     for (let i = 0; i < Globals.scenes.length; i++) {
-      if (Globals.scenes[i].name == scene) {
+      if (Globals.scenes[i].name == scene2) {
         for (let j = 0; j < Globals.scenes[i].images.length; j++) {
           if (Globals.scenes[i].images[j].tag == tag) {
             if (Globals.scenes[i].images[j].loading) {
@@ -325,7 +687,7 @@
         }
       }
     }
-    Globals.log.error("No image found- " + scene + ":" + tag);
+    Globals.log.error("No image found- " + scene2 + ":" + tag);
     return null;
   }
   var SG_image = class {
@@ -354,7 +716,7 @@
       this.size_y = new Adjustable(0);
       this.visible = true;
       this.transparency = new Adjustable(100, 0, 100);
-      this.location = null;
+      this.role = null;
       this.next_blink = 0;
       this.blink_rate = 0;
       this.blink_chance = 0;
@@ -377,7 +739,17 @@
       }
       this.loc_x.set_target_value(x);
       this.loc_y.set_target_value(y);
-      this.depth = depth;
+      this.set_depth("to", depth);
+    }
+    set_depth(depth_type, value2) {
+      if (depth_type == "by") {
+        this.depth += value2;
+      } else {
+        this.depth = value2;
+      }
+      if (this.enabled && this.pi_sprite != null) {
+        this.pi_sprite.zIndex = this.depth;
+      }
     }
     move(new_x, new_y, to_or_by, in_or_at, duration, now, callback) {
       if (to_or_by == "by") {
@@ -388,6 +760,7 @@
       }
       this.loc_x.set_target_value(new_x, duration, now, callback);
       this.loc_y.set_target_value(new_y, duration, now);
+      this.enabled = true;
     }
     rotate(turn_type, value2, dur_type, duration, now, callback) {
       let new_value = 0;
@@ -520,42 +893,48 @@
       this.size_x.set_target_value(new_w, duration, now, callback);
       this.size_y.set_target_value(new_h, duration, now);
     }
-    update(scene, now) {
+    update(scene2, now) {
       if (!this.enabled) {
         return;
       }
       if (this.pi_sprite === null || this.pi_sprite.texture == PIXI.Texture.EMPTY) {
-        let image = get_image(scene, this.image_tag);
+        let image = get_image(scene2, this.image_tag);
         if (image === null) {
           this.enabled = false;
           return;
         }
         if (image != "loading") {
-          if (this.location != null) {
+          if (this.role != null) {
             const img_width = image.pi_image.width;
             const img_height = image.pi_image.height;
             const wdw_width = Globals.app.screen.width;
             const wdw_height = Globals.app.screen.height;
             const scale_y = img_height / wdw_height;
             const scale_x = img_width / wdw_width;
-            switch (this.location) {
+            let depth = null;
+            switch (this.role) {
               case "background":
+              // centre, and scale to window size
+              case "backdrop":
                 this.loc_x.set_target_value(wdw_width / 2);
                 this.loc_y.set_target_value(wdw_height / 2);
                 this.size_x.set_target_value(wdw_width);
                 this.size_y.set_target_value(wdw_height);
+                depth = defaults_default.DEPTH_BACKGROUND;
                 break;
               case "left":
                 this.loc_x.set_target_value(img_width / 2);
                 this.loc_y.set_target_value(wdw_height / 2);
                 this.size_x.set_target_value(scale_y * img_width);
                 this.size_y.set_target_value(scale_y * img_height);
+                depth = defaults_default.DEPTH_LEFT;
                 break;
               case "right":
                 this.loc_x.set_target_value(wdw_width - img_width / 2);
                 this.loc_y.set_target_value(wdw_height / 2);
                 this.size_x.set_target_value(scale_y * img_width);
                 this.size_y.set_target_value(scale_y * img_height);
+                depth = defaults_default.DEPTH_RIGHT;
                 break;
               case "top":
               case "sky":
@@ -563,14 +942,20 @@
                 this.loc_y.set_target_value(img_height / 2);
                 this.size_x.set_target_value(scale_x * img_width);
                 this.size_y.set_target_value(scale_x * img_height);
+                depth = defaults_default.DEPTH_SKY;
                 break;
               case "bottom":
               case "ground":
+              case "foreground":
                 this.loc_x.set_target_value(wdw_width / 2);
                 this.loc_y.set_target_value(wdw_height - img_height / 2);
                 this.size_x.set_target_value(scale_x * img_width);
                 this.size_y.set_target_value(scale_x * img_height);
+                depth = this.role == "ground" ? defaults_default.DEPTH_GROUND : defaults_default.DEPTH_FOREGROUND;
                 break;
+            }
+            if (this.depth == null) {
+              this.depth = depth;
             }
           }
           this.pi_sprite = new PIXI.Sprite({
@@ -582,6 +967,7 @@
             },
             visible: this.visible
           });
+          this.pi_sprite.zIndex = this.depth;
           if (this.size_x.value() > 0 && this.size_y.value() > 0) {
             this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
           }
@@ -594,6 +980,10 @@
         if (this.pi_sprite !== null) {
           this.pi_sprite.position.set(this.loc_x.value(), this.loc_y.value());
         }
+      }
+      if (Math.abs(this.loc_x.value()) > Globals.width * defaults_default.BOUNDS_X || Math.abs(this.loc_y.value()) > Globals.width * defaults_default.BOUNDS_Y) {
+        this.enabled = false;
+        return;
       }
       if (this.falling) {
         const falling_time = (now - this.throw_time) / 1e3;
@@ -654,14 +1044,17 @@
         }
       }
     }
-    static get_sprite(scene, tag) {
+    static get_sprite(scene2, tag, report) {
+      if (arguments.length < 3) {
+        report = true;
+      }
       let parts = tag.split(":");
       if (parts.length > 1) {
-        scene = parts[0];
+        scene2 = parts[0];
         tag = parts[1];
       }
       for (let i = 0; i < Globals.scenes.length; i++) {
-        if (Globals.scenes[i].name == scene) {
+        if (Globals.scenes[i].name == scene2) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
             if (Globals.scenes[i].sprites[j].tag == tag) {
               return Globals.scenes[i].sprites[j];
@@ -669,17 +1062,19 @@
           }
         }
       }
-      Globals.log.error("No sprite found- " + scene + ":" + tag);
+      if (report) {
+        Globals.log.error("No sprite found- " + scene2 + ":" + tag);
+      }
       return null;
     }
-    static remove_sprite(scene, tag) {
+    static remove_sprite(scene2, tag) {
       let parts = tag.split(":");
       if (parts.length > 1) {
-        scene = parts[0];
+        scene2 = parts[0];
         tag = parts[1];
       }
       for (let i = 0; i < Globals.scenes.length; i++) {
-        if (Globals.scenes[i].name == scene) {
+        if (Globals.scenes[i].name == scene2) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
             if (Globals.scenes[i].sprites[j].tag == tag) {
               Globals.scenes[i].sprites[j].pi_sprite.destroy();
@@ -689,7 +1084,7 @@
           }
         }
       }
-      Globals.log.error("No sprite found- " + scene + ":" + tag);
+      Globals.log.error("No sprite found- " + scene2 + ":" + tag);
     }
   };
 
@@ -778,8 +1173,8 @@
 
   // src/triggers.js
   var Trigger = class {
-    constructor(scene, timestamp, params) {
-      this.scene = scene;
+    constructor(scene2, timestamp, params) {
+      this.scene = scene2;
       this.triggered = false;
       this.expired = false;
       this.next_update = 0;
@@ -798,8 +1193,8 @@
     }
   };
   var Begin = class extends Trigger {
-    constructor(scene, timestamp, params) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params) {
+      super(scene2, timestamp, params);
     }
     fired(timestamp) {
       if (this.expired) {
@@ -811,8 +1206,8 @@
     }
   };
   var After = class extends Trigger {
-    constructor(scene, timestamp, params) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params) {
+      super(scene2, timestamp, params);
       this.trigger_time = null;
     }
     fired(timestamp) {
@@ -832,8 +1227,8 @@
     }
   };
   var Every = class extends Trigger {
-    constructor(scene, timestamp, params) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params) {
+      super(scene2, timestamp, params);
       this.trigger_rate = null;
       this.last_triggered = timestamp;
     }
@@ -852,8 +1247,8 @@
     }
   };
   var IfWhile = class extends Trigger {
-    constructor(scene, timestamp, params, keyword) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params, keyword) {
+      super(scene2, timestamp, params);
       this.keyword = keyword;
     }
     fired(timestamp) {
@@ -924,8 +1319,8 @@
     }
   };
   var AtClass = class extends Trigger {
-    constructor(scene, timestamp, params) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params) {
+      super(scene2, timestamp, params);
       this.minutes = null;
       this.hours = null;
       this.seconds = 0;
@@ -978,8 +1373,8 @@
     }
   };
   var ThenClass = class extends Trigger {
-    constructor(scene, timestamp, params, linked_action_group) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params, linked_action_group) {
+      super(scene2, timestamp, params);
       this.linked_action_group = linked_action_group;
     }
     fired(timestamp) {
@@ -994,8 +1389,8 @@
     }
   };
   var Each = class extends Trigger {
-    constructor(scene, timestamp, params) {
-      super(scene, timestamp, params);
+    constructor(scene2, timestamp, params) {
+      super(scene2, timestamp, params);
       this.minutes = null;
       this.hours = null;
       this.seconds = 0;
@@ -1032,257 +1427,6 @@
         matched = false;
       }
       return matched;
-    }
-  };
-
-  // src/vars.js
-  var Variable = class {
-    constructor(name, value2) {
-      this.name = name;
-      this.value = value2;
-    }
-    getValue() {
-      return this.value;
-    }
-    setValue(value2) {
-      this.value = value2;
-      return true;
-    }
-  };
-  var VarList = class _VarList {
-    static key = null;
-    static lastKey = null;
-    constructor() {
-      this.variables = [];
-      this.trigger = null;
-      this.hemisphere = null;
-      getHemisphere(this.makeHemisphereCallback(this));
-    }
-    makeHemisphereCallback(object) {
-      return function(hemisphere) {
-        object.hemisphere = hemisphere;
-      };
-    }
-    create(name, value2) {
-      if (_VarList.built_in(name)) {
-        Globals.log.error("Cannot create built-in variable " + name);
-      } else {
-        this.variables.push(new Variable(name, value2));
-      }
-    }
-    /**************************************************************************************************
-    
-       ########  ##     ## #### ##       ########         #### ##    ##  ######  
-       ##     ## ##     ##  ##  ##          ##             ##  ###   ## ##    ## 
-       ##     ## ##     ##  ##  ##          ##             ##  ####  ## ##       
-       ########  ##     ##  ##  ##          ##    #######  ##  ## ## ##  ######  
-       ##     ## ##     ##  ##  ##          ##             ##  ##  ####       ## 
-       ##     ## ##     ##  ##  ##          ##             ##  ##   ### ##    ## 
-       ########   #######  #### ########    ##            #### ##    ##  ######  
-    
-    **************************************************************************************************/
-    static built_in(name) {
-      const date = /* @__PURE__ */ new Date();
-      const month = date.getMonth() + 1;
-      switch (name) {
-        case "SECONDS":
-        case "SECOND":
-          return new Intl.DateTimeFormat(defaults_default.LOCALE, { second: "numeric" }).format(date);
-        case "MINUTES":
-        case "MINUTE":
-          return new Intl.DateTimeFormat(defaults_default.LOCALE, { minute: "numeric" }).format(date);
-        case "HOUR":
-        case "HOURS":
-          return new Intl.DateTimeFormat(defaults_default.LOCALE, { hour: "numeric" }).format(date);
-        case "DAYOFWEEK":
-          return date.getDay() + 1;
-        // Sunday = 1
-        case "DAYNAME":
-          return new Intl.DateTimeFormat(defaults_default.LOCALE, { weekday: "long" }).format(date);
-        case "MONTH":
-          return month;
-        case "MONTHNAME":
-          return new Intl.DateTimeFormat(defaults_default.LOCALE, { month: "long" }).format(date);
-        case "YEAR":
-          return date.getFullYear();
-        case "HEMISPHERE":
-          return this.hemisphere;
-        case "SEASON":
-          switch (month) {
-            case 12:
-            case 1:
-            case 2:
-              return this.hemisphere == "northern" ? "winter" : "summer";
-            case 3:
-            case 4:
-            case 5:
-              return this.hemisphere == "northern" ? "spring" : "autumn";
-            case 6:
-            case 7:
-            case 8:
-              return this.hemisphere == "northern" ? "summer" : "winter";
-            case 9:
-            case 10:
-            case 11:
-              return this.hemisphere == "northern" ? "autumn" : "spring";
-          }
-          break;
-        case "WINTER":
-          return this.hemisphere == "northern" && (month >= 12 || month <= 2) || this.hemisphere == "southern" && (month >= 6 && month <= 8) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "SPRING":
-          return this.hemisphere == "northern" && (month >= 3 && month <= 5) || this.hemisphere == "southern" && (month >= 9 && month <= 11) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "SUMMER":
-          return this.hemisphere == "northern" && (month >= 6 && month <= 8) || this.hemisphere == "southern" && (month >= 12 || month <= 2) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "AUTUMN":
-          return this.hemisphere == "northern" && (month >= 9 && month <= 11) || this.hemisphere == "southern" && (month >= 3 && month <= 5) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "WIDTH":
-          return Globals.app.screen.width;
-        case "HEIGHT":
-          return Globals.app.screen.height;
-        case "CENTREX":
-        case "CENTERX":
-          return Math.floor(Globals.app.screen.width / 2);
-        case "CENTREY":
-        case "CENTERY":
-          return Math.floor(Globals.app.screen.height / 2);
-        case "RANDOMX":
-          return Math.floor(Math.random() * Globals.app.screen.width);
-        case "RANDOMY":
-          return Math.floor(Math.random() * Globals.app.screen.height);
-        case "CHANCE":
-          return Math.random();
-        case "PERCENT":
-        case "PERCENTAGE":
-          return Math.floor(Math.random() * 101);
-        case "TRIGGER":
-          return this.trigger;
-        case "WEEKDAY":
-          return date.getDay() > 0 && date.getDay() < 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "WEEKEND":
-          return date.getDay() == 0 || date.getDay() == 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "MORNING":
-          return date.getHour() > 6 && date.getHour() < 13 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "AFTERNOON":
-          return date.getHour() > 11 && date.getHour() < 18 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "EVENING":
-          return date.getHour() > 18 && date.getHour() < 22 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "NIGHT":
-          return date.getHour() > 22 || date.getHour() < 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
-        case "KEY":
-          return Globals.key == null ? defaults_default.NOTFOUND : Globals.key;
-        case "LASTKEY":
-          return Globals.lastKey == null ? defaults_default.NOTFOUND : Globals.lastKey;
-        case "SCALEX":
-          return Globals.script_scale_x;
-        case "SCALEY":
-          return Globals.script_scale_y;
-        default:
-          return false;
-      }
-    }
-    static scene_var(varName) {
-      let value2 = "NONE";
-      const parts = varName.split(/:/);
-      const scene = Scene.find(parts[0]);
-      if (scene !== false) {
-        value2 = scene.varList.get_value(parts[1]);
-      }
-      return value2;
-    }
-    find(name) {
-      for (let i = 0; i < this.variables.length; i++) {
-        let variable = this.variables[i];
-        if (variable.name == name) {
-          return i;
-        }
-      }
-      return false;
-    }
-    get_value(name) {
-      let value2 = _VarList.built_in(name);
-      if (value2 === false) {
-        let index = this.find(name);
-        if (index !== false) {
-          value2 = this.variables[index].getValue();
-        } else {
-          Globals.log.error("Variable not found " + name);
-          value2 = defaults_default.NOTFOUND;
-        }
-      }
-      return value2;
-    }
-    update(name, value2) {
-      if (_VarList.built_in(name)) {
-        Globals.log.error("Cannot update built-in variable " + name);
-        return false;
-      }
-      let index = this.find(name);
-      if (index === false) {
-        Globals.log.error("Variable not found " + name);
-        return defaults_default.NOTFOUND;
-      }
-      return this.variables[index].setValue(value2);
-    }
-    delete(name) {
-      let index = this.find(name);
-      if (index === false) {
-        Globals.log.error("Variable not found " + name);
-        return false;
-      }
-      if (!this.variables[index].setValue(0)) {
-        Globals.log.error("Cannot delete readonly variable " + name);
-        return false;
-      }
-      this.variables.splice(index, 1);
-      return true;
-    }
-    expand_vars(input) {
-      let output = "";
-      let i = 0;
-      while (i < input.length) {
-        if (input[i] === "\\" && input[i + 1] === "$") {
-          output += "$";
-          i += 2;
-          continue;
-        }
-        if (input[i] === "$") {
-          let j = i + 1;
-          let varName = "";
-          if (input[j] === "{") {
-            j++;
-            const start = j;
-            while (j < input.length && input[j] !== "}") {
-              j++;
-            }
-            if (j < input.length && input[j] === "}") {
-              varName = input.slice(start, j);
-              j++;
-            } else {
-              output += "$";
-              i++;
-              continue;
-            }
-          } else {
-            const start = j;
-            while (j < input.length && /[a-zA-Z0-9_:]/.test(input[j])) {
-              j++;
-            }
-            varName = input.slice(start, j);
-          }
-          let replacement = "";
-          if (varName.match(/:/)) {
-            replacement = _VarList.scene_var(varName);
-          } else {
-            replacement = this.get_value(varName);
-          }
-          output += replacement;
-          i = j;
-          continue;
-        }
-        output += input[i];
-        i++;
-      }
-      return output;
     }
   };
 
@@ -1446,7 +1590,7 @@
       this.images = [];
       this.sprites = [];
       this.folder = "";
-      this.varList = new VarList();
+      this.varList = new VarList(sceneName);
       this.timers = [];
       this.completion_callback = null;
     }
@@ -1800,6 +1944,11 @@
             Parser.test_word(words, "of");
             command = "fade";
             break;
+          case "speed":
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "speed";
+            break;
           case "position":
           case "pos":
             words.shift();
@@ -1916,11 +2065,11 @@
         case "place":
           if (words.length > 0) {
             let image_tag = words.shift();
-            let sprite_tag = image_tag;
+            let sprite_tag2 = image_tag;
             if (Parser.test_word(words, ["named", "as"])) {
-              sprite_tag = Parser.get_word(words, image_tag);
+              sprite_tag2 = Parser.get_word(words, image_tag);
             }
-            let sg_sprite = new SG_sprite(image_tag, sprite_tag);
+            let sg_sprite = new SG_sprite(image_tag, sprite_tag2);
             let hidden = Parser.test_word(words, "hidden");
             if (hidden) {
               sg_sprite.set_visibility(false);
@@ -1952,11 +2101,11 @@
         **************************************************************************************************/
         case "replace":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
+            let sprite_tag2 = words.shift();
             Parser.test_word(words, "with");
             let image_tag = words.shift();
             let hidden = Parser.test_word(words, "hidden");
-            let sg_sprite = SG_sprite.get_sprite(sprite_tag);
+            let sg_sprite = SG_sprite.get_sprite(sprite_tag2);
             if (hidden) {
               sg_sprite.set_visibility(false);
             }
@@ -1979,25 +2128,41 @@
         
         **************************************************************************************************/
         case "put":
+        case "use":
           if (words.length > 0) {
             let image_tag = words.shift();
-            let sprite_tag = null;
+            let sprite_tag2 = null;
             if (Parser.test_word(words, "named")) {
-              sprite_tag = Parser.get_word(words, image_tag);
+              sprite_tag2 = Parser.get_word(words, image_tag);
             }
-            let sg_sprite = new SG_sprite(image_tag, sprite_tag);
             Parser.test_word(words, ["as", "at"]);
-            const location = Parser.test_word(words, ["background", "top", "bottom", "left", "right", "ground", "sky"]);
-            if (location == false) {
-              Globals.log.error("Unknown location at line " + line_no);
+            let role = Parser.test_word(words, [
+              "background",
+              "backdrop",
+              "top",
+              "bottom",
+              "left",
+              "right",
+              "ground",
+              "sky",
+              "foreground",
+              "frame"
+            ]);
+            if (role == false) {
+              Globals.log.error("Unknown role " + role + " at line " + line_no);
               break;
             }
-            if (sprite_tag == null) {
-              sprite_tag = location;
+            if (sprite_tag2 == null) {
+              sprite_tag2 = role;
             }
-            Parser.test_word(words, "depth");
-            sg_sprite.depth = Parser.get_int(words, 0);
-            sg_sprite.location = location;
+            let sg_sprite = new SG_sprite(image_tag, sprite_tag2);
+            sg_sprite.role = role;
+            Parser.test_word(words, ["as", "at"]);
+            if (Parser.test_word(words, "depth")) {
+              sg_sprite.depth = Parser.get_int(words, 0);
+            } else {
+              sg_sprite.depth = null;
+            }
             this.sprites.push(sg_sprite);
           } else {
             Globals.log.error("Missing put data at line " + line_no);
@@ -2068,9 +2233,8 @@
         **************************************************************************************************/
         case "move":
           if (words.length > 0) {
-            let by_or_to = "to";
-            let sprite_tag = words.shift();
-            by_or_to = Parser.get_word(words, ["by", "to"]);
+            let sprite_tag2 = words.shift();
+            let by_or_to = Parser.get_word(words, ["by", "to"]);
             if (by_or_to === false) {
               Globals.log.error("Expected by or to on line " + line_no);
               break;
@@ -2083,12 +2247,64 @@
               break;
             }
             let duration2 = Parser.get_duration(words, 0);
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-            sprite.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            sprite2.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
           } else {
             Globals.log.error("Missing move data at line " + line_no);
             action_group.complete_action("moveX");
           }
+          break;
+        /**************************************************************************************************
+        
+            ######  ########  ######## ######## ########  
+           ##    ## ##     ## ##       ##       ##     ## 
+           ##       ##     ## ##       ##       ##     ## 
+            ######  ########  ######   ######   ##     ## 
+                 ## ##        ##       ##       ##     ## 
+           ##    ## ##        ##       ##       ##     ## 
+            ######  ##        ######## ######## ########  
+        
+        **************************************************************************************************/
+        case "speed":
+          let sprite_tag = words.shift();
+          Parser.test_word(words, "to");
+          let speed = Parser.get_int(words, 0) * Globals.script_scale_x;
+          let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+          sprite.set_speed(speed);
+          action_group.complete_action("speed");
+          break;
+        /**************************************************************************************************
+        
+        ########     ###    ####  ######  ######## 
+        ##     ##   ## ##    ##  ##    ## ##       
+        ##     ##  ##   ##   ##  ##       ##       
+        ########  ##     ##  ##   ######  ######   
+        ##   ##   #########  ##        ## ##       
+        ##    ##  ##     ##  ##  ##    ## ##       
+        ##     ## ##     ## ####  ######  ######## 
+        
+        **************************************************************************************************/
+        case "raise":
+        case "lower":
+          if (words.length > 0) {
+            let sprite_tag2 = words.shift();
+            let depth_type = Parser.get_word(words, ["to", "by"]);
+            if (depth_type === false) {
+              Globals.log.error("Expected to or by on line " + line_no);
+              break;
+            }
+            let value2 = Parser.get_int(words, 0);
+            if (command == "lower") {
+              value2 = -value2;
+            }
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (sprite2 != null) {
+              sprite2.set_depth(depth_type, value2);
+            }
+          } else {
+            Globals.log.error("Missing raise/lower data at line " + line_no);
+          }
+          action_group.complete_action("raise");
           break;
         /**************************************************************************************************
         
@@ -2103,7 +2319,7 @@
         **************************************************************************************************/
         case "resize":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
+            let sprite_tag2 = words.shift();
             let to_or_by = Parser.get_word(words, ["to", "by"]);
             if (to_or_by === false) {
               Globals.log.error("Expected to or by on line " + line_no);
@@ -2117,8 +2333,8 @@
               break;
             }
             let duration2 = Parser.get_duration(words, 0);
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-            sprite.resize(
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            sprite2.resize(
               w,
               h,
               to_or_by,
@@ -2169,13 +2385,13 @@
         case "rotate":
         case "turn":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
+            let sprite_tag2 = words.shift();
             let turn_type = Parser.test_word(words, ["to", "by", "at"], "to");
             let value2 = Parser.get_int(words, 0);
             let dur_type = Parser.test_word(words, ["in", "per"], "in");
             let duration2 = Parser.get_duration(words, 0);
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-            sprite.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            sprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
           } else {
             Globals.log.error("Missing rotate data at line " + line_no);
             action_group.complete_action("rotateX");
@@ -2195,18 +2411,18 @@
         case "throw":
         case "launch":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
+            let sprite_tag2 = words.shift();
             const stop_or_at = Parser.test_word(words, ["at", "stop"], "at");
             let angle = Parser.get_int(words, 0);
             Parser.test_word(words, ["deg", "degs", "degrees"]);
             Parser.test_word(words, "with");
             Parser.test_word(words, ["force", "velocity", "speed"]);
             let initial_velocity = Parser.get_int(words, 10);
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             if (stop_or_at == "stop") {
-              sprite.throw("stop");
+              sprite2.throw("stop");
             } else {
-              sprite.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
+              sprite2.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing throw data at line " + line_no);
@@ -2225,12 +2441,12 @@
         **************************************************************************************************/
         case "drop":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             if (Parser.test_word(words, "stop")) {
-              sprite.throw("stop");
+              sprite2.throw("stop");
             } else {
-              sprite.throw(180, 0, now, makeCompletionCallback(action_group));
+              sprite2.throw(180, 0, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing drop data at line " + line_no);
@@ -2251,14 +2467,14 @@
         case "hide":
         case "toggle":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             if (command == "show") {
-              sprite.set_visibility(true);
+              sprite2.set_visibility(true);
             } else if (command == "hide") {
-              sprite.set_visibility(false);
+              sprite2.set_visibility(false);
             } else if (command == "toggle") {
-              sprite.set_visibility("toggle");
+              sprite2.set_visibility("toggle");
             }
           } else {
             Globals.log.error("Missing sprite tag at line " + line_no);
@@ -2267,22 +2483,22 @@
           break;
         /**************************************************************************************************
         
-        ######  ########    ###    ########  ########       ##  ######  ########  #######  ########  
-        ##    ##    ##      ## ##   ##     ##    ##         ##  ##    ##    ##    ##     ## ##     ## 
-        ##          ##     ##   ##  ##     ##    ##        ##   ##          ##    ##     ## ##     ## 
-        ######     ##    ##     ## ########     ##       ##     ######     ##    ##     ## ########  
-                ##    ##    ######### ##   ##      ##      ##           ##    ##    ##     ## ##        
-        ##    ##    ##    ##     ## ##    ##     ##     ##      ##    ##    ##    ##     ## ##        
-        ######     ##    ##     ## ##     ##    ##    ##        ######     ##     #######  ##        
+            ######  ########    ###    ########  ######## 
+           ##    ##    ##      ## ##   ##     ##    ##    
+           ##          ##     ##   ##  ##     ##    ##    
+            ######     ##    ##     ## ########     ##    
+                 ##    ##    ######### ##   ##      ##    
+           ##    ##    ##    ##     ## ##    ##     ##    
+            ######     ##    ##     ## ##     ##    ##    
         
         **************************************************************************************************/
         case "start":
           if (words.length > 0) {
             for (let i = 0; i < words.length; i++) {
-              const scene = _Scene.find(words[i]);
-              if (scene !== false) {
+              const scene2 = _Scene.find(words[i]);
+              if (scene2 !== false) {
                 this.completion_callback = makeCompletionCallback(action_group);
-                scene.start();
+                scene2.start();
               }
             }
           } else {
@@ -2292,25 +2508,31 @@
           break;
         /**************************************************************************************************
         
-        ######  ########  #######  ########  
-        ##    ##    ##    ##     ## ##     ## 
-        ##          ##    ##     ## ##     ## 
-        ######     ##    ##     ## ########  
-                ##    ##    ##     ## ##        
-        ##    ##    ##    ##     ## ##        
-        ######     ##     #######  ##        
+            ######  ########  #######  ########  
+           ##    ##    ##    ##     ## ##     ## 
+           ##          ##    ##     ## ##     ## 
+            ######     ##    ##     ## ########  
+                 ##    ##    ##     ## ##        
+           ##    ##    ##    ##     ## ##        
+            ######     ##     #######  ##        
         
         **************************************************************************************************/
         case "stop":
+        case "halt":
           this.completion_callback = makeCompletionCallback(action_group);
           if (words.length > 0) {
             for (let i = 0; i < words.length; i++) {
               if (AudioManager.exists(words[i])) {
                 AudioManager.delete(words[i]);
               } else {
-                const scene = _Scene.find(words[i]);
-                if (scene !== false) {
-                  scene.stop();
+                const scene2 = _Scene.find(words[i]);
+                if (scene2 !== false) {
+                  scene2.stop();
+                } else {
+                  let sprite2 = SG_sprite.get_sprite(this.name, words[i], false);
+                  if (sprite2 != null) {
+                    sprite2.stop();
+                  }
                 }
               }
             }
@@ -2354,17 +2576,17 @@
         **************************************************************************************************/
         case "flicker":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let on_off = Parser.test_word(words, ["by", "stop"]);
             if (on_off == "stop") {
-              sprite.flicker(0, 0);
+              sprite2.flicker(0, 0);
             } else {
               let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals.script_scale_x;
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let flicker_chance = Parser.get_int(words, 50);
-              sprite.flicker(flicker_size, flicker_chance);
+              sprite2.flicker(flicker_size, flicker_chance);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -2385,11 +2607,11 @@
         case "jiggle":
         case "jitter":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let on_off = Parser.test_word(words, ["by", "stop"]);
             if (on_off == "stop") {
-              sprite.jiggle(0, 0, 0);
+              sprite2.jiggle(0, 0, 0);
             } else {
               let jiggle_x = Parser.get_int(words, 0) * Globals.script_scale_x;
               let jiggle_y = Parser.get_int(words, 0) * Globals.script_scale_y;
@@ -2397,7 +2619,7 @@
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let jiggle_chance = Parser.get_int(words, 50);
-              sprite.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
+              sprite2.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -2417,10 +2639,10 @@
         **************************************************************************************************/
         case "flash":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let flash_count = Parser.get_int(words, 0, 1, 10);
-            sprite.flash(flash_count, now);
+            sprite2.flash(flash_count, now);
           } else {
             Globals.log.error("Missing values at line " + line_no);
           }
@@ -2439,11 +2661,11 @@
         **************************************************************************************************/
         case "blink":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let on_off = Parser.test_word(words, ["at", "stop"]);
             if (on_off == "stop") {
-              sprite.blink(0, 0, now);
+              sprite2.blink(0, 0, now);
             } else {
               let blink_rate = Parser.get_int(words, 0, 1, 10);
               Parser.test_word(words, "per");
@@ -2451,7 +2673,7 @@
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let blink_chance = Parser.get_int(words, 100, 0, 100);
-              sprite.blink(blink_rate, blink_chance, now);
+              sprite2.blink(blink_rate, blink_chance, now);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -2472,11 +2694,11 @@
         case "pulse":
         case "pulsate":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let on_off = Parser.test_word(words, "stop");
             if (on_off == "stop") {
-              sprite.pulse(0, 0, 100, now);
+              sprite2.pulse(0, 0, 100, now);
             } else {
               Parser.test_word(words, "at");
               let pulse_rate = Parser.get_int(words, 0, 1, 10);
@@ -2486,7 +2708,7 @@
               let pulse_min = Parser.get_int(words, 0, 0, 100);
               Parser.test_word(words, "to");
               let pulse_max = Parser.get_int(words, 0, 100, 100);
-              sprite.pulse(pulse_rate, pulse_min, pulse_max, now);
+              sprite2.pulse(pulse_rate, pulse_min, pulse_max, now);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -2507,14 +2729,14 @@
         case "fade":
         case "trans":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let fade_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
             let value2 = Parser.get_int(words, 100);
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
-            if (sprite != null) {
-              sprite.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
+            if (sprite2 != null) {
+              sprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing fade parameters");
@@ -2534,14 +2756,14 @@
         case "blur":
         case "fuzz":
           if (words.length > 0) {
-            let sprite_tag = words.shift();
-            let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             let blur_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
             let value2 = Parser.get_int(words, 100);
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
-            if (sprite != null) {
-              sprite.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
+            if (sprite2 != null) {
+              sprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing fade parameters");
@@ -2606,6 +2828,7 @@
       const pixi = document.getElementById(_SlowGlass.sg_id);
       pixi.appendChild(Globals.app.canvas);
       Globals.root = new PIXI.Container();
+      Globals.root.sortableChildren = true;
       Globals.app.stage.addChild(Globals.root);
       Globals.app.ticker.add(this.update);
     }
@@ -2677,10 +2900,18 @@
       run();
     }
     interactiveAction(text) {
-      const dummyLine = new Line(1, text);
       const topScene = Scene2.find(defaults_default.MAIN_NAME);
       const dummyActionGroupIndex = topScene.actionGroups.length - 1;
-      topScene.runAction(dummyLine, topScene.actionGroups[dummyActionGroupIndex], Date.now());
+      const actionGroup = topScene.actionGroups[dummyActionGroupIndex];
+      const lines = text.split(/\r?\n/);
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i].trim();
+        if (lineText.length < 1) {
+          continue;
+        }
+        const dummyLine = new Line(i + 1, lineText);
+        topScene.runAction(dummyLine, actionGroup, Date.now());
+      }
     }
     setDrawingParent(elementID) {
       _SlowGlass.sg_id = elementID;

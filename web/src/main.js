@@ -31,6 +31,7 @@ class SlowGlass {
 
         // Root container for scene
         Globals.root = new PIXI.Container();
+        Globals.root.sortableChildren = true;
         Globals.app.stage.addChild(Globals.root);
 
         // Main loop
@@ -125,10 +126,19 @@ class SlowGlass {
     }
 
     interactiveAction(text) {
-        const dummyLine = new Utils.Line(1, text);
         const topScene = Scene.find(defaults.MAIN_NAME);
         const dummyActionGroupIndex = topScene.actionGroups.length - 1;
-        topScene.runAction(dummyLine, topScene.actionGroups[dummyActionGroupIndex], Date.now());
+        const actionGroup = topScene.actionGroups[dummyActionGroupIndex];
+        const lines = text.split(/\r?\n/);
+
+        for (let i = 0; i < lines.length; i++) {
+            const lineText = lines[i].trim();
+            if (lineText.length < 1) {
+                continue;
+            }
+            const dummyLine = new Utils.Line(i + 1, lineText);
+            topScene.runAction(dummyLine, actionGroup, Date.now());
+        }
     }
 
     setDrawingParent(elementID) {

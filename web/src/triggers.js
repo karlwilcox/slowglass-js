@@ -155,7 +155,7 @@ export class IfWhile extends Trigger {
         }
         if (expanded.length == 0) { // no arguments, just return something
             result = !inverted;
-        } else if (expanded.length == 1) { // check it for truthiness / falsiness
+        } else if (expanded.length == 1) { // check it for truthiness / falseiness
             if (expanded[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
                 result = !(Math.abs(parseFloat(expanded[0])) < 0.001); // zero is false, all else true
             } else if ( ["false","no","n","none"].includes(expanded[0].toLowerCase())) {

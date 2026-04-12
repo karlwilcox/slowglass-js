@@ -16,7 +16,7 @@ export class Scene {
         this.images = [];
         this.sprites = [];
         this.folder = '';
-        this.varList = new VarList();
+        this.varList = new VarList(sceneName);
         this.timers = [];
         this.completion_callback = null;
     }
@@ -430,6 +430,11 @@ export class Scene {
                     Parser.test_word(words, "of");
                     command = "fade";
                     break;
+                case "speed":
+                    words.shift();
+                    Parser.test_word(words, "of");
+                    command = "speed";
+                    break;
                 case "position":
                 case "pos":
                     words.shift();
@@ -470,7 +475,7 @@ export class Scene {
 
             case "echo":
             case "log":
-                Globals.log.error(words.join(' '));
+                Globals.log.log(words.join(' '));
                 action_group.complete_action("echo");
                 break;
 
@@ -641,6 +646,7 @@ export class Scene {
 **************************************************************************************************/
 
             case "put":
+            case "use":
                 if (words.length > 0) {
                     // which (already loaded) image to use?
                     let image_tag = words.shift();
@@ -649,19 +655,35 @@ export class Scene {
                     if (Parser.test_word(words,"named")) {
                         sprite_tag = Parser.get_word(words, image_tag);
                     }
-                    let sg_sprite = new SG_sprite(image_tag, sprite_tag);
                     Parser.test_word(words,["as","at"]);
-                    const location = Parser.test_word(words,["background","top","bottom","left","right","ground","sky"]);
-                    if (location == false) {
-                        Globals.log.error("Unknown location" + " at line " + line_no);
+                    let role = Parser.test_word(words,["background","backdrop","top","bottom","left",
+                            "right","ground","sky","foreground","frame"]);
+                    // resolve synonyms
+                    // switch(role) {
+                    //     case "background":
+                    //         role = "backdrop";
+                    //         break;
+                    //     case "top":
+                    //         role = "sky";
+                    //         break;
+                    //     default: // everything else is fine
+                    //         break;
+                    // }
+                    if (role == false) {
+                        Globals.log.error("Unknown role " + role + " at line " + line_no);
                         break;
                     } // else 
                     if ( sprite_tag == null ) {
-                        sprite_tag = location;
+                        sprite_tag = role;
                     }
-                    Parser.test_word(words,"depth");
-                    sg_sprite.depth = Parser.get_int(words, 0);
-                    sg_sprite.location = location;
+                    let sg_sprite = new SG_sprite(image_tag, sprite_tag);
+                    sg_sprite.role = role;
+                    Parser.test_word(words,["as","at"]);
+                    if (Parser.test_word(words,"depth")) {
+                        sg_sprite.depth = Parser.get_int(words, 0);
+                    } else {
+                        sg_sprite.depth = null; // let the system set it instead
+                    }
                     // can't set any other properties until we know the image size, so quit for now
                     this.sprites.push(sg_sprite);
                 } else {
@@ -739,9 +761,8 @@ export class Scene {
 
             case "move":
                 if (words.length > 0) {
-                    let by_or_to = "to";
                     let sprite_tag = words.shift();
-                    by_or_to = Parser.get_word(words, ["by","to"]);
+                    let by_or_to = Parser.get_word(words, ["by","to"]);
                     if (by_or_to === false) {
                         Globals.log.error("Expected by or to on line " + line_no);
                         break;
@@ -760,6 +781,63 @@ export class Scene {
                     Globals.log.error("Missing move data" + " at line " + line_no);
                     action_group.complete_action("moveX");
                 }
+                break;
+
+/**************************************************************************************************
+
+    ######  ########  ######## ######## ########  
+   ##    ## ##     ## ##       ##       ##     ## 
+   ##       ##     ## ##       ##       ##     ## 
+    ######  ########  ######   ######   ##     ## 
+         ## ##        ##       ##       ##     ## 
+   ##    ## ##        ##       ##       ##     ## 
+    ######  ##        ######## ######## ########  
+
+**************************************************************************************************/
+
+            case "speed":
+                let sprite_tag = words.shift();
+                Parser.test_word(words,"to");
+                let speed = Parser.get_int(words, 0) * Globals.script_scale_x;
+                let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+                sprite.set_speed(speed);
+                // speed change is instantaneous
+                action_group.complete_action("speed");
+                break;
+
+/**************************************************************************************************
+
+########     ###    ####  ######  ######## 
+##     ##   ## ##    ##  ##    ## ##       
+##     ##  ##   ##   ##  ##       ##       
+########  ##     ##  ##   ######  ######   
+##   ##   #########  ##        ## ##       
+##    ##  ##     ##  ##  ##    ## ##       
+##     ## ##     ## ####  ######  ######## 
+
+**************************************************************************************************/
+
+            case "raise":
+            case "lower":
+                if (words.length > 0) {
+                    let sprite_tag = words.shift();
+                    let depth_type = Parser.get_word(words, ["to", "by"]);
+                    if (depth_type === false) {
+                        Globals.log.error("Expected to or by on line " + line_no);
+                        break;
+                    }
+                    let value = Parser.get_int(words, 0);
+                    if (command == "lower") {
+                        value = -value;
+                    }
+                    let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+                    if (sprite != null) {
+                        sprite.set_depth(depth_type, value);
+                    }
+                } else {
+                    Globals.log.error("Missing raise/lower data at line " + line_no);
+                }
+                action_group.complete_action("raise");
                 break;
 
 /**************************************************************************************************
@@ -955,18 +1033,19 @@ export class Scene {
                 action_group.complete_action();
                 break;
 
+
 /**************************************************************************************************
 
-######  ########    ###    ########  ########       ##  ######  ########  #######  ########  
-##    ##    ##      ## ##   ##     ##    ##         ##  ##    ##    ##    ##     ## ##     ## 
-##          ##     ##   ##  ##     ##    ##        ##   ##          ##    ##     ## ##     ## 
-######     ##    ##     ## ########     ##       ##     ######     ##    ##     ## ########  
-        ##    ##    ######### ##   ##      ##      ##           ##    ##    ##     ## ##        
-##    ##    ##    ##     ## ##    ##     ##     ##      ##    ##    ##    ##     ## ##        
-######     ##    ##     ## ##     ##    ##    ##        ######     ##     #######  ##        
+    ######  ########    ###    ########  ######## 
+   ##    ##    ##      ## ##   ##     ##    ##    
+   ##          ##     ##   ##  ##     ##    ##    
+    ######     ##    ##     ## ########     ##    
+         ##    ##    ######### ##   ##      ##    
+   ##    ##    ##    ##     ## ##    ##     ##    
+    ######     ##    ##     ## ##     ##    ##    
 
 **************************************************************************************************/
-            
+
             case "start":
                 if (words.length > 0) {
                     for (let i = 0; i < words.length; i++) {
@@ -982,19 +1061,22 @@ export class Scene {
                 action_group.complete_action("start");
                 break;
 
+
 /**************************************************************************************************
 
-######  ########  #######  ########  
-##    ##    ##    ##     ## ##     ## 
-##          ##    ##     ## ##     ## 
-######     ##    ##     ## ########  
-        ##    ##    ##     ## ##        
-##    ##    ##    ##     ## ##        
-######     ##     #######  ##        
+    ######  ########  #######  ########  
+   ##    ##    ##    ##     ## ##     ## 
+   ##          ##    ##     ## ##     ## 
+    ######     ##    ##     ## ########  
+         ##    ##    ##     ## ##        
+   ##    ##    ##    ##     ## ##        
+    ######     ##     #######  ##        
 
 **************************************************************************************************/
 
+
             case "stop":
+            case "halt":
                 this.completion_callback = Utils.makeCompletionCallback(action_group);
                 if (words.length > 0) {
                     for (let i = 0; i < words.length; i++) {
@@ -1004,6 +1086,11 @@ export class Scene {
                             const scene = Scene.find(words[i]);
                             if (scene !== false) {
                                 scene.stop();
+                            } else {
+                                let sprite = SG_sprite.get_sprite(this.name, words[i], false);
+                                if (sprite != null) {
+                                    sprite.stop();
+                                }
                             }
                         }
                     }

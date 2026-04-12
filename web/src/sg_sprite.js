@@ -1,5 +1,6 @@
 
 import { Adjustable } from "./adjustable";
+import defaults from "./defaults.js";
 import { Globals } from "./globals.js";
 
 function get_image(scene, tag) {
@@ -87,7 +88,7 @@ export class SG_sprite {
         // visibility
         this.visible = true;
         this.transparency = new Adjustable(100,0,100);
-        this.location = null;
+        this.role = null;
         // blinking
         this.next_blink = 0;
         this.blink_rate = 0;
@@ -116,7 +117,18 @@ export class SG_sprite {
         }
         this.loc_x.set_target_value(x)
         this.loc_y.set_target_value(y);
-        this.depth = depth;
+        this.set_depth("to", depth);
+    }
+
+    set_depth(depth_type, value) {
+        if (depth_type == "by") {
+            this.depth += value;
+        } else {
+            this.depth = value;
+        }
+        if (this.enabled && this.pi_sprite != null) {
+            this.pi_sprite.zIndex = this.depth;
+        }
     }
 
     move(new_x, new_y, to_or_by, in_or_at, duration, now, callback) {
@@ -129,6 +141,7 @@ export class SG_sprite {
         }
         this.loc_x.set_target_value(new_x, duration, now, callback);
         this.loc_y.set_target_value(new_y, duration, now); // only need one callback
+        this.enabled = true;
     }
 
     rotate(turn_type, value, dur_type, duration, now, callback) {
@@ -290,7 +303,7 @@ export class SG_sprite {
             }
             if (image != "loading") { // now ready
                 // Are we in a specific location?
-                if (this.location != null) {
+                if (this.role != null) {
                     // Yes, but we need the image size to work out scaling
                     const img_width = image.pi_image.width;
                     const img_height = image.pi_image.height;
@@ -298,24 +311,29 @@ export class SG_sprite {
                     const wdw_height = Globals.app.screen.height;
                     const scale_y = img_height / wdw_height ;
                     const scale_x = img_width / wdw_width ;
-                    switch ( this.location ) {
+                    let depth = null;
+                    switch ( this.role ) {
                         case "background": // centre, and scale to window size
+                        case "backdrop": // centre, and scale to window size
                             this.loc_x.set_target_value(wdw_width / 2);
                             this.loc_y.set_target_value(wdw_height / 2);
                             this.size_x.set_target_value(wdw_width);
                             this.size_y.set_target_value(wdw_height);
+                            depth = defaults.DEPTH_BACKGROUND;
                             break;
                         case "left":
                             this.loc_x.set_target_value(img_width / 2);
                             this.loc_y.set_target_value(wdw_height / 2);
                             this.size_x.set_target_value(scale_y * img_width);
                             this.size_y.set_target_value(scale_y * img_height);
+                            depth = defaults.DEPTH_LEFT;
                             break;
                         case "right":
                             this.loc_x.set_target_value(wdw_width - (img_width / 2));
                             this.loc_y.set_target_value(wdw_height / 2);
                             this.size_x.set_target_value(scale_y * img_width);
                             this.size_y.set_target_value(scale_y * img_height);
+                            depth = defaults.DEPTH_RIGHT;
                             break;
                         case "top":
                         case "sky":
@@ -323,14 +341,20 @@ export class SG_sprite {
                             this.loc_y.set_target_value(img_height / 2);
                             this.size_x.set_target_value(scale_x * img_width);
                             this.size_y.set_target_value(scale_x * img_height);
+                            depth = defaults.DEPTH_SKY;
                             break;
                         case "bottom":
                         case "ground":
+                        case "foreground":
                             this.loc_x.set_target_value(wdw_width / 2);
                             this.loc_y.set_target_value(wdw_height - (img_height / 2));
                             this.size_x.set_target_value(scale_x * img_width);
                             this.size_y.set_target_value(scale_x * img_height);
+                            depth = this.role == "ground" ? defaults.DEPTH_GROUND : defaults.DEPTH_FOREGROUND;
                             break;
+                    }
+                    if (this.depth == null ) {
+                        this.depth = depth;
                     }
                 }
                 this.pi_sprite = new PIXI.Sprite({
@@ -340,6 +364,7 @@ export class SG_sprite {
                                 y: this.loc_y.value() },
                             visible: this.visible,
                             }); 
+                this.pi_sprite.zIndex = this.depth;
                 if (this.size_x.value() > 0 && this.size_y.value() > 0) {
                     this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
                 }
@@ -355,6 +380,12 @@ export class SG_sprite {
                 this.pi_sprite.position.set(this.loc_x.value(), this.loc_y.value());
             }
         }
+        // Bounds checking
+        if ((Math.abs(this.loc_x.value()) > (Globals.width * defaults.BOUNDS_X))
+              || (Math.abs(this.loc_y.value()) > (Globals.width * defaults.BOUNDS_Y)) ) {
+            this.enabled = false;
+            return;
+        }    
         // Let's see if we have been thrown...?
         if (this.falling) {
             const falling_time = (now - this.throw_time) / 1000; // elapsed time in seconds
@@ -430,7 +461,10 @@ export class SG_sprite {
         }
     }
 
-    static get_sprite(scene, tag) {
+    static get_sprite(scene, tag, report) {
+        if (arguments.length < 3) {
+            report = true;
+        }
         let parts = tag.split(":");
         if (parts.length > 1) {
             scene = parts[0];
@@ -445,7 +479,9 @@ export class SG_sprite {
                 }
             }
         }
-        Globals.log.error("No sprite found- " + scene + ":" + tag);
+        if (report) {
+            Globals.log.error("No sprite found- " + scene + ":" + tag);
+        }
         return(null);
     }
 

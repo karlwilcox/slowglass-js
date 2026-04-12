@@ -1,7 +1,8 @@
 
 import { Globals } from "./globals.js";
-import Defaults from "./defaults.js";
+import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
+import { SG_sprite } from "./sg_sprite";
 
 class Variable {
     constructor(name, value) {
@@ -22,23 +23,20 @@ class Variable {
 export class VarList {
     static key = null;
     static lastKey = null;
+    static hemisphere = null;
 
-    constructor() {
+    constructor(sceneName) {
         this.variables = [];
         this.trigger = null;
-        this.hemisphere = null;
-        Utils.getHemisphere(this.makeHemisphereCallback(this));
-    }
-
-    makeHemisphereCallback(object) {
-        return function(hemisphere) {
-            object.hemisphere = hemisphere
-        }
+        this.sceneName = sceneName;
+        Utils.getHemisphere();
     }
 
     create(name, value) {
         if (VarList.built_in(name)) {
             Globals.log.error("Cannot create built-in variable " + name);
+        } else if (name.match(/[\.:]/)) {
+            Globals.log.error("Cannot create variable with dot or colon in name " + name);
         } else {
             this.variables.push(new Variable(name, value));
         }
@@ -62,21 +60,21 @@ export class VarList {
         switch (name) {
             case "SECONDS":
             case "SECOND":
-                return new Intl.DateTimeFormat(Defaults.LOCALE, { second: "numeric" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { second: "numeric" }).format(date);
             case "MINUTES":
             case "MINUTE":
-                return new Intl.DateTimeFormat(Defaults.LOCALE, { minute: "numeric" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { minute: "numeric" }).format(date);
             case "HOUR":
             case "HOURS":
-                return new Intl.DateTimeFormat(Defaults.LOCALE, { hour: "numeric" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { hour: "numeric" }).format(date);
             case "DAYOFWEEK":
                 return date.getDay() + 1; // Sunday = 1
             case "DAYNAME":
-                return new Intl.DateTimeFormat(Defaults.LOCALE, { weekday: "long" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { weekday: "long" }).format(date);
             case "MONTH":
                 return month;
             case "MONTHNAME":
-                return new Intl.DateTimeFormat(Defaults.LOCALE, { month: "long" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { month: "long" }).format(date);
             case "YEAR":
                 return date.getFullYear();
             case "HEMISPHERE":
@@ -103,16 +101,16 @@ export class VarList {
                 break;
             case "WINTER":
                 return ((this.hemisphere == "northern" && (month >= 12 || month <= 2)) ||
-                            (this.hemisphere == "southern" && (month >= 6 && month <= 8))) ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 6 && month <= 8))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "SPRING":
                 return ((this.hemisphere == "northern" && (month >= 3 && month <= 5)) ||
-                            (this.hemisphere == "southern" && (month >= 9 && month <= 11))) ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 9 && month <= 11))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "SUMMER":
                 return ((this.hemisphere == "northern" && (month >= 6 && month <= 8)) ||
-                            (this.hemisphere == "southern" && (month >= 12 || month <= 2))) ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 12 || month <= 2))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "AUTUMN":
                 return ((this.hemisphere == "northern" && (month >= 9 && month <= 11)) ||
-                            (this.hemisphere == "southern" && (month >= 3 && month <= 5))) ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 3 && month <= 5))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "WIDTH":
                 return Globals.app.screen.width;
             case "HEIGHT":
@@ -135,21 +133,21 @@ export class VarList {
             case "TRIGGER":
                 return this.trigger;
             case "WEEKDAY":
-                return date.getDay() > 0 && date.getDay() < 6 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getDay() > 0 && date.getDay() < 6 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "WEEKEND":
-                return date.getDay() == 0 || date.getDay() == 6 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getDay() == 0 || date.getDay() == 6 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "MORNING":
-                return date.getHours() > 6 && date.getHour() < 13 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 6 && date.getHour() < 13 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "AFTERNOON":
-                return date.getHours() > 11 && date.getHour() < 18 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 11 && date.getHour() < 18 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "EVENING":
-                return date.getHours() > 18 && date.getHour() < 22 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return date.getHours() > 18 && date.getHour() < 22 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
             case "NIGHT":
-                return date.getHours() > 22 || date.getHour() < 6 ? Defaults.TRUEVALUE : Defaults.FALSEVALUE;
+                return Utils.t_or_f(date.getHours() > 22 || date.getHour() < 6);
             case "KEY":
-                return Globals.key == null ? Defaults.NOTFOUND : Globals.key;
+                return Globals.key == null ? defaults.NOTFOUND : Globals.key;
             case "LASTKEY":
-                return Globals.lastKey == null ? Defaults.NOTFOUND : Globals.lastKey;
+                return Globals.lastKey == null ? defaults.NOTFOUND : Globals.lastKey;
             case "SCALEX":
                 return Globals.script_scale_x;
             case "SCALEY":
@@ -179,16 +177,86 @@ export class VarList {
         return false;
     }
 
-    get_value(name) {
-        let value = VarList.built_in(name);
-        if (value === false) {
-            let index = this.find(name);
-            if (index !== false) {
-                value = this.variables[index].getValue();
-            } else {
-                Globals.log.error("Variable not found " + name);
-                value = Defaults.NOTFOUND;
+    get_value(varName) {
+        let value = false;
+        let sceneName = this.sceneName; // assume we are local
+        if (varName.match(/:/)) { // this is a different scene
+            const colonParts = varName.split(/:/);
+            varName = colonParts[1];
+            sceneName = colonParts[0];
+        }
+        // Is this is a sprite name?
+        if (varName.match(/\./)) { // should be a sprite name/property pair
+            const parts = varName.split(/\./, 2);
+            const sprite = SG_sprite.get_sprite(sceneName, parts[0], false);
+            if (sprite != null) {
+                switch(parts[1]) {
+                    case 'x':
+                    case 'loc.x':
+                    case 'location.x':
+                    case 'pos.x':
+                    case 'position.x':
+                        value = sprite.loc_x.value();
+                        break;
+                    case 'y':
+                    case 'loc.y':
+                    case 'location.y':
+                    case 'pos.y':
+                    case 'position.y':
+                        value = sprite.loc_y.value();
+                        break;
+                    case 'z':
+                    case 'depth':
+                        value = sprite.depth;
+                        break;
+                    case 'sx':
+                    case 'size.x':
+                        value = sprite.size_x.value();
+                        break;
+                    case 'sy':
+                    case 'size.y':
+                        value = sprite.size_y.value();
+                        break;
+                    case 'angle':
+                    case 'rotation':
+                        value = sprite.angle.value();
+                        break;
+                    case 'visible':
+                        value = Utils.t_or_f(sprite.visible);
+                        break;
+                    case 'role':
+                        if (sprite.role == null) {
+                            value = defaults.NOTFOUND;
+                        } else {
+                            value = sprite.role;
+                        }
+                        break;
+                        // More still to do
+                    default:
+                }
             }
+        }
+        if (value === false) {
+            // Otherwise, Look for built-ins first
+            value = VarList.built_in(varName);
+        }
+        if (value === false) {
+            // then look for user defined 
+            if (sceneName != this.sceneName) { // look in a different scene
+                const otherScene = Scene.find(sceneName);
+                if (scene !== false) {
+                    value = otherScene.varList.get_value(varName);
+                }
+            } else {
+                let index = this.find(varName);
+                if (index !== false) {
+                    value = this.variables[index].getValue();
+                } 
+            }
+        }
+        if (value === false) {
+            Globals.log.error("Variable not found " + varName);
+            value = defaults.NOTFOUND;
         }
         return value;
     }
@@ -201,7 +269,7 @@ export class VarList {
         let index = this.find(name);
         if (index === false) {
             Globals.log.error("Variable not found " + name);
-            return Defaults.NOTFOUND;
+            return defaults.NOTFOUND;
         } // else
         return this.variables[index].setValue(value);
     }
@@ -266,12 +334,7 @@ export class VarList {
                     varName = input.slice(start, j);
                 }
 
-                let replacement = "";
-                if (varName.match(/:/)) {
-                    replacement = VarList.scene_var(varName);
-                } else {
-                    replacement = this.get_value(varName);
-                }
+                let replacement = this.get_value(varName);
 
                 output += replacement;
                 i = j;
@@ -285,5 +348,4 @@ export class VarList {
 
         return output;
     }
-
 }

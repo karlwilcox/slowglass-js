@@ -5,6 +5,7 @@ export class Adjustable {
         if (arguments.length < 4) {
             wrap = false;
         }
+        // values and limits
         this.current_value = in_value;
         this.target_value = in_value;
         this.delta_value = 0;
@@ -15,13 +16,20 @@ export class Adjustable {
             this.lower_limit = Number.MIN_SAFE_INTEGER;
             this.upper_limit = Number.MAX_SAFE_INTEGER;
         }
+        // status
         this.last_adjustment = 0;
         this.changing = false;
         this.wrap = wrap;
+        // Jiggling
         this.jig_step = 0;
         this.jig_limit = 0;
         this.jig_chance = 0;
-        this.callback = null;
+        // Accelerating
+        this.acceleration_rate = 0;
+        this.acceleration_time = 0;
+        // Callbacks
+        this.position_callback = null;
+        this.accelerate_callback = null;
     }
 
     value() {
@@ -32,16 +40,47 @@ export class Adjustable {
         return this.delta_value;
     }
 
-    adjust(delta) {
-        let new_value = this.value + delta;
-        // but check limits
-        if ( new_value < this.lower_limit ) {
-            new_value = this.wrap ? this.upper_limit : this.lower_limit;
-        } else if ( new_value > this.upper_limit ) {
-            new_value = this.wrap ? this.lower_limit : this.upper_limit;
+    stop() {
+        if (typeof this.position_callback === "function") {
+            this.position_callback("stop");
         }
-        this.value = this.new_value;
+        if (typeof this.acceleration_callback === "function") {
+            this.acceleration_callback("stop");
+        }
+        this.delta_value = 0;
+        this.changing = false;
     }
+
+    set_speed(delta) {
+        if (Math.abs(delta) > 0) {
+            this.delta_value = delta;
+            this.changing = true;
+        }
+    }
+
+    accelerate(rate, seconds, timestamp, callback) {
+        if (arguments.length == 1) {
+            seconds = 0;
+        }
+        if (arguments.length == 2) {
+            timestamp = Date.now();
+        }
+        if (arguments.length > 3) {
+            this.acceleration_callback = callback;
+        }
+        this.acceleration_rate = rate;
+    }
+
+    // adjust(delta) {
+    //     let new_value = this.value + delta;
+    //     // but check limits
+    //     if ( new_value < this.lower_limit ) {
+    //         new_value = this.wrap ? this.upper_limit : this.lower_limit;
+    //     } else if ( new_value > this.upper_limit ) {
+    //         new_value = this.wrap ? this.lower_limit : this.upper_limit;
+    //     }
+    //     this.value = this.new_value;
+    // }
 
     set_target_value(target, seconds, timestamp, callback) {
         if (arguments.length == 1) {
@@ -51,7 +90,7 @@ export class Adjustable {
             timestamp = Date.now();
         }
         if (arguments.length > 3) {
-            this.callback = callback;
+            this.position_callback = callback;
         }
         if (target < this.lower_limit) {
             target = this.lower_limit;
@@ -63,7 +102,7 @@ export class Adjustable {
             this.current_value = target;
             this.delta_value = 0;
             if ( this.callback != null ) {
-                this.callback("adjustable");
+                this.position_callback("adjustable");
             }
         } else {
             this.delta_value = (this.target_value - this.current_value) / (seconds * 1000);
@@ -98,7 +137,7 @@ export class Adjustable {
             this.delta_value = 0;
             this.changing = false;
             if (this.callback != null) {
-                this.callback("adjustable");
+                this.position_callback("adjustable");
             }
         } else {
             let this_adjustment = Date.now();
