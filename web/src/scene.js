@@ -1,5 +1,5 @@
-import { SG_image, SG_sprite } from "./sg_sprite";
-import { Parser } from "./parser";
+import { SG_image, SG_sprite } from "./sg_sprite.js";
+import { Parser } from "./parser.js";
 import * as Triggers from "./triggers.js";
 import * as Utils from "./utils.js";
 import { Globals } from "./globals.js";
@@ -452,6 +452,21 @@ export class Scene {
                     Parser.test_word(words, "of");
                     command = "blur"
                     break;
+                case "darkness":
+                    words.shift();
+                    Parser.test_word(words, "of");
+                    command = "darken";
+                    break;
+                case "lightness":
+                    words.shift();
+                    Parser.test_word(words, "of");
+                    command = "lighten";
+                    break;
+                case "tint":
+                    words.shift();
+                    Parser.test_word(words, "of");
+                    command = "tint";
+                    break;
                 default: // means the same as make
                     command = "make";
                     break;
@@ -720,17 +735,19 @@ export class Scene {
                 action_group.complete_action("play"); // todo put in a proper callback
                 break;
 
+
 /**************************************************************************************************
 
-##     ##  #######  ##       ##     ## ##     ## ######## 
-##     ## ##     ## ##       ##     ## ###   ### ##       
-##     ## ##     ## ##       ##     ## #### #### ##       
-##     ## ##     ## ##       ##     ## ## ### ## ######   
-##   ##  ##     ## ##       ##     ## ##     ## ##       
-    ## ##   ##     ## ##       ##     ## ##     ## ##       
-    ###     #######  ########  #######  ##     ## ######## 
+   ##     ##  #######  ##       ##     ## ##     ## ######## 
+   ##     ## ##     ## ##       ##     ## ###   ### ##       
+   ##     ## ##     ## ##       ##     ## #### #### ##       
+   ##     ## ##     ## ##       ##     ## ## ### ## ######   
+    ##   ##  ##     ## ##       ##     ## ##     ## ##       
+     ## ##   ##     ## ##       ##     ## ##     ## ##       
+      ###     #######  ########  #######  ##     ## ######## 
 
 **************************************************************************************************/
+
 
             case "volume":
                 if (words.length > 0) {
@@ -943,17 +960,19 @@ export class Scene {
                 }
                 break;
 
+
 /**************************************************************************************************
 
-######## ##     ## ########   #######  ##      ## 
-    ##    ##     ## ##     ## ##     ## ##  ##  ## 
-    ##    ##     ## ##     ## ##     ## ##  ##  ## 
-    ##    ######### ########  ##     ## ##  ##  ## 
-    ##    ##     ## ##   ##   ##     ## ##  ##  ## 
-    ##    ##     ## ##    ##  ##     ## ##  ##  ## 
-    ##    ##     ## ##     ##  #######   ###  ###  
+   ######## ##     ## ########   #######  ##      ## 
+      ##    ##     ## ##     ## ##     ## ##  ##  ## 
+      ##    ##     ## ##     ## ##     ## ##  ##  ## 
+      ##    ######### ########  ##     ## ##  ##  ## 
+      ##    ##     ## ##   ##   ##     ## ##  ##  ## 
+      ##    ##     ## ##    ##  ##     ## ##  ##  ## 
+      ##    ##     ## ##     ##  #######   ###  ###  
 
 **************************************************************************************************/
+
 
             case "throw":
             case "launch":
@@ -1002,17 +1021,19 @@ export class Scene {
                 }
                 break;
 
+
 /**************************************************************************************************
 
-######  ##     ##  #######  ##      ##       ## ##     ## #### ########  ######## 
-##    ## ##     ## ##     ## ##  ##  ##      ##  ##     ##  ##  ##     ## ##       
-##       ##     ## ##     ## ##  ##  ##     ##   ##     ##  ##  ##     ## ##       
-######  ######### ##     ## ##  ##  ##    ##    #########  ##  ##     ## ######   
-        ## ##     ## ##     ## ##  ##  ##   ##     ##     ##  ##  ##     ## ##       
-##    ## ##     ## ##     ## ##  ##  ##  ##      ##     ##  ##  ##     ## ##       
-######  ##     ##  #######   ###  ###  ##       ##     ## #### ########  ######## 
+    ######  ##     ##  #######  ##      ##       ## ##     ## #### ########  ######## 
+   ##    ## ##     ## ##     ## ##  ##  ##      ##  ##     ##  ##  ##     ## ##       
+   ##       ##     ## ##     ## ##  ##  ##     ##   ##     ##  ##  ##     ## ##       
+    ######  ######### ##     ## ##  ##  ##    ##    #########  ##  ##     ## ######   
+         ## ##     ## ##     ## ##  ##  ##   ##     ##     ##  ##  ##     ## ##       
+   ##    ## ##     ## ##     ## ##  ##  ##  ##      ##     ##  ##  ##     ## ##       
+    ######  ##     ##  #######   ###  ###  ##       ##     ## #### ########  ######## 
 
 **************************************************************************************************/
+
 
             case "show":
             case "hide":
@@ -1073,21 +1094,40 @@ export class Scene {
     ######     ##     #######  ##        
 
 **************************************************************************************************/
-
-
+            
             case "stop":
             case "halt":
                 this.completion_callback = Utils.makeCompletionCallback(action_group);
                 if (words.length > 0) {
-                    for (let i = 0; i < words.length; i++) {
-                        if (AudioManager.exists(words[i])) {
-                            AudioManager.delete(words[i]);
+                    while (words.length > 0) {
+                        const stop_type = Parser.test_word(words, ["scene", "audio", "sound", "track", "sprite"]);
+                        const item = words.shift();
+                        if (item == null) {
+                            break;
+                        }
+                        // todo allow an option here to fade out the sound after a set duration
+                        if (stop_type == "audio" || stop_type == "sound" || stop_type == "track") {
+                            if (AudioManager.exists(item)) {
+                                AudioManager.delete(item);
+                            }
+                        } else if (stop_type == "scene") {
+                            const scene = Scene.find(item);
+                            if (scene !== false) {
+                                scene.stop();
+                            }
+                        } else if (stop_type == "sprite") {
+                            let sprite = SG_sprite.get_sprite(this.name, item, false);
+                            if (sprite != null) {
+                                sprite.stop();
+                            }
+                        } else if (AudioManager.exists(item)) {
+                            AudioManager.delete(item);
                         } else {
-                            const scene = Scene.find(words[i]);
+                            const scene = Scene.find(item);
                             if (scene !== false) {
                                 scene.stop();
                             } else {
-                                let sprite = SG_sprite.get_sprite(this.name, words[i], false);
+                                let sprite = SG_sprite.get_sprite(this.name, item, false);
                                 if (sprite != null) {
                                     sprite.stop();
                                 }
@@ -1156,17 +1196,21 @@ export class Scene {
                 action_group.complete_action("flicker"); // not really, but also not very important
                 break;                   
 
+
+
 /**************************************************************************************************
 
-        ## ####  ######    ######   ##       ######## 
-        ##  ##  ##    ##  ##    ##  ##       ##       
-        ##  ##  ##        ##        ##       ##       
-        ##  ##  ##   #### ##   #### ##       ######   
-##    ##  ##  ##    ##  ##    ##  ##       ##       
-##    ##  ##  ##    ##  ##    ##  ##       ##       
-######  ####  ######    ######   ######## ######## 
+         ## ####  ######    ######   ##       ######## 
+         ##  ##  ##    ##  ##    ##  ##       ##       
+         ##  ##  ##        ##        ##       ##       
+         ##  ##  ##   #### ##   #### ##       ######   
+   ##    ##  ##  ##    ##  ##    ##  ##       ##       
+   ##    ##  ##  ##    ##  ##    ##  ##       ##       
+    ######  ####  ######    ######   ######## ######## 
 
 **************************************************************************************************/
+
+
 
             case "jiggle":
             case "jitter":
@@ -1277,7 +1321,7 @@ export class Scene {
                         Parser.test_word(words,"from");
                         let pulse_min = Parser.get_int(words,0,0,100);
                         Parser.test_word(words,"to");
-                        let pulse_max = Parser.get_int(words,0,100,100);
+                        let pulse_max = Parser.get_int(words,100,0,100);
                         sprite.pulse(pulse_rate, pulse_min, pulse_max, now);
                     }
                 } else {
@@ -1312,6 +1356,7 @@ export class Scene {
                         }
                     } else {
                         Globals.log.error("Missing fade parameters");
+                        action_group.complete_action("fade");
                     }
                     break;
 
@@ -1341,6 +1386,55 @@ export class Scene {
                         }
                     } else {
                         Globals.log.error("Missing fade parameters");
+                        action_group.complete_action("blur");
+                    }
+                    break;
+
+/**************************************************************************************************
+
+########  #### ###    ## ######## 
+   ##      ##  ####   ##    ##    
+   ##      ##  ## ##  ##    ##    
+   ##      ##  ##  ## ##    ##    
+   ##      ##  ##   ####    ##    
+   ##      ##  ##    ###    ##    
+   ##     #### ##     ##    ##    
+
+**************************************************************************************************/
+
+                case "tint":
+                    if (words.length > 0) {
+                        let sprite_tag = words.shift();
+                        let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+                        Parser.test_word(words, ["to", "by", "at"]);
+                        const value = Parser.get_word(words, "red");
+                        if (sprite != null) {
+                            sprite.set_tint(value);
+                        }
+                    } else {
+                        Globals.log.error("Missing tint colour");
+                        action_group.complete_action("tint");
+                    }
+                    break;
+
+                case "darken":
+                case "lighten":
+                    if (words.length > 0) {
+                        let sprite_tag = words.shift();
+                        let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+                        Parser.test_word(words, ["to", "by", "at"]);
+                        let value = Parser.get_int(words, 0, 0, 100);
+                        if (command == "lighten") {
+                            value = 100 - value;
+                        }
+                        Parser.test_word(words, "in");
+                        let duration = Parser.get_duration(words, 0);
+                        if (sprite != null) {
+                            sprite.set_tint(value, duration, now, Utils.makeCompletionCallback(action_group));
+                        }
+                    } else {
+                        Globals.log.error("Missing " + command + " parameters");
+                        action_group.complete_action(command);
                     }
                     break;
 

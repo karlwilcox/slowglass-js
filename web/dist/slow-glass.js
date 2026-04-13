@@ -395,10 +395,10 @@
           }
         }
       }
-      if (value2 == false) {
+      if (value2 === false) {
         value2 = _VarList.built_in(varName);
       }
-      if (value2 == false) {
+      if (value2 === false) {
         if (sceneName != this.sceneName) {
           const otherScene = Scene.find(sceneName);
           if (scene !== false) {
@@ -411,7 +411,7 @@
           }
         }
       }
-      if (value2 == false) {
+      if (value2 === false) {
         Globals.log.error("Variable not found " + varName);
         value2 = defaults_default.NOTFOUND;
       }
@@ -475,12 +475,7 @@
             }
             varName = input.slice(start, j);
           }
-          let replacement = "";
-          if (varName.match(/:/)) {
-            replacement = _VarList.scene_var(varName);
-          } else {
-            replacement = this.get_value(varName);
-          }
+          let replacement = this.get_value(varName);
           output += replacement;
           i = j;
           continue;
@@ -512,6 +507,9 @@
       }
       console.log(text);
       this.errors.push(text);
+    }
+    log(text) {
+      console.log(text);
     }
   };
   var Line = class {
@@ -716,6 +714,9 @@
       this.size_y = new Adjustable(0);
       this.visible = true;
       this.transparency = new Adjustable(100, 0, 100);
+      this.tint_value = new Adjustable(0, 0, 100);
+      this.tint_colour = null;
+      this.new_tint = false;
       this.role = null;
       this.next_blink = 0;
       this.blink_rate = 0;
@@ -806,6 +807,23 @@
       }
       this.bluriness.set_target_value(target, duration, now, callback);
     }
+    set_tint(target, duration, now, callback) {
+      if (arguments.length == 1) {
+        if (target == "stop") {
+          this.tint_colour = null;
+          this.tint_value.set_target_value(100, 0, now, callback);
+        } else {
+          this.tint_colour = target;
+        }
+      } else {
+        this.tint_value.set_target_value(target, duration, now, callback);
+      }
+      this.new_tint = true;
+    }
+    current_tint() {
+      const shade = Math.round(255 * (100 - this.tint_value.value()) / 100);
+      return shade << 16 | shade << 8 | shade;
+    }
     flash(flash_count, now) {
       this.flash_count = flash_count;
       this.next_flash = now + 100;
@@ -865,11 +883,16 @@
       };
     }
     pulse(rate, pulse_min, pulse_max, now) {
-      this.pulse_rate = 1 / rate;
-      this.pulse_min = pulse_min;
-      this.pulse_max = pulse_max;
-      this.transparency.set_target_value(this.pulse_min);
-      this.transparency.set_target_value(this.pulse_max, this.pulse_rate, Date.now(), this.make_pulse_callback(this, "down"));
+      if (rate == 0) {
+        this.pulse_rate = 0;
+        this.transparency.set_target_value(100);
+      } else {
+        this.pulse_rate = 1 / rate;
+        this.pulse_min = pulse_min;
+        this.pulse_max = pulse_max;
+        this.transparency.set_target_value(this.pulse_min);
+        this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now, this.make_pulse_callback(this, "down"));
+      }
     }
     set_visibility(visible) {
       if (visible === true) {
@@ -968,6 +991,7 @@
             visible: this.visible
           });
           this.pi_sprite.zIndex = this.depth;
+          this.pi_sprite.tint = this.current_tint();
           if (this.size_x.value() > 0 && this.size_y.value() > 0) {
             this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
           }
@@ -1007,6 +1031,17 @@
       if (this.transparency.update_value()) {
         if (this.pi_sprite !== null) {
           this.pi_sprite.alpha = this.transparency.value() / 100;
+        }
+      }
+      if (this.new_tint) {
+        if (this.pi_sprite !== null) {
+          this.pi_sprite.tint = this.tint_colour;
+          this.new_tint = false;
+        }
+      }
+      if (this.tint_value.update_value()) {
+        if (this.pi_sprite !== null) {
+          this.pi_sprite.tint = this.current_tint();
         }
       }
       change_x = this.size_x.update_value();
@@ -1966,6 +2001,21 @@
             Parser.test_word(words, "of");
             command = "blur";
             break;
+          case "darkness":
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "darken";
+            break;
+          case "lightness":
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "lighten";
+            break;
+          case "tint":
+            words.shift();
+            Parser.test_word(words, "of");
+            command = "tint";
+            break;
           default:
             command = "make";
             break;
@@ -1985,7 +2035,7 @@
         **************************************************************************************************/
         case "echo":
         case "log":
-          Globals.log.error(words.join(" "));
+          Globals.log.log(words.join(" "));
           action_group.complete_action("echo");
           break;
         /**************************************************************************************************
@@ -2197,13 +2247,13 @@
           break;
         /**************************************************************************************************
         
-        ##     ##  #######  ##       ##     ## ##     ## ######## 
-        ##     ## ##     ## ##       ##     ## ###   ### ##       
-        ##     ## ##     ## ##       ##     ## #### #### ##       
-        ##     ## ##     ## ##       ##     ## ## ### ## ######   
-        ##   ##  ##     ## ##       ##     ## ##     ## ##       
-            ## ##   ##     ## ##       ##     ## ##     ## ##       
-            ###     #######  ########  #######  ##     ## ######## 
+           ##     ##  #######  ##       ##     ## ##     ## ######## 
+           ##     ## ##     ## ##       ##     ## ###   ### ##       
+           ##     ## ##     ## ##       ##     ## #### #### ##       
+           ##     ## ##     ## ##       ##     ## ## ### ## ######   
+            ##   ##  ##     ## ##       ##     ## ##     ## ##       
+             ## ##   ##     ## ##       ##     ## ##     ## ##       
+              ###     #######  ########  #######  ##     ## ######## 
         
         **************************************************************************************************/
         case "volume":
@@ -2399,13 +2449,13 @@
           break;
         /**************************************************************************************************
         
-        ######## ##     ## ########   #######  ##      ## 
-            ##    ##     ## ##     ## ##     ## ##  ##  ## 
-            ##    ##     ## ##     ## ##     ## ##  ##  ## 
-            ##    ######### ########  ##     ## ##  ##  ## 
-            ##    ##     ## ##   ##   ##     ## ##  ##  ## 
-            ##    ##     ## ##    ##  ##     ## ##  ##  ## 
-            ##    ##     ## ##     ##  #######   ###  ###  
+           ######## ##     ## ########   #######  ##      ## 
+              ##    ##     ## ##     ## ##     ## ##  ##  ## 
+              ##    ##     ## ##     ## ##     ## ##  ##  ## 
+              ##    ######### ########  ##     ## ##  ##  ## 
+              ##    ##     ## ##   ##   ##     ## ##  ##  ## 
+              ##    ##     ## ##    ##  ##     ## ##  ##  ## 
+              ##    ##     ## ##     ##  #######   ###  ###  
         
         **************************************************************************************************/
         case "throw":
@@ -2454,13 +2504,13 @@
           break;
         /**************************************************************************************************
         
-        ######  ##     ##  #######  ##      ##       ## ##     ## #### ########  ######## 
-        ##    ## ##     ## ##     ## ##  ##  ##      ##  ##     ##  ##  ##     ## ##       
-        ##       ##     ## ##     ## ##  ##  ##     ##   ##     ##  ##  ##     ## ##       
-        ######  ######### ##     ## ##  ##  ##    ##    #########  ##  ##     ## ######   
-                ## ##     ## ##     ## ##  ##  ##   ##     ##     ##  ##  ##     ## ##       
-        ##    ## ##     ## ##     ## ##  ##  ##  ##      ##     ##  ##  ##     ## ##       
-        ######  ##     ##  #######   ###  ###  ##       ##     ## #### ########  ######## 
+            ######  ##     ##  #######  ##      ##       ## ##     ## #### ########  ######## 
+           ##    ## ##     ## ##     ## ##  ##  ##      ##  ##     ##  ##  ##     ## ##       
+           ##       ##     ## ##     ## ##  ##  ##     ##   ##     ##  ##  ##     ## ##       
+            ######  ######### ##     ## ##  ##  ##    ##    #########  ##  ##     ## ######   
+                 ## ##     ## ##     ## ##  ##  ##   ##     ##     ##  ##  ##     ## ##       
+           ##    ## ##     ## ##     ## ##  ##  ##  ##      ##     ##  ##  ##     ## ##       
+            ######  ##     ##  #######   ###  ###  ##       ##     ## #### ########  ######## 
         
         **************************************************************************************************/
         case "show":
@@ -2521,15 +2571,34 @@
         case "halt":
           this.completion_callback = makeCompletionCallback(action_group);
           if (words.length > 0) {
-            for (let i = 0; i < words.length; i++) {
-              if (AudioManager.exists(words[i])) {
-                AudioManager.delete(words[i]);
+            while (words.length > 0) {
+              const stop_type = Parser.test_word(words, ["scene", "audio", "sound", "track", "sprite"]);
+              const item = words.shift();
+              if (item == null) {
+                break;
+              }
+              if (stop_type == "audio" || stop_type == "sound" || stop_type == "track") {
+                if (AudioManager.exists(item)) {
+                  AudioManager.delete(item);
+                }
+              } else if (stop_type == "scene") {
+                const scene2 = _Scene.find(item);
+                if (scene2 !== false) {
+                  scene2.stop();
+                }
+              } else if (stop_type == "sprite") {
+                let sprite2 = SG_sprite.get_sprite(this.name, item, false);
+                if (sprite2 != null) {
+                  sprite2.stop();
+                }
+              } else if (AudioManager.exists(item)) {
+                AudioManager.delete(item);
               } else {
-                const scene2 = _Scene.find(words[i]);
+                const scene2 = _Scene.find(item);
                 if (scene2 !== false) {
                   scene2.stop();
                 } else {
-                  let sprite2 = SG_sprite.get_sprite(this.name, words[i], false);
+                  let sprite2 = SG_sprite.get_sprite(this.name, item, false);
                   if (sprite2 != null) {
                     sprite2.stop();
                   }
@@ -2595,13 +2664,13 @@
           break;
         /**************************************************************************************************
         
-                ## ####  ######    ######   ##       ######## 
-                ##  ##  ##    ##  ##    ##  ##       ##       
-                ##  ##  ##        ##        ##       ##       
-                ##  ##  ##   #### ##   #### ##       ######   
-        ##    ##  ##  ##    ##  ##    ##  ##       ##       
-        ##    ##  ##  ##    ##  ##    ##  ##       ##       
-        ######  ####  ######    ######   ######## ######## 
+                 ## ####  ######    ######   ##       ######## 
+                 ##  ##  ##    ##  ##    ##  ##       ##       
+                 ##  ##  ##        ##        ##       ##       
+                 ##  ##  ##   #### ##   #### ##       ######   
+           ##    ##  ##  ##    ##  ##    ##  ##       ##       
+           ##    ##  ##  ##    ##  ##    ##  ##       ##       
+            ######  ####  ######    ######   ######## ######## 
         
         **************************************************************************************************/
         case "jiggle":
@@ -2740,6 +2809,7 @@
             }
           } else {
             Globals.log.error("Missing fade parameters");
+            action_group.complete_action("fade");
           }
           break;
         /**************************************************************************************************
@@ -2767,6 +2837,52 @@
             }
           } else {
             Globals.log.error("Missing fade parameters");
+            action_group.complete_action("blur");
+          }
+          break;
+        /**************************************************************************************************
+        
+        ########  #### ###    ## ######## 
+           ##      ##  ####   ##    ##    
+           ##      ##  ## ##  ##    ##    
+           ##      ##  ##  ## ##    ##    
+           ##      ##  ##   ####    ##    
+           ##      ##  ##    ###    ##    
+           ##     #### ##     ##    ##    
+        
+        **************************************************************************************************/
+        case "tint":
+          if (words.length > 0) {
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            Parser.test_word(words, ["to", "by", "at"]);
+            const value2 = Parser.get_word(words, "red");
+            if (sprite2 != null) {
+              sprite2.set_tint(value2);
+            }
+          } else {
+            Globals.log.error("Missing tint colour");
+            action_group.complete_action("tint");
+          }
+          break;
+        case "darken":
+        case "lighten":
+          if (words.length > 0) {
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            Parser.test_word(words, ["to", "by", "at"]);
+            let value2 = Parser.get_int(words, 0, 0, 100);
+            if (command == "lighten") {
+              value2 = 100 - value2;
+            }
+            Parser.test_word(words, "in");
+            let duration2 = Parser.get_duration(words, 0);
+            if (sprite2 != null) {
+              sprite2.set_tint(value2, duration2, now, makeCompletionCallback(action_group));
+            }
+          } else {
+            Globals.log.error("Missing " + command + " parameters");
+            action_group.complete_action(command);
           }
           break;
         /**************************************************************************************************

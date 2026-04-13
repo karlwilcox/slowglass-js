@@ -31,7 +31,8 @@ The Slow Glass project aims to provide a similar experience but without the long
 
 ## Requirements
 
-Slow Glass is written in JavaScript, initially targetted at the browser environment.
+Slow Glass is written in JavaScript, initially targetted at the browser environment. It will ask for
+location but this is only to determine the hemisphere so the season variables work correctly.
 
 (Slow glass was originally written in Python 3 using the Pygame-ce library, this code is still available.)
 
@@ -39,14 +40,41 @@ Slow Glass is written in JavaScript, initially targetted at the browser environm
 
 The best place to start is probably the [tutorial](/slow-glass/tutorial/).
 
-The [reference](/slow-glass/reference/) page contains a list of all triggers and commands with a brief description.
+### Documentation Conventions
 
-The remaining pages cover particular concepts in more depth and should be consulted as and when
-you need to know about them:
+When documenting the language the following conventions are used:
 
-* [Scripting Overview](/slow-glass/script-overview.md/)
-* [Animation methods](/slow-glass/animation-methods/)
-* [Command Line Arguments](/slow-glass/command-line/)
-* [Groups](/slow-glass/groups/)
-* [Scenes](/slow-glass/scenes/)
-* [Triggers](/slow-glass/triggers/)
+* Words in ordinary text are REQUIRED as part of the command
+* Words in curly brackets are supplied by the user (usually names)
+* (EXCEPT where the examples is discussing variable names, where the curly brackets mark the limits of the variable name)
+* Words in square brackets are OPTIONAL and can be used to help readability - this is encouraged but not required
+* Words in round brackets separated by vertical bars indicate options
+* Words followed by ellipsis (...) can be repeated any number of times
+
+### Naming Conventions
+
+Where you are asked to supply a name it is best to assume that all names should
+be unique, i.e. they all share the same namespace. So do not have a scene, a
+sprite and a sound all using the same name. Although this will work in most
+cases, the **stop** command cannot tell these apart for example. This may change
+in a future version but why make things difficult for yourself!
+
+It is probably also best to avoid using the language keywords as names, so don't call you scene "scene"!
+
+### Specifying Duration
+
+Where are duration is required an integer number will be searched, followed by an optional time unit. Units can be "seconds", "minutes", or "hours" (or common abbreviations of those) and the default is seconds.
+
+### Command Completion
+
+In the documentation of the action commands, it is always stated when, and
+under what circumstances the command "completes". This is relevant to the
+trigger word **then**. This trigger will be succesful when all the immediately
+preceding commands have "completed". Many commands complete as soon as they are
+encountered, but others complete when whatever action has been requested has
+completed, for example when moving a sprite to a specific location the command
+completes when the sprite reaches the location or the script sends a **stop**
+command to the sprite.
+
+See also the **wait** command discussed in [/slow-glass/actions/system/]{the system commands} page.
+

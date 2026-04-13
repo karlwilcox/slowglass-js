@@ -88,6 +88,10 @@ export class SG_sprite {
         // visibility
         this.visible = true;
         this.transparency = new Adjustable(100,0,100);
+        this.tint_value = new Adjustable(0,0,100);
+        this.tint_colour = null;
+        this.new_tint = false;
+        // usage
         this.role = null;
         // blinking
         this.next_blink = 0;
@@ -191,6 +195,25 @@ export class SG_sprite {
         this.bluriness.set_target_value(target, duration, now, callback);
     }
 
+    set_tint(target, duration, now, callback) {
+        if (arguments.length == 1) {
+            if (target == "stop") {
+                this.tint_colour = null;
+                this.tint_value.set_target_value(100, 0, now, callback);
+            } else {
+                this.tint_colour = target;
+            }
+        } else {
+            this.tint_value.set_target_value(target, duration, now, callback);
+        }
+        this.new_tint = true;
+    }
+
+    current_tint() {
+        const shade = Math.round(255 * (100 - this.tint_value.value()) / 100);
+        return (shade << 16) | (shade << 8) | shade;
+    }
+
     flash(flash_count, now) {
         this.flash_count = flash_count;
         this.next_flash = now + 100; // 1/10th of second
@@ -247,20 +270,27 @@ export class SG_sprite {
         return function() {
             if (object.pulse_rate > 0) {
                 if (action == "up") {
-                    object.transparency.set_target_value(object.pulse_max, object.pulse_rate, Date.now(), object.make_pulse_callback(object,"down"));
+                    object.transparency.set_target_value(object.pulse_max, object.pulse_rate, Date.now(),
+                        object.make_pulse_callback(object,"down"));
                 } else {
-                    object.transparency.set_target_value(object.pulse_min, object.pulse_rate, Date.now(), object.make_pulse_callback(object, "up"));
+                    object.transparency.set_target_value(object.pulse_min, object.pulse_rate, Date.now(), 
+                        object.make_pulse_callback(object, "up"));
                 }
             }
         }
     }
 
     pulse(rate, pulse_min, pulse_max, now) {
-        this.pulse_rate = 1 / rate;
-        this.pulse_min = pulse_min;
-        this.pulse_max = pulse_max;
-        this.transparency.set_target_value(this.pulse_min);
-        this.transparency.set_target_value(this.pulse_max, this.pulse_rate, Date.now(), this.make_pulse_callback(this, "down"));
+        if (rate == 0) {
+            this.pulse_rate = 0;
+            this.transparency.set_target_value(100);
+        } else {
+            this.pulse_rate = 1 / rate;
+            this.pulse_min = pulse_min;
+            this.pulse_max = pulse_max;
+            this.transparency.set_target_value(this.pulse_min);
+            this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now, this.make_pulse_callback(this, "down"));
+        }
     }
 
     set_visibility( visible ) {
@@ -365,6 +395,7 @@ export class SG_sprite {
                             visible: this.visible,
                             }); 
                 this.pi_sprite.zIndex = this.depth;
+                this.pi_sprite.tint = this.current_tint();
                 if (this.size_x.value() > 0 && this.size_y.value() > 0) {
                     this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
                 }
@@ -414,6 +445,21 @@ export class SG_sprite {
         if (this.transparency.update_value()) {
             if (this.pi_sprite !== null ) { // image has been loaded
                 this.pi_sprite.alpha = this.transparency.value() / 100;
+            }
+        }
+
+        // colour tint
+        if (this.new_tint) {
+            if (this.pi_sprite !== null ) { // image has been loaded
+                this.pi_sprite.tint = this.tint_colour;
+                this.new_tint = false;
+            }
+        }
+
+        // darken / lighten
+        if (this.tint_value.update_value()) {
+            if (this.pi_sprite !== null ) { // image has been loaded
+                this.pi_sprite.tint = this.current_tint();
             }
         }
 
