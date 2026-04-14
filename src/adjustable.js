@@ -82,6 +82,14 @@ export class Adjustable {
     //     this.value = this.new_value;
     // }
 
+    // Some things need to be kept in step (e.g. size and scale) without triggering
+    // an update, so do it here.
+    force_value(value) {
+        this.value = value;
+        this.delta_value = 0;
+        this.changing = false;
+    }
+
     set_target_value(target, seconds, timestamp, callback) {
         if (arguments.length == 1) {
             seconds = 0;
@@ -107,8 +115,8 @@ export class Adjustable {
         } else {
             this.delta_value = (this.target_value - this.current_value) / (seconds * 1000);
             this.last_adjustment = timestamp;
-            this.changing = true;
         }
+        this.changing = true;
     }
 
     update_value() {

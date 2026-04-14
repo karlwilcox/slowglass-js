@@ -29,14 +29,25 @@ header:
             &nbsp;
             <button class="btn btn-secondary" type="button" id="stop_button">Stop</button>
             &nbsp;
+            <button class="btn btn-secondary" type="button" id="clear_button">Clear Messages</button>
+            &nbsp;
         </p>
     </div>
 
 
-    <div>
-        <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" >
+    <div class="row">
+        <div class="col-6">
+            <p>Script Input Area</p>
+            <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" >
 
-        </textarea>
+            </textarea>
+        </div>
+        <div class="col-6">
+            <p>Message Area</p>
+            <textarea id="sg_messages" name="sg_script" class="w-75" rows="10" style="height: 100%;" readonly>
+
+            </textarea>
+        </div>
     </div>
 
     <div id="audio"></div>
@@ -48,6 +59,7 @@ header:
         document.getElementById("url_button").addEventListener("click",loadFromURL);
         document.getElementById("interactive_button").addEventListener("click",runAction);
         document.getElementById("stop_button").addEventListener("click",clean_up);
+        document.getElementById("clear_button").addEventListener("click",clearMsgs);
         document.getElementById("sound_button").addEventListener("click",unlockAudio);
 
         // Source - https://stackoverflow.com/a/58189464
@@ -75,6 +87,10 @@ header:
 
         function clean_up() {
             slowGlass.cleanUp();
+        }
+
+        function clearMsgs() {
+            document.getElementById("sg_messages").value = "";
         }
 
         window.onload = function() { slowGlass.setDrawingParent("sg_div") };

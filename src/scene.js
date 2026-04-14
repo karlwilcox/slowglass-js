@@ -766,6 +766,43 @@ export class Scene {
 
 /**************************************************************************************************
 
+   ######## ######## ##     ## ######## 
+      ##    ##        ##   ##     ##    
+      ##    ##         ## ##      ##    
+      ##    ######      ###       ##    
+      ##    ##         ## ##      ##    
+      ##    ##        ##   ##     ##    
+      ##    ######## ##     ##    ##    
+
+**************************************************************************************************/
+
+            case "text":
+                if (words.length > 2) {
+                    Parser.test_word(words,["named", "as"]);
+                    const text_tag = Parser.get_word(words);
+                    const content = words.join(" ");
+                    const text_item = new PIXI.Text({
+                        text: content,
+                            style: {
+                            fontFamily: 'Arial',
+                            fontSize: 24,
+                            fill: 0xff1010,
+                            align: 'center',
+                        }
+                    });
+                    const sg_sprite = new SG_sprite(text_tag, text_tag);
+                    sg_sprite.pi_sprite = text_item;
+                    sg_sprite.pi_sprite.visible = false;
+                    sg_sprite.visible = false;
+                    this.sprites.push(sg_sprite);
+                } else {
+                    Globals.log.error("No text at line " + line_no);
+                }
+                action_group.complete_action("text");
+                break;
+
+/**************************************************************************************************
+
 ##     ##  #######  ##     ## ######## 
 ###   ### ##     ## ##     ## ##       
 #### #### ##     ## ##     ## ##       
@@ -786,11 +823,7 @@ export class Scene {
                     }
                     let x = Parser.get_int(words, 0) * Globals.script_scale_x;
                     let y = Parser.get_int(words, 0) * Globals.script_scale_y;
-                    let in_or_at = Parser.test_word(words, ["in","at"]);
-                    if (in_or_at === false) {
-                        Globals.log.error("Expected in or at on line " + line_no);
-                        break;
-                    }
+                    let in_or_at = Parser.test_word(words, ["in","at"], "in");
                     let duration = Parser.get_duration(words,0);
                     let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
                     sprite.move(x, y, by_or_to, in_or_at, duration, now, Utils.makeCompletionCallback(action_group));
@@ -872,7 +905,6 @@ export class Scene {
             case "resize":
                 if (words.length > 0) {
                     let sprite_tag = words.shift();
-
                     let to_or_by = Parser.get_word(words, ["to","by"]);
                     if (to_or_by === false) {
                         Globals.log.error("Expected to or by on line " + line_no);
@@ -881,28 +913,15 @@ export class Scene {
 
                     let w = Parser.get_int(words, 0) * Globals.script_scale_x;
                     let h = Parser.get_int(words, 0) * Globals.script_scale_y;
-
                     let in_or_at = Parser.test_word(words, ["in","at"]);
-                    if (in_or_at === false) {
-                        Globals.log.error("Expected in or at on line " + line_no);
-                        break;
-                    }
-
                     let duration = Parser.get_duration(words, 0);
-
                     let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-
-                    sprite.resize(
-                        w,
-                        h,
-                        to_or_by,
-                        in_or_at,
-                        duration,
-                        now,
+                    sprite.resize( w, h, to_or_by, in_or_at, duration, now,
                         Utils.makeCompletionCallback(action_group)
                     );
                 } else {
                     Globals.log.error("Missing resize data at line " + line_no);
+                    action_group.complete_action("resize");
                 }
                 break;
 
@@ -1021,6 +1040,29 @@ export class Scene {
                 }
                 break;
 
+/**************************************************************************************************
+
+   ######## ##       #### ########  
+   ##       ##        ##  ##     ## 
+   ##       ##        ##  ##     ## 
+   ######   ##        ##  ########  
+   ##       ##        ##  ##        
+   ##       ##        ##  ##        
+   ##       ######## #### ##        
+
+**************************************************************************************************/
+
+            case "flip":
+                if (words.length > 0) {
+                    let sprite_tag = words.shift();
+                    let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+                    let axis = Parser.get_word(words,"h");
+                    sprite.flip(axis.charAt(0));
+                } else {
+                    Globals.log.error("Missing sprite tag" + " at line " + line_no);
+                }
+                action_group.complete_action();
+                break;
 
 /**************************************************************************************************
 
@@ -1439,17 +1481,19 @@ export class Scene {
                     break;
 
 
+
 /**************************************************************************************************
 
-##      ##    ###    #### ######## 
-##  ##  ##   ## ##    ##     ##    
-##  ##  ##  ##   ##   ##     ##    
-##  ##  ## ##     ##  ##     ##    
-##  ##  ## #########  ##     ##    
-##  ##  ## ##     ##  ##     ##    
-###  ###  ##     ## ####    ##    
+   ##      ##    ###    #### ######## 
+   ##  ##  ##   ## ##    ##     ##    
+   ##  ##  ##  ##   ##   ##     ##    
+   ##  ##  ## ##     ##  ##     ##    
+   ##  ##  ## #########  ##     ##    
+   ##  ##  ## ##     ##  ##     ##    
+    ###  ###  ##     ## ####    ##    
 
 **************************************************************************************************/
+
 
                 case 'wait':
                     let duration = Parser.get_duration(words,5);

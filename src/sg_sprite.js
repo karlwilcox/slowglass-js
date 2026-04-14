@@ -38,11 +38,17 @@ function get_image(scene, tag) {
 **************************************************************************************************/
 
 export class SG_image {
-    constructor(url, tag) {
-        this.pi_image = null;
+    constructor(data, tag) {
         this.tag = tag;
-        this.loading = true;
-        this.url = url;
+        if (typeof data === "string") {
+            this.pi_image = null;
+            this.loading = true;
+            this.url = data;
+        } else { // must be text - careful if new types added!
+            this.pi_image = data;
+            this.loading = false;
+            this.url = null;
+        }
     }
 
     async load_image() {
@@ -85,6 +91,11 @@ export class SG_sprite {
         // size
         this.size_x = new Adjustable(0);
         this.size_y = new Adjustable(0);
+        // scale
+        this.scale_x = new Adjustable(0);
+        this.scale_y = new Adjustable(0);
+        this.flip_h = false;
+        this.flip_v = false;
         // visibility
         this.visible = true;
         this.transparency = new Adjustable(100,0,100);
@@ -101,6 +112,7 @@ export class SG_sprite {
         this.pulse_rate = 0;
         this.pulse_min = 0;
         this.pulse_max = 0;
+        this.pulse_up = true;
         // flashing
         this.flash_count = 0;
         this.next_flash = 0;
@@ -203,10 +215,22 @@ export class SG_sprite {
             } else {
                 this.tint_colour = target;
             }
+            this.new_tint = true;
         } else {
             this.tint_value.set_target_value(target, duration, now, callback);
         }
-        this.new_tint = true;
+    }
+
+    flip(axis) {
+        if (axis == "h") {
+            this.scale_x.set_target_value(this.flip_h ? 1 : -1);
+            this.scale_y.set_target_value(1);
+            this.flip_h = !this.flip_h;
+        } else if (axis == "v") {
+            this.scale_x.set_target_value(1);
+            this.scale_y.set_target_value(this.flip_v ? 1 : -1);
+            this.flip_v = !this.flip_v;
+        }
     }
 
     current_tint() {
@@ -266,20 +290,6 @@ export class SG_sprite {
         this.next_blink = now + (1000 / this.blink_rate);
     }
 
-    make_pulse_callback(object, action) {
-        return function() {
-            if (object.pulse_rate > 0) {
-                if (action == "up") {
-                    object.transparency.set_target_value(object.pulse_max, object.pulse_rate, Date.now(),
-                        object.make_pulse_callback(object,"down"));
-                } else {
-                    object.transparency.set_target_value(object.pulse_min, object.pulse_rate, Date.now(), 
-                        object.make_pulse_callback(object, "up"));
-                }
-            }
-        }
-    }
-
     pulse(rate, pulse_min, pulse_max, now) {
         if (rate == 0) {
             this.pulse_rate = 0;
@@ -289,7 +299,7 @@ export class SG_sprite {
             this.pulse_min = pulse_min;
             this.pulse_max = pulse_max;
             this.transparency.set_target_value(this.pulse_min);
-            this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now, this.make_pulse_callback(this, "down"));
+            this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now);
         }
     }
 
@@ -311,11 +321,9 @@ export class SG_sprite {
             new_w += this.size_x.value();
             new_h += this.size_y.value();
         }
-
         if (in_or_at == "at") {
             // (future: rate-based resizing)
         }
-
         this.size_x.set_target_value(new_w, duration, now, callback);
         this.size_y.set_target_value(new_h, duration, now);
     }
@@ -446,6 +454,16 @@ export class SG_sprite {
             if (this.pi_sprite !== null ) { // image has been loaded
                 this.pi_sprite.alpha = this.transparency.value() / 100;
             }
+        } else { // if pulsing, switch directions
+            if (this.pulse_rate > 0) {
+                if (this.pulse_up) {
+                    this.transparency.set_target_value(this.pulse_min, this.pulse_rate, now);
+                    this.pulse_up = false;
+                } else {
+                    this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now);
+                    this.pulse_up = true;
+                }
+            }
         }
 
         // colour tint
@@ -470,9 +488,27 @@ export class SG_sprite {
         if (change_x || change_y) {
             if (this.pi_sprite !== null ) { // image has been loaded
                 this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
+                // this may have changed the scaling, so update it
+                // this.scale_x.force_value(this.pi_sprite.scale.x);
+                // this.scale_y.force_value(this.pi_sprite.scale.y);
             }
         }
         
+        // update scale
+        // can't test both in same expression because of short-circuiting
+        change_x = this.scale_x.update_value();
+        change_y = this.scale_y.update_value();
+        if (change_x || change_y) {
+            if (this.pi_sprite !== null ) { // image has been loaded
+                this.pi_sprite.scale.set(this.scale_x.value(), this.scale_y.value());
+                // Force the size back to what we want
+                this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
+                // this may have changed the size, so update it
+                // this.size_x.force_value(this.pi_sprite.size.x);
+                // this.size_y.force_value(this.pi_sprite.size.y);
+            }
+        }
+         
         // Are we blinking?
         if (this.blink_rate > 0 && this.next_blink < now) {
             if (this.blink_chance >= 100 || Math.random() * 100 < this.blink_chance ) { // lets blink

@@ -70,6 +70,13 @@
     //     }
     //     this.value = this.new_value;
     // }
+    // Some things need to be kept in step (e.g. size and scale) without triggering
+    // an update, so do it here.
+    force_value(value2) {
+      this.value = value2;
+      this.delta_value = 0;
+      this.changing = false;
+    }
     set_target_value(target, seconds, timestamp, callback) {
       if (arguments.length == 1) {
         seconds = 0;
@@ -95,8 +102,8 @@
       } else {
         this.delta_value = (this.target_value - this.current_value) / (seconds * 1e3);
         this.last_adjustment = timestamp;
-        this.changing = true;
       }
+      this.changing = true;
     }
     update_value() {
       let updated = false;
@@ -689,11 +696,17 @@
     return null;
   }
   var SG_image = class {
-    constructor(url, tag) {
-      this.pi_image = null;
+    constructor(data, tag) {
       this.tag = tag;
-      this.loading = true;
-      this.url = url;
+      if (typeof data === "string") {
+        this.pi_image = null;
+        this.loading = true;
+        this.url = data;
+      } else {
+        this.pi_image = data;
+        this.loading = false;
+        this.url = null;
+      }
     }
     async load_image() {
       this.pi_image = await PIXI.Assets.load(this.url);
@@ -712,6 +725,10 @@
       this.depth = 0;
       this.size_x = new Adjustable(0);
       this.size_y = new Adjustable(0);
+      this.scale_x = new Adjustable(0);
+      this.scale_y = new Adjustable(0);
+      this.flip_h = false;
+      this.flip_v = false;
       this.visible = true;
       this.transparency = new Adjustable(100, 0, 100);
       this.tint_value = new Adjustable(0, 0, 100);
@@ -724,6 +741,7 @@
       this.pulse_rate = 0;
       this.pulse_min = 0;
       this.pulse_max = 0;
+      this.pulse_up = true;
       this.flash_count = 0;
       this.next_flash = 0;
       this.throw_vx = 0;
@@ -815,10 +833,21 @@
         } else {
           this.tint_colour = target;
         }
+        this.new_tint = true;
       } else {
         this.tint_value.set_target_value(target, duration, now, callback);
       }
-      this.new_tint = true;
+    }
+    flip(axis) {
+      if (axis == "h") {
+        this.scale_x.set_target_value(this.flip_h ? 1 : -1);
+        this.scale_y.set_target_value(1);
+        this.flip_h = !this.flip_h;
+      } else if (axis == "v") {
+        this.scale_x.set_target_value(1);
+        this.scale_y.set_target_value(this.flip_v ? 1 : -1);
+        this.flip_v = !this.flip_v;
+      }
     }
     current_tint() {
       const shade = Math.round(255 * (100 - this.tint_value.value()) / 100);
@@ -871,17 +900,6 @@
       }
       this.next_blink = now + 1e3 / this.blink_rate;
     }
-    make_pulse_callback(object, action) {
-      return function() {
-        if (object.pulse_rate > 0) {
-          if (action == "up") {
-            object.transparency.set_target_value(object.pulse_max, object.pulse_rate, Date.now(), object.make_pulse_callback(object, "down"));
-          } else {
-            object.transparency.set_target_value(object.pulse_min, object.pulse_rate, Date.now(), object.make_pulse_callback(object, "up"));
-          }
-        }
-      };
-    }
     pulse(rate, pulse_min, pulse_max, now) {
       if (rate == 0) {
         this.pulse_rate = 0;
@@ -891,7 +909,7 @@
         this.pulse_min = pulse_min;
         this.pulse_max = pulse_max;
         this.transparency.set_target_value(this.pulse_min);
-        this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now, this.make_pulse_callback(this, "down"));
+        this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now);
       }
     }
     set_visibility(visible) {
@@ -1032,6 +1050,16 @@
         if (this.pi_sprite !== null) {
           this.pi_sprite.alpha = this.transparency.value() / 100;
         }
+      } else {
+        if (this.pulse_rate > 0) {
+          if (this.pulse_up) {
+            this.transparency.set_target_value(this.pulse_min, this.pulse_rate, now);
+            this.pulse_up = false;
+          } else {
+            this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now);
+            this.pulse_up = true;
+          }
+        }
       }
       if (this.new_tint) {
         if (this.pi_sprite !== null) {
@@ -1048,6 +1076,14 @@
       change_y = this.size_y.update_value();
       if (change_x || change_y) {
         if (this.pi_sprite !== null) {
+          this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
+        }
+      }
+      change_x = this.scale_x.update_value();
+      change_y = this.scale_y.update_value();
+      if (change_x || change_y) {
+        if (this.pi_sprite !== null) {
+          this.pi_sprite.scale.set(this.scale_x.value(), this.scale_y.value());
           this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
         }
       }
@@ -2272,6 +2308,41 @@
           break;
         /**************************************************************************************************
         
+           ######## ######## ##     ## ######## 
+              ##    ##        ##   ##     ##    
+              ##    ##         ## ##      ##    
+              ##    ######      ###       ##    
+              ##    ##         ## ##      ##    
+              ##    ##        ##   ##     ##    
+              ##    ######## ##     ##    ##    
+        
+        **************************************************************************************************/
+        case "text":
+          if (words.length > 2) {
+            Parser.test_word(words, ["named", "as"]);
+            const text_tag = Parser.get_word(words);
+            const content = words.join(" ");
+            const text_item = new PIXI.Text({
+              text: content,
+              style: {
+                fontFamily: "Arial",
+                fontSize: 24,
+                fill: 16715792,
+                align: "center"
+              }
+            });
+            const sg_sprite = new SG_sprite(text_tag, text_tag);
+            sg_sprite.pi_sprite = text_item;
+            sg_sprite.pi_sprite.visible = false;
+            sg_sprite.visible = false;
+            this.sprites.push(sg_sprite);
+          } else {
+            Globals.log.error("No text at line " + line_no);
+          }
+          action_group.complete_action("text");
+          break;
+        /**************************************************************************************************
+        
         ##     ##  #######  ##     ## ######## 
         ###   ### ##     ## ##     ## ##       
         #### #### ##     ## ##     ## ##       
@@ -2378,10 +2449,6 @@
             let w = Parser.get_int(words, 0) * Globals.script_scale_x;
             let h = Parser.get_int(words, 0) * Globals.script_scale_y;
             let in_or_at = Parser.test_word(words, ["in", "at"]);
-            if (in_or_at === false) {
-              Globals.log.error("Expected in or at on line " + line_no);
-              break;
-            }
             let duration2 = Parser.get_duration(words, 0);
             let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             sprite2.resize(
@@ -2395,6 +2462,7 @@
             );
           } else {
             Globals.log.error("Missing resize data at line " + line_no);
+            action_group.complete_action("resize");
           }
           break;
         /**************************************************************************************************
@@ -2501,6 +2569,28 @@
           } else {
             Globals.log.error("Missing drop data at line " + line_no);
           }
+          break;
+        /**************************************************************************************************
+        
+           ######## ##       #### ########  
+           ##       ##        ##  ##     ## 
+           ##       ##        ##  ##     ## 
+           ######   ##        ##  ########  
+           ##       ##        ##  ##        
+           ##       ##        ##  ##        
+           ##       ######## #### ##        
+        
+        **************************************************************************************************/
+        case "flip":
+          if (words.length > 0) {
+            let sprite_tag2 = words.shift();
+            let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            let axis = Parser.get_word(words, "h");
+            sprite2.flip(axis.charAt(0));
+          } else {
+            Globals.log.error("Missing sprite tag at line " + line_no);
+          }
+          action_group.complete_action();
           break;
         /**************************************************************************************************
         
@@ -2776,7 +2866,7 @@
               Parser.test_word(words, "from");
               let pulse_min = Parser.get_int(words, 0, 0, 100);
               Parser.test_word(words, "to");
-              let pulse_max = Parser.get_int(words, 0, 100, 100);
+              let pulse_max = Parser.get_int(words, 100, 0, 100);
               sprite2.pulse(pulse_rate, pulse_min, pulse_max, now);
             }
           } else {
@@ -2887,13 +2977,13 @@
           break;
         /**************************************************************************************************
         
-        ##      ##    ###    #### ######## 
-        ##  ##  ##   ## ##    ##     ##    
-        ##  ##  ##  ##   ##   ##     ##    
-        ##  ##  ## ##     ##  ##     ##    
-        ##  ##  ## #########  ##     ##    
-        ##  ##  ## ##     ##  ##     ##    
-        ###  ###  ##     ## ####    ##    
+           ##      ##    ###    #### ######## 
+           ##  ##  ##   ## ##    ##     ##    
+           ##  ##  ##  ##   ##   ##     ##    
+           ##  ##  ## ##     ##  ##     ##    
+           ##  ##  ## #########  ##     ##    
+           ##  ##  ## ##     ##  ##     ##    
+            ###  ###  ##     ## ####    ##    
         
         **************************************************************************************************/
         case "wait":
