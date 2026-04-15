@@ -35,25 +35,27 @@ header:
     </div>
 
 
-    <div class="row">
-        <div class="col-6">
-            <p>Script Input Area</p>
-            <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" >
+    <div class="container-fluid">
+        <div class="row">
+            <div class="medium-6 columns">
+                <p>Script Input Area</p>
+                <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" >
 
-            </textarea>
-        </div>
-        <div class="col-6">
-            <p>Message Area</p>
-            <textarea id="sg_messages" name="sg_script" class="w-75" rows="10" style="height: 100%;" readonly>
+                </textarea>
+            </div>
+            <div class="medium-6 columns">
+                <p>Message Area</p>
+                <textarea id="sg_messages" name="sg_script" class="w-75" rows="10" style="height: 100%;" readonly>
 
-            </textarea>
+                </textarea>
+            </div>
         </div>
     </div>
 
     <div id="audio"></div>
 
     <script src="https://pixijs.download/release/pixi.min.js"></script>
-    <script type="module" src="./dist/slow-glass.js";></script>
+    <script type="module" src="/slow-glass/dist/slow-glass.js";></script>
     <script>
         document.getElementById("run_button").addEventListener("click",loadFromTextArea);
         document.getElementById("url_button").addEventListener("click",loadFromURL);
@@ -93,6 +95,6 @@ header:
             document.getElementById("sg_messages").value = "";
         }
 
-        window.onload = function() { slowGlass.setDrawingParent("sg_div") };
+        window.onload = function() { slowGlass.setDrawingParent("sg_div"); slowGlass.setMessageParent("sg_messages"); };
     </script>
 

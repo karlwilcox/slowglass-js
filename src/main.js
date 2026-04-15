@@ -121,8 +121,9 @@ class SlowGlass {
             Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
         const text = await response.text();
-        Scene.readFromText(text);
-        run();
+        if (Scene.readFromText(text)) {
+            this.run();
+        }
     }
 
     interactiveAction(text) {
@@ -143,6 +144,10 @@ class SlowGlass {
 
     setDrawingParent(elementID) {
         SlowGlass.sg_id = elementID;
+    }
+
+    setMessageParent(elementID) {
+        Globals.log.messageParent(elementID);
     }
 
     cleanUp() {
@@ -170,8 +175,9 @@ class SlowGlass {
         Globals.log.debug("Starting Slow Glass from textarea");
         // tidy up previous run
         this.cleanUp();
-        Scene.readFromText(text);
-        this.run();
+        if (Scene.readFromText(text)) {
+            this.run();
+        }
     }
 }
 

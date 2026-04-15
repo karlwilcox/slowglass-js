@@ -1,5 +1,6 @@
 
 
+import { Globals } from "./globals.js";
 import { VarList } from "./vars.js";
 
 /**************************************************************************************************
@@ -20,6 +21,7 @@ export class Log {
     constructor(debug_on) {
         this.debug_on = debug_on;
         this.errors = [];
+        this.messageElement = null;
     }
 
     debug(text) {
@@ -35,12 +37,26 @@ export class Log {
                 return;
             }
         } // else
-        console.log(text);
+        if (this.messageElement != null) {
+            report(text);
+        } else {
+            console.log(text);
+        }
         this.errors.push(text);
     }
 
     log(text) {
         console.log(text);
+    }
+
+    report(text) {
+        if (this.messageElement != null) {
+            this.messageElement.value += text + "\n";
+        }
+    }
+
+    messageParent(elementID) {
+        this.messageElement = document.getElementById(elementID);
     }
 }
 
@@ -224,4 +240,30 @@ export function getHemisphere(callback) {
 
 export function t_or_f(value) {
     return value ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+}
+
+
+/**************************************************************************************************
+
+   ########  ######## ########   #######  ########  ######## ######## ########  
+   ##     ## ##       ##     ## ##     ## ##     ##    ##    ##       ##     ## 
+   ##     ## ##       ##     ## ##     ## ##     ##    ##    ##       ##     ## 
+   ########  ######   ########  ##     ## ########     ##    ######   ########  
+   ##   ##   ##       ##        ##     ## ##   ##      ##    ##       ##   ##   
+   ##    ##  ##       ##        ##     ## ##    ##     ##    ##       ##    ##  
+   ##     ## ######## ##         #######  ##     ##    ##    ######## ##     ## 
+
+**************************************************************************************************/
+
+export class  Reporter {
+    constructor() {
+    }
+
+    dumpScene(scene) {
+        if (typeof scene === "string") { // assume it is a name
+            scene = Scene.find(scene);
+        }
+        Globals.log.report(scene.dump());
+    }
+
 }

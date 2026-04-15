@@ -7,6 +7,7 @@ export class Globals {
     static scenes = [];
     static app = null;
     static log = new Utils.Log(defaults.DEBUG);
+    static reporter = new Utils.Reporter();
     static current_trigger = "";
     static display_width = defaults.DISPLAY_WIDTH;
     static display_height = defaults.DISPLAY_HEIGHT;
@@ -21,6 +22,14 @@ export class Globals {
     static key = null;
 
     constructor() {
+    }
+
+    static dump() {
+        let text = "";
+        for (const propt in this) {
+            text += `$propt = $this[propt]\n`;
+        }
+        return text;
     }
 
     static reset() {

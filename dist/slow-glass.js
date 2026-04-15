@@ -209,9 +209,9 @@
     }
     create(name, value2) {
       if (_VarList.built_in(name)) {
-        Globals.log.error("Cannot create built-in variable " + name);
+        Globals2.log.error("Cannot create built-in variable " + name);
       } else if (name.match(/[\.:]/)) {
-        Globals.log.error("Cannot create variable with dot or colon in name " + name);
+        Globals2.log.error("Cannot create variable with dot or colon in name " + name);
       } else {
         this.variables.push(new Variable(name, value2));
       }
@@ -282,19 +282,19 @@
         case "AUTUMN":
           return this.hemisphere == "northern" && (month >= 9 && month <= 11) || this.hemisphere == "southern" && (month >= 3 && month <= 5) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
         case "WIDTH":
-          return Globals.app.screen.width;
+          return Globals2.app.screen.width;
         case "HEIGHT":
-          return Globals.app.screen.height;
+          return Globals2.app.screen.height;
         case "CENTREX":
         case "CENTERX":
-          return Math.floor(Globals.app.screen.width / 2);
+          return Math.floor(Globals2.app.screen.width / 2);
         case "CENTREY":
         case "CENTERY":
-          return Math.floor(Globals.app.screen.height / 2);
+          return Math.floor(Globals2.app.screen.height / 2);
         case "RANDOMX":
-          return Math.floor(Math.random() * Globals.app.screen.width);
+          return Math.floor(Math.random() * Globals2.app.screen.width);
         case "RANDOMY":
-          return Math.floor(Math.random() * Globals.app.screen.height);
+          return Math.floor(Math.random() * Globals2.app.screen.height);
         case "CHANCE":
           return Math.random();
         case "PERCENT":
@@ -315,13 +315,13 @@
         case "NIGHT":
           return t_or_f(date.getHours() > 22 || date.getHour() < 6);
         case "KEY":
-          return Globals.key == null ? defaults_default.NOTFOUND : Globals.key;
+          return Globals2.key == null ? defaults_default.NOTFOUND : Globals2.key;
         case "LASTKEY":
-          return Globals.lastKey == null ? defaults_default.NOTFOUND : Globals.lastKey;
+          return Globals2.lastKey == null ? defaults_default.NOTFOUND : Globals2.lastKey;
         case "SCALEX":
-          return Globals.script_scale_x;
+          return Globals2.script_scale_x;
         case "SCALEY":
-          return Globals.script_scale_y;
+          return Globals2.script_scale_y;
         default:
           return false;
       }
@@ -419,19 +419,19 @@
         }
       }
       if (value2 === false) {
-        Globals.log.error("Variable not found " + varName);
+        Globals2.log.error("Variable not found " + varName);
         value2 = defaults_default.NOTFOUND;
       }
       return value2;
     }
     update(name, value2) {
       if (_VarList.built_in(name)) {
-        Globals.log.error("Cannot update built-in variable " + name);
+        Globals2.log.error("Cannot update built-in variable " + name);
         return false;
       }
       let index = this.find(name);
       if (index === false) {
-        Globals.log.error("Variable not found " + name);
+        Globals2.log.error("Variable not found " + name);
         return defaults_default.NOTFOUND;
       }
       return this.variables[index].setValue(value2);
@@ -439,11 +439,11 @@
     delete(name) {
       let index = this.find(name);
       if (index === false) {
-        Globals.log.error("Variable not found " + name);
+        Globals2.log.error("Variable not found " + name);
         return false;
       }
       if (!this.variables[index].setValue(0)) {
-        Globals.log.error("Cannot delete readonly variable " + name);
+        Globals2.log.error("Cannot delete readonly variable " + name);
         return false;
       }
       this.variables.splice(index, 1);
@@ -499,6 +499,7 @@
     constructor(debug_on) {
       this.debug_on = debug_on;
       this.errors = [];
+      this.messageElement = null;
     }
     debug(text) {
       if (this.debug_on) {
@@ -512,11 +513,23 @@
           return;
         }
       }
-      console.log(text);
+      if (this.messageElement != null) {
+        report(text);
+      } else {
+        console.log(text);
+      }
       this.errors.push(text);
     }
     log(text) {
       console.log(text);
+    }
+    report(text) {
+      if (this.messageElement != null) {
+        this.messageElement.value += text + "\n";
+      }
+    }
+    messageParent(elementID) {
+      this.messageElement = document.getElementById(elementID);
     }
   };
   var Line = class {
@@ -621,13 +634,24 @@
   function t_or_f(value2) {
     return value2 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
   }
+  var Reporter = class {
+    constructor() {
+    }
+    dumpScene(scene2) {
+      if (typeof scene2 === "string") {
+        scene2 = Scene.find(scene2);
+      }
+      Globals.log.report(scene2.dump());
+    }
+  };
 
   // src/globals.js
-  var Globals = class _Globals {
+  var Globals2 = class _Globals {
     static root = null;
     static scenes = [];
     static app = null;
     static log = new Log(defaults_default.DEBUG);
+    static reporter = new Reporter();
     static current_trigger = "";
     static display_width = defaults_default.DISPLAY_WIDTH;
     static display_height = defaults_default.DISPLAY_HEIGHT;
@@ -641,6 +665,14 @@
     static lastKey = null;
     static key = null;
     constructor() {
+    }
+    static dump() {
+      let text = "";
+      for (const propt in this) {
+        text += `$propt = $this[propt]
+`;
+      }
+      return text;
     }
     static reset() {
       _Globals.root = null;
@@ -679,20 +711,20 @@
       scene2 = parts[0];
       tag = parts[1];
     }
-    for (let i = 0; i < Globals.scenes.length; i++) {
-      if (Globals.scenes[i].name == scene2) {
-        for (let j = 0; j < Globals.scenes[i].images.length; j++) {
-          if (Globals.scenes[i].images[j].tag == tag) {
-            if (Globals.scenes[i].images[j].loading) {
+    for (let i = 0; i < Globals2.scenes.length; i++) {
+      if (Globals2.scenes[i].name == scene2) {
+        for (let j = 0; j < Globals2.scenes[i].images.length; j++) {
+          if (Globals2.scenes[i].images[j].tag == tag) {
+            if (Globals2.scenes[i].images[j].loading) {
               return "loading";
             } else {
-              return Globals.scenes[i].images[j];
+              return Globals2.scenes[i].images[j];
             }
           }
         }
       }
     }
-    Globals.log.error("No image found- " + scene2 + ":" + tag);
+    Globals2.log.error("No image found- " + scene2 + ":" + tag);
     return null;
   }
   var SG_image = class {
@@ -948,8 +980,8 @@
           if (this.role != null) {
             const img_width = image.pi_image.width;
             const img_height = image.pi_image.height;
-            const wdw_width = Globals.app.screen.width;
-            const wdw_height = Globals.app.screen.height;
+            const wdw_width = Globals2.app.screen.width;
+            const wdw_height = Globals2.app.screen.height;
             const scale_y = img_height / wdw_height;
             const scale_x = img_width / wdw_width;
             let depth = null;
@@ -1013,7 +1045,7 @@
           if (this.size_x.value() > 0 && this.size_y.value() > 0) {
             this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
           }
-          Globals.root.addChild(this.pi_sprite);
+          Globals2.root.addChild(this.pi_sprite);
         }
       }
       let change_x = this.loc_x.update_value();
@@ -1023,15 +1055,15 @@
           this.pi_sprite.position.set(this.loc_x.value(), this.loc_y.value());
         }
       }
-      if (Math.abs(this.loc_x.value()) > Globals.width * defaults_default.BOUNDS_X || Math.abs(this.loc_y.value()) > Globals.width * defaults_default.BOUNDS_Y) {
+      if (Math.abs(this.loc_x.value()) > Globals2.width * defaults_default.BOUNDS_X || Math.abs(this.loc_y.value()) > Globals2.width * defaults_default.BOUNDS_Y) {
         this.enabled = false;
         return;
       }
       if (this.falling) {
         const falling_time = (now - this.throw_time) / 1e3;
-        const delta_x = this.loc_x.value() + this.thrown_vx * falling_time * Globals.script_scale_x;
-        const delta_y = this.loc_y.value() - (this.thrown_vy * falling_time - 0.5 * Globals.gravity * falling_time * falling_time) * Globals.script_scale_y;
-        if (Math.abs(delta_x) > Globals.app.screen.width * 2 || Math.abs(delta_y) > Globals.app.screen.height * 2 || Globals.ground_level > 0 && this.loc_y.value + delta_y > Globals.ground_level) {
+        const delta_x = this.loc_x.value() + this.thrown_vx * falling_time * Globals2.script_scale_x;
+        const delta_y = this.loc_y.value() - (this.thrown_vy * falling_time - 0.5 * Globals2.gravity * falling_time * falling_time) * Globals2.script_scale_y;
+        if (Math.abs(delta_x) > Globals2.app.screen.width * 2 || Math.abs(delta_y) > Globals2.app.screen.height * 2 || Globals2.ground_level > 0 && this.loc_y.value + delta_y > Globals2.ground_level) {
           this.falling = false;
           if (this.throw_callback != null) {
             this.throw_callback();
@@ -1115,26 +1147,26 @@
         }
       }
     }
-    static get_sprite(scene2, tag, report) {
+    static get_sprite(scene2, tag, report2) {
       if (arguments.length < 3) {
-        report = true;
+        report2 = true;
       }
       let parts = tag.split(":");
       if (parts.length > 1) {
         scene2 = parts[0];
         tag = parts[1];
       }
-      for (let i = 0; i < Globals.scenes.length; i++) {
-        if (Globals.scenes[i].name == scene2) {
-          for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
-            if (Globals.scenes[i].sprites[j].tag == tag) {
-              return Globals.scenes[i].sprites[j];
+      for (let i = 0; i < Globals2.scenes.length; i++) {
+        if (Globals2.scenes[i].name == scene2) {
+          for (let j = 0; j < Globals2.scenes[i].sprites.length; j++) {
+            if (Globals2.scenes[i].sprites[j].tag == tag) {
+              return Globals2.scenes[i].sprites[j];
             }
           }
         }
       }
-      if (report) {
-        Globals.log.error("No sprite found- " + scene2 + ":" + tag);
+      if (report2) {
+        Globals2.log.error("No sprite found- " + scene2 + ":" + tag);
       }
       return null;
     }
@@ -1144,18 +1176,18 @@
         scene2 = parts[0];
         tag = parts[1];
       }
-      for (let i = 0; i < Globals.scenes.length; i++) {
-        if (Globals.scenes[i].name == scene2) {
-          for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
-            if (Globals.scenes[i].sprites[j].tag == tag) {
-              Globals.scenes[i].sprites[j].pi_sprite.destroy();
-              Globals.scenes[i].sprites.splice(j, 1);
+      for (let i = 0; i < Globals2.scenes.length; i++) {
+        if (Globals2.scenes[i].name == scene2) {
+          for (let j = 0; j < Globals2.scenes[i].sprites.length; j++) {
+            if (Globals2.scenes[i].sprites[j].tag == tag) {
+              Globals2.scenes[i].sprites[j].pi_sprite.destroy();
+              Globals2.scenes[i].sprites.splice(j, 1);
               return;
             }
           }
         }
       }
-      Globals.log.error("No sprite found- " + scene2 + ":" + tag);
+      Globals2.log.error("No sprite found- " + scene2 + ":" + tag);
     }
   };
 
@@ -1188,7 +1220,7 @@
       if (words.length > 0) {
         let word = words.shift();
         if (!word.match(/^[0-9-]+$/)) {
-          Globals.log.error("Expected integer - " + word);
+          Globals2.log.error("Expected integer - " + word);
         }
         let retval = parseInt(word);
         if (arguments.length > 2 && retval < min) {
@@ -1223,7 +1255,7 @@
       } else if (units.startsWith("h")) {
         mult = 3600;
       } else {
-        Globals.log.error("Unknown time unit - " + units);
+        Globals2.log.error("Unknown time unit - " + units);
       }
       return mult;
     }
@@ -1374,7 +1406,7 @@
             value = lvalue <= rvalue;
             break;
           default:
-            Globals.log.error("Unknown comparison - " + comparison);
+            Globals2.log.error("Unknown comparison - " + comparison);
             break;
         }
       }
@@ -1414,11 +1446,11 @@
               this.seconds = parseInt(parts[2]);
             }
           } else {
-            Globals.log.error("Incorrect time format " + timeofDay);
+            Globals2.log.error("Incorrect time format " + timeofDay);
             this.valid = false;
           }
         } else {
-          Globals.log.error("Missing time for at ");
+          Globals2.log.error("Missing time for at ");
           this.valid = false;
         }
       }
@@ -1479,10 +1511,10 @@
               this.seconds = parts[2] == "*" ? "*" : parseInt(parts[2]);
             }
           } else {
-            Globals.log.error("Incorrect time format " + timeofDay);
+            Globals2.log.error("Incorrect time format " + timeofDay);
           }
         } else {
-          Globals.log.error("Missing time for at ");
+          Globals2.log.error("Missing time for at ");
         }
       }
       const d = /* @__PURE__ */ new Date();
@@ -1666,13 +1698,21 @@
       this.completion_callback = null;
     }
     static find(scene_name) {
-      for (let i = 0; i < Globals.scenes.length; i++) {
-        if (scene_name == Globals.scenes[i].name) {
-          return Globals.scenes[i];
+      for (let i = 0; i < Globals2.scenes.length; i++) {
+        if (scene_name == Globals2.scenes[i].name) {
+          return Globals2.scenes[i];
         }
       }
-      Globals.log.error("Cannot find scene " + scene_name);
+      Globals2.log.error("Cannot find scene " + scene_name);
       return false;
+    }
+    dump() {
+      let text = "Scene: " + this.name + "\n";
+      text += this.enabled ? "enabled\n" : "disabled\n";
+      text += "Contains " + this.ActionGroups.length + " action groups\n";
+      text += this.images.length + " images\n";
+      text += this.sprites.length + " sprites\n";
+      return text;
     }
     /**************************************************************************************************
     
@@ -1731,10 +1771,10 @@
         }
         if (command == "scene") {
           if (argument == null) {
-            Globals.log.error(`expected scene name on line ${lineCount}`);
+            Globals2.log.error(`expected scene name on line ${lineCount}`);
           } else {
             if (holding != null) {
-              Globals.scenes.push(holding);
+              Globals2.scenes.push(holding);
             }
             holding = new _Scene(argument);
           }
@@ -1743,62 +1783,62 @@
             break;
           } else if (argument == "scene") {
             if (holding != null) {
-              Globals.scenes.push(holding);
+              Globals2.scenes.push(holding);
               holding = null;
             } else {
-              Globals.log.error(`no current scene at line ${lineCount}`);
+              Globals2.log.error(`no current scene at line ${lineCount}`);
             }
           } else {
-            Globals.log.error("end must be followed by file or scene");
+            Globals2.log.error("end must be followed by file or scene");
           }
         } else if (command == "display") {
           if (argument == "width") {
             let display_width = parseInt(argument2);
             if (display_width < 50 || display_width > 5e3) {
-              Globals.log.error("silly display width");
+              Globals2.log.error("silly display width");
               display_width = defaults_default.DISPLAY_WIDTH;
             }
-            Globals.display_width = display_width;
+            Globals2.display_width = display_width;
           } else if (argument == "height") {
             let display_height = parseInt(argument2);
             if (display_height < 50 || display_height > 5e3) {
-              Globals.log.error("silly display height");
+              Globals2.log.error("silly display height");
               display_height = defaults_default.DISPLAY_HEIGHT;
             }
-            Globals.display_height = display_height;
+            Globals2.display_height = display_height;
           }
         } else if (command == "include") {
-          Globals.log.error("Include not supported yet");
+          Globals2.log.error("Include not supported yet");
         } else if (command == "script") {
           if (argument == "width") {
             let script_width = parseInt(argument2);
             if (script_width < 50 || script_width > 5e3) {
-              Globals.log.error("silly script width");
+              Globals2.log.error("silly script width");
               script_width = defaults_default.DISPLAY_WIDTH;
             }
-            Globals.script_width = script_width;
+            Globals2.script_width = script_width;
           } else if (argument == "height") {
             let script_height = parseInt(argument2);
             if (script_height < 50 || script_height > 5e3) {
-              Globals.log.error("silly script height");
+              Globals2.log.error("silly script height");
               script_height = defaults_default.DISPLAY_HEIGHT;
             }
-            Globals.script_height = script_height;
+            Globals2.script_height = script_height;
           } else if (argument == "scale") {
-            Globals.script_scale_type = argument2;
+            Globals2.script_scale_type = argument2;
           }
         } else if (command == "gravity") {
           let gravity = Parrser.parseFloat(argument);
           if (gravity <= 0) {
-            Globals.log.error("silly gravity setting");
+            Globals2.log.error("silly gravity setting");
             gravity = defaults_default.GRAVITY_PS2;
           }
-          Globals.gravity_ps2 = gravity;
+          Globals2.gravity_ps2 = gravity;
         } else if (command == "ground") {
           if (argument == "level") {
             argument = argument2;
           }
-          Globals.ground_level = parseInt(argument);
+          Globals2.ground_level = parseInt(argument);
         } else {
           const line = new Line(lineCount, currentLine);
           if (holding == null) {
@@ -1809,15 +1849,15 @@
         }
       }
       if (holding != null) {
-        Globals.scenes.push(holding);
+        Globals2.scenes.push(holding);
       }
       if (top.content.length < 1) {
-        Globals.log.error("No top level actions, nothing will happen!");
+        Globals2.log.error("No top level actions, nothing will happen!");
       } else {
-        switch (Globals.script_scale_type) {
+        switch (Globals2.script_scale_type) {
           case defaults_default.SCALE_STRETCH:
-            Globals.script_scale_x = Globals.display_width / Globals.script_width;
-            Globals.script_scale_y = Globals.display_height / Globals.script_height;
+            Globals2.script_scale_x = Globals2.display_width / Globals2.script_width;
+            Globals2.script_scale_y = Globals2.display_height / Globals2.script_height;
             break;
           case defaults_default.SCALE_FIT:
           // todo
@@ -1828,7 +1868,7 @@
         top.start();
         const dummyActionGroup = new ActionGroup();
         top.actionGroups.push(dummyActionGroup);
-        Globals.scenes.push(top);
+        Globals2.scenes.push(top);
       }
     }
     stop() {
@@ -1879,7 +1919,7 @@
             if (words.toLowerCase().startsWith("all")) {
               action_group.any_trigger = false;
             } else if (!words.toLowerCase().startsWith("any")) {
-              Globals.log.error("Unknown when condition - " + words);
+              Globals2.log.error("Unknown when condition - " + words);
             }
             continue;
           // go to the next line
@@ -1917,7 +1957,7 @@
                 trigger = new Trigger("MOUSECLICK", words);
                 break;
               default:
-                Globals.log.error("Unknown trigger type on " + on_word + " at line " + line_no);
+                Globals2.log.error("Unknown trigger type on " + on_word + " at line " + line_no);
                 break;
             }
             break;
@@ -1935,7 +1975,7 @@
             break;
           case "then":
             if (state == "T") {
-              Globals.log.error("Then must be the only trigger in that group");
+              Globals2.log.error("Then must be the only trigger in that group");
             } else {
               trigger = new ThenClass(this, timestamp, words, action_group);
             }
@@ -1959,7 +1999,7 @@
         }
         state = "A";
         if (action_group.triggers.length < 1) {
-          Globals.log.error("No trigger for action in scene " + this.name + " at line " + line_no);
+          Globals2.log.error("No trigger for action in scene " + this.name + " at line " + line_no);
         }
         action_group.addAction(this.content[i]);
       }
@@ -2071,7 +2111,7 @@
         **************************************************************************************************/
         case "echo":
         case "log":
-          Globals.log.log(words.join(" "));
+          Globals2.log.log(words.join(" "));
           action_group.complete_action("echo");
           break;
         /**************************************************************************************************
@@ -2089,7 +2129,7 @@
         case "upload":
           let tag = null;
           if (words.count < 1) {
-            Globals.log.error("Missing filename at line " + line_no);
+            Globals2.log.error("Missing filename at line " + line_no);
             break;
           }
           let filename = words.shift();
@@ -2133,7 +2173,7 @@
           if (words.length > 0) {
             this.folder = words[0] + "/";
           } else {
-            Globals.log.error("Expected folder name at " + line_no);
+            Globals2.log.error("Expected folder name at " + line_no);
           }
           action_group.complete_action("from");
           break;
@@ -2161,16 +2201,16 @@
               sg_sprite.set_visibility(false);
             }
             Parser.test_word(words, "at");
-            sg_sprite.loc_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
-            sg_sprite.loc_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
+            sg_sprite.loc_x.set_target_value(Parser.get_int(words, 0) * Globals2.script_scale_x);
+            sg_sprite.loc_y.set_target_value(Parser.get_int(words, 0) * Globals2.script_scale_y);
             Parser.test_word(words, "depth");
             sg_sprite.depth = Parser.get_int(words, 0);
             Parser.test_word(words, ["size", "scale"]);
-            sg_sprite.size_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
-            sg_sprite.size_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
+            sg_sprite.size_x.set_target_value(Parser.get_int(words, 0) * Globals2.script_scale_x);
+            sg_sprite.size_y.set_target_value(Parser.get_int(words, 0) * Globals2.script_scale_y);
             this.sprites.push(sg_sprite);
           } else {
-            Globals.log.error("Missing place data at line " + line_no);
+            Globals2.log.error("Missing place data at line " + line_no);
           }
           action_group.complete_action("place");
           break;
@@ -2198,7 +2238,7 @@
             sg_sprite.image_tag = image_tag;
             sg_sprite.pi_sprite.texture = PIXI.Texture.EMPTY;
           } else {
-            Globals.log.error("Missing replace data at line " + line_no);
+            Globals2.log.error("Missing replace data at line " + line_no);
           }
           action_group.complete_action("replace");
           break;
@@ -2235,7 +2275,7 @@
               "frame"
             ]);
             if (role == false) {
-              Globals.log.error("Unknown role " + role + " at line " + line_no);
+              Globals2.log.error("Unknown role " + role + " at line " + line_no);
               break;
             }
             if (sprite_tag2 == null) {
@@ -2251,7 +2291,7 @@
             }
             this.sprites.push(sg_sprite);
           } else {
-            Globals.log.error("Missing put data at line " + line_no);
+            Globals2.log.error("Missing put data at line " + line_no);
           }
           action_group.complete_action("put");
           break;
@@ -2277,7 +2317,7 @@
             const volume = Parser.get_int(words, 50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
             AudioManager.play(tag2, { fadeInMs: fadein * 1e3, targetVolume: volume });
           } else {
-            Globals.log.error("Nothing to play at line " + line_no);
+            Globals2.log.error("Nothing to play at line " + line_no);
           }
           action_group.complete_action("play");
           break;
@@ -2302,7 +2342,7 @@
             const fadein = Parser.get_duration(words, 0);
             AudioManager.setVolume(tag2, volume, { fadeMs: fadein * 1e3 });
           } else {
-            Globals.log.error("No volume change at line " + line_no);
+            Globals2.log.error("No volume change at line " + line_no);
           }
           action_group.complete_action("volume");
           break;
@@ -2335,9 +2375,12 @@
             sg_sprite.pi_sprite = text_item;
             sg_sprite.pi_sprite.visible = false;
             sg_sprite.visible = false;
+            sg_sprite.size_x.set_target_value(text_item.width);
+            sg_sprite.size_y.set_target_value(text_item.height);
+            Globals2.root.addChild(text_item);
             this.sprites.push(sg_sprite);
           } else {
-            Globals.log.error("No text at line " + line_no);
+            Globals2.log.error("No text at line " + line_no);
           }
           action_group.complete_action("text");
           break;
@@ -2357,21 +2400,17 @@
             let sprite_tag2 = words.shift();
             let by_or_to = Parser.get_word(words, ["by", "to"]);
             if (by_or_to === false) {
-              Globals.log.error("Expected by or to on line " + line_no);
+              Globals2.log.error("Expected by or to on line " + line_no);
               break;
             }
-            let x = Parser.get_int(words, 0) * Globals.script_scale_x;
-            let y = Parser.get_int(words, 0) * Globals.script_scale_y;
-            let in_or_at = Parser.test_word(words, ["in", "at"]);
-            if (in_or_at === false) {
-              Globals.log.error("Expected in or at on line " + line_no);
-              break;
-            }
+            let x = Parser.get_int(words, 0) * Globals2.script_scale_x;
+            let y = Parser.get_int(words, 0) * Globals2.script_scale_y;
+            let in_or_at = Parser.test_word(words, ["in", "at"], "in");
             let duration2 = Parser.get_duration(words, 0);
             let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             sprite2.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
           } else {
-            Globals.log.error("Missing move data at line " + line_no);
+            Globals2.log.error("Missing move data at line " + line_no);
             action_group.complete_action("moveX");
           }
           break;
@@ -2389,7 +2428,7 @@
         case "speed":
           let sprite_tag = words.shift();
           Parser.test_word(words, "to");
-          let speed = Parser.get_int(words, 0) * Globals.script_scale_x;
+          let speed = Parser.get_int(words, 0) * Globals2.script_scale_x;
           let sprite = SG_sprite.get_sprite(this.name, sprite_tag);
           sprite.set_speed(speed);
           action_group.complete_action("speed");
@@ -2411,7 +2450,7 @@
             let sprite_tag2 = words.shift();
             let depth_type = Parser.get_word(words, ["to", "by"]);
             if (depth_type === false) {
-              Globals.log.error("Expected to or by on line " + line_no);
+              Globals2.log.error("Expected to or by on line " + line_no);
               break;
             }
             let value2 = Parser.get_int(words, 0);
@@ -2423,7 +2462,7 @@
               sprite2.set_depth(depth_type, value2);
             }
           } else {
-            Globals.log.error("Missing raise/lower data at line " + line_no);
+            Globals2.log.error("Missing raise/lower data at line " + line_no);
           }
           action_group.complete_action("raise");
           break;
@@ -2443,11 +2482,11 @@
             let sprite_tag2 = words.shift();
             let to_or_by = Parser.get_word(words, ["to", "by"]);
             if (to_or_by === false) {
-              Globals.log.error("Expected to or by on line " + line_no);
+              Globals2.log.error("Expected to or by on line " + line_no);
               break;
             }
-            let w = Parser.get_int(words, 0) * Globals.script_scale_x;
-            let h = Parser.get_int(words, 0) * Globals.script_scale_y;
+            let w = Parser.get_int(words, 0) * Globals2.script_scale_x;
+            let h = Parser.get_int(words, 0) * Globals2.script_scale_y;
             let in_or_at = Parser.test_word(words, ["in", "at"]);
             let duration2 = Parser.get_duration(words, 0);
             let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
@@ -2461,7 +2500,7 @@
               makeCompletionCallback(action_group)
             );
           } else {
-            Globals.log.error("Missing resize data at line " + line_no);
+            Globals2.log.error("Missing resize data at line " + line_no);
             action_group.complete_action("resize");
           }
           break;
@@ -2511,7 +2550,7 @@
             let sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             sprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
           } else {
-            Globals.log.error("Missing rotate data at line " + line_no);
+            Globals2.log.error("Missing rotate data at line " + line_no);
             action_group.complete_action("rotateX");
           }
           break;
@@ -2543,7 +2582,7 @@
               sprite2.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
             }
           } else {
-            Globals.log.error("Missing throw data at line " + line_no);
+            Globals2.log.error("Missing throw data at line " + line_no);
           }
           break;
         /**************************************************************************************************
@@ -2567,7 +2606,7 @@
               sprite2.throw(180, 0, now, makeCompletionCallback(action_group));
             }
           } else {
-            Globals.log.error("Missing drop data at line " + line_no);
+            Globals2.log.error("Missing drop data at line " + line_no);
           }
           break;
         /**************************************************************************************************
@@ -2588,7 +2627,7 @@
             let axis = Parser.get_word(words, "h");
             sprite2.flip(axis.charAt(0));
           } else {
-            Globals.log.error("Missing sprite tag at line " + line_no);
+            Globals2.log.error("Missing sprite tag at line " + line_no);
           }
           action_group.complete_action();
           break;
@@ -2617,7 +2656,7 @@
               sprite2.set_visibility("toggle");
             }
           } else {
-            Globals.log.error("Missing sprite tag at line " + line_no);
+            Globals2.log.error("Missing sprite tag at line " + line_no);
           }
           action_group.complete_action();
           break;
@@ -2642,7 +2681,7 @@
               }
             }
           } else {
-            Globals.log.error("Missing scene name at line " + line_no);
+            Globals2.log.error("Missing scene name at line " + line_no);
           }
           action_group.complete_action("start");
           break;
@@ -2718,7 +2757,7 @@
             Parser.test_word(words, ["be", "to"]);
             this.varList.create(varName, words.join(" "));
           } else {
-            Globals.log.error("Missing variable name at line " + line_no);
+            Globals2.log.error("Missing variable name at line " + line_no);
           }
           action_group.complete_action("let");
           break;
@@ -2741,14 +2780,14 @@
             if (on_off == "stop") {
               sprite2.flicker(0, 0);
             } else {
-              let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals.script_scale_x;
+              let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals2.script_scale_x;
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let flicker_chance = Parser.get_int(words, 50);
               sprite2.flicker(flicker_size, flicker_chance);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals2.log.error("Missing values at line " + line_no);
           }
           action_group.complete_action("flicker");
           break;
@@ -2772,8 +2811,8 @@
             if (on_off == "stop") {
               sprite2.jiggle(0, 0, 0);
             } else {
-              let jiggle_x = Parser.get_int(words, 0) * Globals.script_scale_x;
-              let jiggle_y = Parser.get_int(words, 0) * Globals.script_scale_y;
+              let jiggle_x = Parser.get_int(words, 0) * Globals2.script_scale_x;
+              let jiggle_y = Parser.get_int(words, 0) * Globals2.script_scale_y;
               let jiggle_r = Parser.get_int(words, 0);
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
@@ -2781,7 +2820,7 @@
               sprite2.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals2.log.error("Missing values at line " + line_no);
           }
           action_group.complete_action("jiggle");
           break;
@@ -2803,7 +2842,7 @@
             let flash_count = Parser.get_int(words, 0, 1, 10);
             sprite2.flash(flash_count, now);
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals2.log.error("Missing values at line " + line_no);
           }
           action_group.complete_action("flash");
           break;
@@ -2835,7 +2874,7 @@
               sprite2.blink(blink_rate, blink_chance, now);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals2.log.error("Missing values at line " + line_no);
           }
           action_group.complete_action("blink");
           break;
@@ -2870,7 +2909,7 @@
               sprite2.pulse(pulse_rate, pulse_min, pulse_max, now);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals2.log.error("Missing values at line " + line_no);
           }
           action_group.complete_action("pulse");
           break;
@@ -2898,7 +2937,7 @@
               sprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
             }
           } else {
-            Globals.log.error("Missing fade parameters");
+            Globals2.log.error("Missing fade parameters");
             action_group.complete_action("fade");
           }
           break;
@@ -2926,7 +2965,7 @@
               sprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
             }
           } else {
-            Globals.log.error("Missing fade parameters");
+            Globals2.log.error("Missing fade parameters");
             action_group.complete_action("blur");
           }
           break;
@@ -2951,7 +2990,7 @@
               sprite2.set_tint(value2);
             }
           } else {
-            Globals.log.error("Missing tint colour");
+            Globals2.log.error("Missing tint colour");
             action_group.complete_action("tint");
           }
           break;
@@ -2971,7 +3010,7 @@
               sprite2.set_tint(value2, duration2, now, makeCompletionCallback(action_group));
             }
           } else {
-            Globals.log.error("Missing " + command + " parameters");
+            Globals2.log.error("Missing " + command + " parameters");
             action_group.complete_action(command);
           }
           break;
@@ -3002,10 +3041,37 @@
         
         **************************************************************************************************/
         case "finish":
-          Globals.app.stop();
+          Globals2.app.stop();
+          break;
+        /**************************************************************************************************
+        
+           ########  ##     ## ##     ## ########  
+           ##     ## ##     ## ###   ### ##     ## 
+           ##     ## ##     ## #### #### ##     ## 
+           ##     ## ##     ## ## ### ## ########  
+           ##     ## ##     ## ##     ## ##        
+           ##     ## ##     ## ##     ## ##        
+           ########   #######  ##     ## ##        
+        
+        **************************************************************************************************/
+        case "dump":
+          const type = Parser.get_word(words, "scene");
+          const arg = Parser.get_word(words);
+          switch (type) {
+            case "scene":
+              if (arg) {
+                Globals2.reporter.dumpScene(arg);
+              } else {
+                Globals2.reporter.dumpScene(this);
+              }
+              break;
+            case "globals":
+              Globals2.log.report(Globals2.dump());
+              break;
+          }
           break;
         default:
-          Globals.log.error("Unknown command: " + command);
+          Globals2.log.error("Unknown command: " + command);
           break;
       }
     }
@@ -3019,36 +3085,36 @@
     constructor() {
     }
     async run() {
-      await Globals.app.init({
+      await Globals2.app.init({
         // resizeTo: window,
         background: "#dfdfdf",
-        width: Globals.display_width,
-        height: Globals.display_height
+        width: Globals2.display_width,
+        height: Globals2.display_height
       });
       document.onkeydown = function(e) {
-        Globals.event("onkeydown", e.key);
+        Globals2.event("onkeydown", e.key);
       };
       document.onkeyup = function(e) {
-        Globals.event("onkeyup", e.key);
+        Globals2.event("onkeyup", e.key);
       };
       const pixi = document.getElementById(_SlowGlass.sg_id);
-      pixi.appendChild(Globals.app.canvas);
-      Globals.root = new PIXI.Container();
-      Globals.root.sortableChildren = true;
-      Globals.app.stage.addChild(Globals.root);
-      Globals.app.ticker.add(this.update);
+      pixi.appendChild(Globals2.app.canvas);
+      Globals2.root = new PIXI.Container();
+      Globals2.root.sortableChildren = true;
+      Globals2.app.stage.addChild(Globals2.root);
+      Globals2.app.ticker.add(this.update);
     }
     update(ticker) {
       let current_millis = Date.now();
       if (_SlowGlass.next_action_run < current_millis) {
-        if (Globals.app.screen.width != Globals.display_width) {
-          Globals.app.screen.width = Globals.display_width;
+        if (Globals2.app.screen.width != Globals2.display_width) {
+          Globals2.app.screen.width = Globals2.display_width;
         }
-        if (Globals.app.screen.height != Globals.display_height) {
-          Globals.app.screen.height = Globals.display_height;
+        if (Globals2.app.screen.height != Globals2.display_height) {
+          Globals2.app.screen.height = Globals2.display_height;
         }
-        for (let i = 0; i < Globals.scenes.length; i++) {
-          let current = Globals.scenes[i];
+        for (let i = 0; i < Globals2.scenes.length; i++) {
+          let current = Globals2.scenes[i];
           if (!current.enabled) {
             continue;
           }
@@ -3082,8 +3148,8 @@
         _SlowGlass.next_action_run = current_millis + defaults_default.TRIGGER_RATE;
       }
       if (_SlowGlass.next_sprite_update < current_millis) {
-        for (let i = 0; i < Globals.scenes.length; i++) {
-          let current = Globals.scenes[i];
+        for (let i = 0; i < Globals2.scenes.length; i++) {
+          let current = Globals2.scenes[i];
           if (!current.enabled) {
             continue;
           }
@@ -3095,11 +3161,11 @@
       }
     }
     async scriptFromURL(url) {
-      Globals.log.debug("Starting Slow Glass from " + window.sg_filename);
+      Globals2.log.debug("Starting Slow Glass from " + window.sg_filename);
       this.cleanUp();
       const response = await fetch(url);
       if (!response.ok) {
-        Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+        Globals2.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
       }
       const text = await response.text();
       Scene2.readFromText(text);
@@ -3122,10 +3188,13 @@
     setDrawingParent(elementID) {
       _SlowGlass.sg_id = elementID;
     }
+    setMessageParent(elementID) {
+      Globals2.log.messageParent(elementID);
+    }
     cleanUp() {
       AudioManager.deleteAll();
-      if (Globals.app != null) {
-        Globals.app.destroy(
+      if (Globals2.app != null) {
+        Globals2.app.destroy(
           { removeView: true },
           // removes the canvas element from the DOM
           {
@@ -3138,11 +3207,11 @@
           }
         );
       }
-      Globals.reset();
-      Globals.app = new PIXI.Application();
+      Globals2.reset();
+      Globals2.app = new PIXI.Application();
     }
     scriptFromText(text) {
-      Globals.log.debug("Starting Slow Glass from textarea");
+      Globals2.log.debug("Starting Slow Glass from textarea");
       this.cleanUp();
       Scene2.readFromText(text);
       this.run();

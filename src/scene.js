@@ -31,6 +31,14 @@ export class Scene {
         return false;
     }
 
+    dump() {
+        let text = "Scene: " + this.name + "\n";
+        text += this.enabled ? "enabled\n" : "disabled\n";
+        text += "Contains " + this.ActionGroups.length + " action groups\n";
+        text += this.images.length + " images\n";
+        text += this.sprites.length + " sprites\n"; 
+        return text;
+    }
 
 /**************************************************************************************************
 
@@ -185,6 +193,7 @@ export class Scene {
         }
         if (top.content.length < 1) {
             Globals.log.error('No top level actions, nothing will happen!');
+            return false;
         } else {
             // calculate overall scaling
             switch (Globals.script_scale_type) {
@@ -204,6 +213,7 @@ export class Scene {
             top.actionGroups.push(dummyActionGroup);
             Globals.scenes.push(top);
         }
+        return true;
     }
 
     stop() {
@@ -473,6 +483,33 @@ export class Scene {
             }
         }
 
+/**************************************************************************************************
+
+    ######  ########  ########    ###    ######## ######## 
+   ##    ## ##     ## ##         ## ##      ##    ##       
+   ##       ##     ## ##        ##   ##     ##    ##       
+   ##       ########  ######   ##     ##    ##    ######   
+   ##       ##   ##   ##       #########    ##    ##       
+   ##    ## ##    ##  ##       ##     ##    ##    ##       
+    ######  ##     ## ######## ##     ##    ##    ######## 
+
+**************************************************************************************************/
+
+        // convert "create X" to the appropriate single word command
+        if (command == "set" && words.length > 1) {
+            switch(words[0]) {
+                case "text":
+                    words.shift();
+                    command = "text";
+                    break;
+                case "sprite":
+                    words.shift();
+                    command = "sprite";
+                    break;
+                default:
+                    break;
+            }
+        }
 
         switch(command) {
 
@@ -781,19 +818,20 @@ export class Scene {
                     Parser.test_word(words,["named", "as"]);
                     const text_tag = Parser.get_word(words);
                     const content = words.join(" ");
-                    const text_item = new PIXI.Text({
-                        text: content,
-                            style: {
-                            fontFamily: 'Arial',
-                            fontSize: 24,
-                            fill: 0xff1010,
-                            align: 'center',
-                        }
-                    });
+                    const text_item = new PIXI.Text(content, {
+                        fontSize: 24,
+                        lineHeight: 28,
+                        letterSpacing: 0,
+                        fill: 0xffffff,
+                        align: "center"
+                    })
                     const sg_sprite = new SG_sprite(text_tag, text_tag);
                     sg_sprite.pi_sprite = text_item;
                     sg_sprite.pi_sprite.visible = false;
                     sg_sprite.visible = false;
+                    sg_sprite.size_x.set_target_value(text_item.width);
+                    sg_sprite.size_y.set_target_value(text_item.height);
+                    Globals.root.addChild(text_item);
                     this.sprites.push(sg_sprite);
                 } else {
                     Globals.log.error("No text at line " + line_no);
@@ -1516,6 +1554,35 @@ export class Scene {
                 Globals.app.stop();
                 break;
 
+/**************************************************************************************************
+
+   ########  ##     ## ##     ## ########  
+   ##     ## ##     ## ###   ### ##     ## 
+   ##     ## ##     ## #### #### ##     ## 
+   ##     ## ##     ## ## ### ## ########  
+   ##     ## ##     ## ##     ## ##        
+   ##     ## ##     ## ##     ## ##        
+   ########   #######  ##     ## ##        
+
+**************************************************************************************************/
+
+            case "dump":
+                const type = Parser.get_word(words,"scene");
+                const arg = Parser.get_word(words);
+                switch(type) {
+                    case "scene":
+                        if (arg) {
+                            Globals.reporter.dumpScene(arg);
+                        } else {
+                            Globals.reporter.dumpScene(this);
+                        }
+                        break;
+                    case "globals":
+                        Globals.log.report(Globals.dump());
+                        break;
+                }
+                break;
+            
             default:
                 Globals.log.error("Unknown command: " + command );
                 break;
