@@ -38,7 +38,7 @@ export class Log {
             }
         } // else
         if (this.messageElement != null) {
-            report(text);
+            this.report(text);
         } else {
             console.log(text);
         }

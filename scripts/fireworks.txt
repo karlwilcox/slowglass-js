@@ -1,0 +1,36 @@
+# Fireworks demo
+# All images created by Affinty App generative AI
+# call from URL /slow-glass/scripts/fireworks.txt
+
+display width 800
+display height 450
+
+begin
+    # Create our stage...
+    with /slow-glass/assets/fireworks
+    load starry-sky.png as starry-sky
+    use starry-sky as background
+    load crowd-of-people.png as crowd
+    use crowd as foreground
+    load tree1.png as left-tree
+    load tree2.png as right-tree
+    sprite create left-tree from left-tree
+    sprite create right-tree from right-tree
+    darken left-tree to 70
+    darken right-tree to 70
+    place left-tree at 20 200 depth 250
+    place right-tree at 780 200 depth  251
+
+scene firework1
+   begin
+        with /slow-glass/assets/fireworks
+        load firework1-1.png as firework1
+        make launch-site be (100 + (600 * $CHANCE))
+        make launch-angle be (-25 + (50 * $CHANCE))
+        make launch-speed be (250 + (100 * $CHANCE))
+        sprite create firework1 from firework1
+        resize firework1 to 10 10
+        resize firework1 to 150 150 in 3 seconds
+        place firework1 at ${launch-site} 450 depth 220
+        launch firework1 at ${launch-angle} with force ${launch-speed}
+end scene

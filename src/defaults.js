@@ -27,4 +27,7 @@ export default {
     DEPTH_RIGHT: 301,
     DEPTH_FOREGROUND: 400,
     DEPTH_FRAME: 1000,
+    SPRITE_IMAGE: "_IMAGE_",
+    SPRITE_TEXT: "_TEXT_",
+    SPRITE_GRAPHIC: "_GRAPHIC_",
 };

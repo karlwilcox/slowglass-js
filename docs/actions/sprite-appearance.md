@@ -16,6 +16,32 @@ These commands affect the visual appearane of a named sprite.
 
 Makes the named sprite visible or not, or swaps the visibility state. If you want to fade a sprite in to or out of view use the **fade** action with a given duration.
 
+## Resize
+
+`resize {sprite-name} (to | by) {width} {height} [(in | at) {duration}]`
+
+Changes the sprite size to an absolute value (**to**) or by the given
+values (**by**), either immediately or over a given duration.
+
+The width and height values are integers and can be negative if
+the **by** option is used.
+
+The command completes when the resizing has been accomplished.
+
+## Scale
+
+`scale {sprite-name} to {w%} {h%} [in {duration}]`
+
+Changes the size of the named sprite by the given percentage width and height.
+So a change of 50% will make the sprite half the size, a scale of 200%
+will make it twice the size and a scale of 100% will not make any difference
+at all.
+
+If one of the sizes is zero or omitted then the scaling will be uniform
+across both dimensions.
+
+The command completes when the re-scaling has been accomplished.
+
 ## Flicker
 
 `flicker {sprite-name} {size} [with chance {number}]`
@@ -79,3 +105,31 @@ These commands complete when the tone change is finished.
 The **tint** command allows you to give an overall colour cast to the sprite. The colour parameter can be any of the named web colors, or the word **stop** which will remove any colour tint or lightening or darkening, restoring the sprite to its original colours.
 
 The tint command completes immediately.
+
+## Flip
+
+`flip {sprite-name} (horizontal | vertical | reset)`
+
+Flips the named sprite around the horizontal or vertical axes, or puts the sprite
+back into its original orientation. The argument can be abbreviated to the first letter.
+The sprite does not change size or position.
+
+This command completes immediately.
+
+## Skew
+
+`skew {sprite-name} (to | by) {x-angle} {y-angle} [in {duration}]`
+
+A shear transform by the specified angle in the given time.
+
+The command completes when the skew is accomplished.
+
+## Reset
+
+`reset [sprite] {sprite-name}`
+
+This command undoes almost all of the above changes to bring the sprite back to its
+original state. It will also make the sprite invisible so use the **show** command
+to make it visible, possibly after applying a different set of effects.
+
+This command completes immediately.

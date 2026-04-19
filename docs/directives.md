@@ -15,25 +15,25 @@ The following directives are supported:
 
 ## display width / height
 
-```
-display width {integer}
-dipslay height {integer}
-display fullscreen (*)
-```
+`display width {integer}`
+
+`dipslay height {integer}`
+
+`display fullscreen (*)`
 
 Sets the width and height of the HTML Canvas object that the animation will be drawn on.
 
 The current display size can be accessed through the variables $WIDTH and $HEIGHT
 
-(*) Not implemted yet
+(*) Not implemented yet
 
 ## script width / height
 
-```
-script width {integer}
-script height {integer}
-script scale (fit | stretch | none) (*)
-```
+`script width {integer}`
+
+`script height {integer}`
+
+`script scale (fit | stretch | none) (*)`
 
 This is optional, but if your script has assumed a particular size for the drawing
 area you can specify this here. You can also choose how the script coordinates are mapped
@@ -47,10 +47,9 @@ on to the actual drawing area. The options are:
 
 ## gravity / ground
 
-```
-gravity {integer}
-ground [level] {integer}
-```
+`gravity {integer}`
+
+`ground [level] {integer}`
 
 These settings determine the behaviour of objects that are subject to the
 actions "throw", "launch" or "drop". 'gravity' sets the acceleration due to
@@ -79,9 +78,7 @@ This is not implemented yet but reserved for a future development.
 
 ## end file
 
-```
-end file
-```
+`end file`
 
 This is just a convenience directive that causes Slow Glass to ignore
 everything in the file beyond this point, even if it is valid script.
@@ -91,10 +88,9 @@ although there are more flexible commenting systems available (see below).
 
 ## scene / end scene
 
-```
-scene {name}
-end scene
-```
+`scene {name}`
+
+`end scene`
 
 These directives are used to split your script into smaller, reusable parts. A
 scene is introduced with the "scene" directive, which must be followed by a
@@ -121,9 +117,7 @@ here as they are also a means of structuring your scripts
 Lines begining with '#' (hash, or octothorpe) are completely ignored. You can
 have whitespace in front the hash but no other content, hence in the action:
 
-```
-log Attempt #${counter}
-```
+`text greeting colour #00ff00`
 
 The hash does **NOT** introduce a comment and will be treated as normal text.
 
@@ -132,9 +126,7 @@ Blank lines are ignored.
 Finally, lines that do not contain any alphabetic characters are also ignored.
 This means that you can break up your file with lines such as:
 
-```
-======================================
-```
+`======================================`
 
 Without having to explicitly put them into comments.
 
@@ -145,11 +137,9 @@ style comments.
 
 Any content on a line after two slash characters will be ignored:
 
-```
-start my-scene // this is ignored
-```
+`start my-scene // this is ignored`
 
-Also, anything enclosed between /* and */ will be ignored, even if it
+Also, anything enclosed between /\* and \*/ will be ignored, even if it
 spans over multiple lines.
 
 ```
@@ -157,4 +147,3 @@ spans over multiple lines.
 This content will be ignored
 ********/
 ```
-

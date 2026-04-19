@@ -39,15 +39,11 @@ header:
         <div class="row">
             <div class="medium-6 columns">
                 <p>Script Input Area</p>
-                <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" >
-
-                </textarea>
+                <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" ></textarea>
             </div>
             <div class="medium-6 columns">
                 <p>Message Area</p>
-                <textarea id="sg_messages" name="sg_script" class="w-75" rows="10" style="height: 100%;" readonly>
-
-                </textarea>
+                <textarea id="sg_messages" name="sg_script" class="w-75" rows="10" style="height: 100%;" readonly></textarea>
             </div>
         </div>
     </div>
@@ -63,6 +59,16 @@ header:
         document.getElementById("stop_button").addEventListener("click",clean_up);
         document.getElementById("clear_button").addEventListener("click",clearMsgs);
         document.getElementById("sound_button").addEventListener("click",unlockAudio);
+        input_line = document.getElementById("input_line");
+        input_line.addEventListener("keypress",function(event) {
+        // If the user presses the "Enter" key on the keyboard
+        if (event.key === "Enter") {
+            // Cancel the default action, if needed
+            event.preventDefault();
+            // Trigger the button element with a click
+            document.getElementById("interactive_button").click();
+        }
+        }); 
 
         // Source - https://stackoverflow.com/a/58189464
         // Posted by Paulo Eduardo, modified by community. See post 'Timeline' for change history
@@ -76,7 +82,15 @@ header:
         }
 
         function loadFromURL() {
-            slowGlass.scriptFromText(document.getElementById("input_line").value);
+            clearMsgs();
+            const url = document.getElementById("input_line").value;
+            slowGlass.scriptFromURL(url);
+            fetch(url)
+            .then(response => response.text())
+            .then(text => {
+                document.getElementById('sg_script').value = text;
+            })
+            .catch(error => console.error('Error fetching data:', error));
         }
 
         function runAction() {

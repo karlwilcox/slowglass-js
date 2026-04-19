@@ -23,18 +23,6 @@ the currently visible area.
 
 The command completes when the movement has been accomplished.
 
-## Resize
-
-`resize {sprite-name} (to | by) {width} {height} [(in | at) {duration}]`
-
-Changes the sprite size to an aboslute value (**to**) or by the given
-values (**by**), either immediately or over a given duration.
-
-The width and height values are integers and can be negative if
-the **by** option is used.
-
-The command completes when the resizing has been accomplished.
-
 ## Rotate
 
 `rotate {sprite-name} (by | to | at) {angle} [in {duration}]`
@@ -76,8 +64,7 @@ have the commands complete immediately.
 
 ## Jiggle
 
-`(jiggle | jitter) {sprite-name} [by] {x} {y} {step} [with chance
-{percentage}]`
+`(jiggle | jitter) {sprite-name} [by] {x} {y} {step} [with chance {percentage}]`
 
 `(jiggle | jitter) stop`
 
@@ -89,11 +76,31 @@ random percentage is less than **percentage**, default 100%, i.e.
 jiggling every 25th of a second. A percentage of 50 or even lower
 looks quite effective.
 
-When the sprite position is used, for example in a variable or
-moving by a relative amount then the intended position is used,
-the jigglyness is ignored for these purposes.
+When the sprite position is used, for example in a variable or moving by a
+relative amount then the intended position is used, the jigglyness is ignored
+for these purposes. 
 
-Although jiggling will continue until the **stop** command
+The command completes immediately although jiggling will continue until the **stop** command
+
+## Sway / Wave
+
+`(sway | wave) {sprite-name} [to] {degrees} [in] {duration} [with chance {percentage}]`
+
+`(sway | wave) stop`
+
+This makes a gradual adjustment to the skew angle, going up to the skew angle
+in the given time, down to zero then to the negative angle in the given time,
+and repeats. The difference between them is that sway operates in the x
+axis and wave operates in the y axis. You can apply both at the same time.
+
+The percentage chance determines whether a movement will be made at each
+update (currently once every 25th of a second).
+
+The sway and wave are calculated separately from any other skew value applied,
+and if you skew a relative amount, or use the skew value in a variable any
+extra amount of sway or wave will be ignored.
+
+The command completes immediately although skewing will continue until the **stop** command
 
 ## Future Intentions
 

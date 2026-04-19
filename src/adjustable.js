@@ -30,14 +30,37 @@ export class Adjustable {
         // Callbacks
         this.position_callback = null;
         this.accelerate_callback = null;
+        // Swaying
+        this.sway_limit = 0;
+        this.sway_step = 0;
+        this.sway_rate = 0;
+        this.sway_up = false;
+        this.sway_chance = 0;
+        this.last_sway = 0;
     }
 
     value() {
-        return this.current_value + this.jig_step;
+        return this.current_value + this.jig_step + this.sway_step;
     }
 
     speed() {
         return this.delta_value;
+    }
+
+    sway_stop() {
+        this.sway_limit = 0;
+        this.sway_step = 0;
+        this.sway_rate = 0;
+        this.sway_chance = 0;
+    }
+
+    sway_start(limit, rate, chance) {
+        this.sway_limit = limit;
+        this.sway_rate = rate * 1000; // convert to milliseconds
+        this.sway_chance = chance;
+        this.sway_step = 0;
+        this.sway_up = true;
+        this.last_sway = Date.now();
     }
 
     stop() {
@@ -121,6 +144,7 @@ export class Adjustable {
 
     update_value() {
         let updated = false;
+        let this_adjustment = Date.now();
         // Are we jiggly?
         if (this.jig_limit > 0 && this.jig_chance > 0) {
             if (Math.random() * 100 < this.jig_chance ) { // lets jiggle
@@ -131,6 +155,28 @@ export class Adjustable {
                 } else if (this.jig_step < (this.jig_limit * -1)) {
                     this.jig_step = this.jig_limit * -1;
                 }
+            }
+        }
+        // Are we swaying?
+        if (this.sway_limit > 0) {
+            if (Math.random() * 100 < this.sway_chance ) { // lets sway
+                // this should probably be sine wave rather than a sawtooth...?
+                let step = (this.sway_limit / this.sway_rate) * (this_adjustment - this.last_sway);
+                if (this.sway_up) {
+                    this.sway_step += step;
+                    if (this.sway_step > this.sway_limit) {
+                        this.sway_step = this.sway_limit;
+                        this.sway_up = false;
+                    }
+                } else { // swaying down
+                    this.sway_step -= step;
+                    if (this.sway_step < this.sway_limit * -1) {
+                        this.sway_step = this.sway_limit * -1;
+                        this.sway_up = true;
+                    }
+                }
+                this.last_sway = this_adjustment;
+                updated = true;
             }
         }
         // Are we still changing?
@@ -148,7 +194,6 @@ export class Adjustable {
                 this.position_callback("adjustable");
             }
         } else {
-            let this_adjustment = Date.now();
             this.current_value += this.delta_value * (this_adjustment - this.last_adjustment);
             this.last_adjustment = this_adjustment;
         }

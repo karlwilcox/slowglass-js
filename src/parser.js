@@ -30,10 +30,10 @@ export class Parser {
     static get_int(words, def, min, max) {
         if (words.length > 0) {
             let word = words.shift();
-            if (!word.match(/^[0-9-]+$/)) {
+            if (!word.match(/^[0-9-\.]+$/)) {
                 Globals.log.error("Expected integer - " + word);
             }
-            let retval = parseInt(word);
+            let retval = Math.floor(parseFloat(word));
             if (arguments.length > 2 && retval < min) {
                 retval = min;
             }
@@ -70,6 +70,8 @@ export class Parser {
             mult = 60;
         } else if (units.startsWith("h")) {
             mult = 3600;
+        } else if (units.startsWith("t")) {
+            mult = 0.1;
         } else {
             Globals.log.error("Unknown time unit - " + units );
         }

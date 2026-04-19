@@ -10,11 +10,13 @@ class SlowGlass {
     static next_action_run = 0;
     static next_sprite_update = 0;
     static sg_id = "body";
+    static clean = true;
 
     constructor() {
     }
 
     async run() {
+        this.clean = false;
         // Initialise renderer (Pixi v8 requirement)
         await Globals.app.init({
             // resizeTo: window,
@@ -114,7 +116,7 @@ class SlowGlass {
     }
 
     async scriptFromURL(url) {
-        Globals.log.debug("Starting Slow Glass from " + window.sg_filename );
+        Globals.log.report("Starting Slow Glass from " + url);
         this.cleanUp();
         const response = await fetch(url);
         if (!response.ok) {
@@ -151,6 +153,7 @@ class SlowGlass {
     }
 
     cleanUp() {
+        if (this.clean) { return; }
         // tidy up previous run
         // let pixi = document.getElementById(SlowGlass.sg_id);
         AudioManager.deleteAll();
@@ -164,6 +167,7 @@ class SlowGlass {
                 },
             );
         }
+        this.clean = true;
         Globals.reset();
         // if (pixi.hasChildNodes()) {
         //     pixi.removeChild(pixi.firstChild);
@@ -172,7 +176,7 @@ class SlowGlass {
     }
 
     scriptFromText(text) {
-        Globals.log.debug("Starting Slow Glass from textarea");
+        Globals.log.report("Starting Slow Glass from textarea");
         // tidy up previous run
         this.cleanUp();
         if (Scene.readFromText(text)) {

@@ -152,6 +152,16 @@ export class VarList {
                 return Globals.script_scale_x;
             case "SCALEY":
                 return Globals.script_scale_y;
+            case "SCENE":
+                return this.sceneName;
+            case "MESSAGE":
+                const scene = Scene.find(this.sceneName);
+                return scene.message;
+            case "ELAPSED":
+                return Math.floor((Date.now() - Globals.start_time) / 1000);
+            case "MILLIS":
+            case "MS":
+                return (Date.now() - Globals.start_time) / 1000;
             default:
                 return false;
         }

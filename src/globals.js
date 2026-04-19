@@ -3,6 +3,7 @@ import * as Utils from "./utils.js";
 import defaults from "./defaults.js";
 
 export class Globals {
+    static start_time = Date.now();
     static root = null;
     static scenes = [];
     static app = null;
@@ -20,14 +21,25 @@ export class Globals {
     static ground_level = defaults.DISPLAY_HEIGHT;
     static lastKey = null;
     static key = null;
+    static highestZ = 0;
 
     constructor() {
     }
 
-    static dump() {
+    static nextZ(depth) {
+        if (depth > 0) {
+            if (depth > Globals.highestZ) {
+                Globals.highestZ = depth;
+            }
+            return depth;
+        } // else
+        return ++Globals.highestZ;
+    }
+
+    static list() {
         let text = "";
         for (const propt in this) {
-            text += `$propt = $this[propt]\n`;
+            text += `${propt} = ${this[propt]}\n`;
         }
         return text;
     }
@@ -36,7 +48,6 @@ export class Globals {
         Globals.root = null;
         Globals.scenes = [];
         Globals.app = null;
-        Globals.log = new Utils.Log(defaults.DEBUG);
         Globals.current_trigger = "";
         Globals.display_width = defaults.DISPLAY_WIDTH;
         Globals.display_height = defaults.DISPLAY_HEIGHT;
