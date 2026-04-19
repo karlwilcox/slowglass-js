@@ -58,7 +58,7 @@ class SlowGlass {
             }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (!current.enabled) {
+                if (current.state != defaults.SCENE_RUNNING) {
                     continue;
                 }
                 // First let's see if any local timers have expired
@@ -67,14 +67,14 @@ class SlowGlass {
                         current.timers.splice(j,1);
                     }
                 }
-                // this implements the any/all condition. It is set by looking
-                // at each trigger in turn. If the when condition is "any"
-                // we immediately break out of the loop and run actions
-                // If when is "all" we break out of the loop as soon as a
-                // trigger fails. Hence the only way to get out of the loop
-                // with do_run set to true is for all the tirggers to succeed
                 // Found an active scene, now go through each action group
                 for ( let j = 0; j < current.actionGroups.length; j++ ) {
+                    // this implements the any/all condition. It is set by looking
+                    // at each trigger in turn. If the when condition is "any"
+                    // we immediately break out of the loop and run actions
+                    // If when is "all" we break out of the loop as soon as a
+                    // trigger fails. Hence the only way to get out of the loop
+                    // with do_run set to true is for all the triggers to succeed
                     let do_run = false;
                     // check each trigger, if ANY is valid then execute actions
                     let triggers = current.actionGroups[j].triggers;
@@ -103,7 +103,7 @@ class SlowGlass {
         if (SlowGlass.next_sprite_update < current_millis) {
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (!current.enabled) {
+                if (current.state != defaults.SCENE_RUNNING) {
                     continue;
                 }
                 // Found an active scene, now go through each sprite

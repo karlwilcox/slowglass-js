@@ -32,6 +32,23 @@ You can also assign multiple variables at the same time with the command:
 
 `assign {variable-name1} {variable-name2}... as {value1} {value2}...`
 
+This is useful to save space for multiple assignments but can also be
+combined with the built-in variable _*PARAMETERS*_ which can be passed
+to a scene with the **start** command, for example:
+
+`start traffic 50 medium`
+
+Will cause the variable _*$PARAMETERS*_ within the scene named "traffic"
+to have the value:
+
+`50 medium`
+
+You can assign these values to variables like this:
+
+`assign density volume as $PARAMETERS`
+
+and _*$density*_ will be 50 and _*$volume*_ will be 'medium'.
+
 Finally, you can also randomly assign values from a list provided:
 
 `choose {variable-name} [from] {list...}`
@@ -48,10 +65,16 @@ name, so to update a value use a structure like:
 
 `let my_var be 1`
 
-`let my_var be ($my_var + 1)`
+`let my_var be ($my_var + 10)`
 
 The content in round brackets will be assumed to be an expression
 and will be replaced by its evaluated result - see LINK NEEDED.
+
+There are also convenience functions provided for common operations:
+
+`(increment | decrement) {variable-name}`
+
+Which will increase or decrease the variable provided it looks like a number.
 
 ## Variable Expansion
 

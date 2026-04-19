@@ -223,7 +223,10 @@
     DEPTH_FRAME: 1e3,
     SPRITE_IMAGE: "_IMAGE_",
     SPRITE_TEXT: "_TEXT_",
-    SPRITE_GRAPHIC: "_GRAPHIC_"
+    SPRITE_GRAPHIC: "_GRAPHIC_",
+    SCENE_STOPPED: "_STOPPED_",
+    SCENE_RUNNING: "_RUNNING_",
+    SCENE_PAUSED: "_PAUSED_"
   };
 
   // src/vars.js
@@ -367,9 +370,10 @@
           return Globals.script_scale_y;
         case "SCENE":
           return this.sceneName;
-        case "MESSAGE":
+        case "PARAMS":
+        case "PARAMETERS":
           const scene2 = Scene.find(this.sceneName);
-          return scene2.message;
+          return scene2.parameters;
         case "ELAPSED":
           return Math.floor((Date.now() - Globals.start_time) / 1e3);
         case "MILLIS":
@@ -1310,7 +1314,7 @@
       for (let i = 0; i < Globals.scenes.length; i++) {
         if (Globals.scenes[i].name == scene2) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
-            if (Globals.scenes[i].sprites[j].name == tag) {
+            if (!(Globals.scenes[i].state == defaults_default.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
               return Globals.scenes[i].sprites[j];
             }
           }
@@ -1840,16 +1844,19 @@
   var Scene2 = class _Scene {
     constructor(sceneName) {
       this.name = sceneName;
+      this.state = defaults_default.SCENE_STOPPED;
       this.content = [];
-      this.enabled = sceneName == defaults_default.MAIN_NAME;
+      this.reset();
+    }
+    reset() {
       this.actionGroups = [];
       this.images = [];
       this.sprites = [];
       this.folder = "";
-      this.varList = new VarList(sceneName);
+      this.varList = new VarList(this.sceneName);
       this.timers = [];
       this.completion_callback = null;
-      this.message = defaults_default.NOTFOUND;
+      this.parameters = defaults_default.NOTFOUND;
       this.graphic_fill = "black";
       this.graphic_stroke = "black";
       this.graphic_stroke_width = 1;
@@ -1865,7 +1872,7 @@
     }
     scene_data() {
       let text = "Scene: " + this.name + "\n";
-      text += this.enabled ? "enabled\n" : "disabled\n";
+      text += "State: " + this.state + "\n";
       text += "Contains " + this.actionGroups.length + " action groups\n";
       text += this.images.length + " images\n";
       text += this.sprites.length + " sprites\n";
@@ -2055,28 +2062,34 @@
       }
       return true;
     }
-    stop() {
-      this.enabled = false;
+    stop(reset = false) {
+      this.state = defaults_default.SCENE_STOPPED;
+      this.parameters = defaults_default.NOTFOUND;
       this.actionGroups = [];
       for (let i = 0; i < this.sprites; i++) {
-        const sprite2 = this.sprites[i];
-        if (sprite2.enabled) {
+        const sg_sprite = this.sprites[i];
+        if (sg_sprite.pi_sprite != null) {
           sg_sprite.pi_sprite.destroy();
         }
       }
-      this.varList = null;
       this.sprites = [];
-      this.images = [];
+      if (reset) {
+        this.reset();
+      }
       if (this.completion_callback != null) {
         this.completion_callback();
         this.completion_callback = null;
       }
     }
     pause() {
-      this.enabled = true;
+      if (this.state == defaults_default.SCENE_RUNNING) {
+        this.state = defaults_default.SCENE_PAUSED;
+      }
     }
     resume() {
-      this.enabled = false;
+      if (this.state == defaults_default.SCENE_PAUSED) {
+        this.state = defaults_default.SCENE_RUNNING;
+      }
     }
     /**************************************************************************************************
     
@@ -2089,10 +2102,12 @@
         ######     ##    ##     ## ##     ##    ##      ### ###   
     
     **************************************************************************************************/
-    start(message) {
-      this.enabled = false;
+    start(parameters) {
+      if (this.state != defaults_default.SCENE_STOPPED) {
+        return;
+      }
       this.actionGroups = [];
-      this.message = message;
+      this.parameters = parameters;
       let action_group = new ActionGroup();
       let state = "T";
       let timestamp = Date.now();
@@ -2192,7 +2207,7 @@
         action_group.addAction(this.content[i]);
       }
       this.actionGroups.push(action_group);
-      this.enabled = true;
+      this.state = defaults_default.SCENE_RUNNING;
     }
     /**************************************************************************************************
     
@@ -2400,22 +2415,39 @@
         case "reset":
           {
             action_group.complete_action("reset");
-            Parser.test_word(words, "sprite");
-            let sprite_tag2 = Parser.get_word(words);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
-              break;
+            const reset_type = Parser.test_word(words, ["sprite", "scene"], "scene");
+            if (reset_type == "sprite") {
+              if (words.length > 0) {
+                let sprite_tag2 = Parser.get_word(words);
+                let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+                if (!sg_sprite2) {
+                  break;
+                }
+                sg_sprite2.reset_size();
+                sg_sprite2.jiggle(0, 0, 0, 0);
+                sg_spitre.flicker(0);
+                sg_sprite2.blink(0, 0);
+                sg_sprite2.pulse(0);
+                sg_sprite2.flip("r");
+                sg_sprite2.set_tint("stop");
+                sg_sprite2.set_blur(0);
+                sg_spriet.set_skew(0, 0);
+                sg_sprite2.rotate("to", 0, "in");
+              } else {
+                Globals.log.error("Missing sprite name at line " + line_no);
+              }
+            } else if (reset_type == "scene") {
+              let sceneName = this.name;
+              if (words.length > 0) {
+                let sceneName2 = Parser.get_word(words);
+              }
+              const scene2 = _Scene.find(sceneName);
+              if (scene2 != false) {
+                scene2.stop(true);
+              } else {
+                Globals.log.error("Scene not found at line " + line_no);
+              }
             }
-            sg_sprite3.reset_size();
-            sg_sprite3.jiggle(0, 0, 0, 0);
-            sg_spitre.flicker(0);
-            sg_sprite3.blink(0, 0);
-            sg_sprite3.pulse(0);
-            sg_sprite3.flip("r");
-            sg_sprite3.set_tint("stop");
-            sg_sprite3.set_blur(0);
-            sg_spriet.set_skew(0, 0);
-            sg_sprite3.rotate("to", 0, "in");
           }
           break;
         /**************************************************************************************************
@@ -2445,20 +2477,20 @@
                   if (!sprite_tag2) {
                     sprite_tag2 = image_tag;
                   }
-                  let sg_sprite3 = new SG_sprite(image_tag, sprite_tag2);
+                  let sg_sprite2 = new SG_sprite(image_tag, sprite_tag2);
                   if (Parser.test_word(words, "area")) {
                     const x = Parser.get_int(words, 0);
                     const y = Parser.get_int(words, 0);
                     const w = Parser.get_int(words, 0);
                     const h = Parser.get_int(words, 0);
                     if (w > 0 && h > 0) {
-                      sg_sprite3.image_portion = new PIXI.Rectangle(x, y, w, h);
+                      sg_sprite2.image_portion = new PIXI.Rectangle(x, y, w, h);
                       sq_sprite.size_x.set_target_value(w);
                       sq_sprite.size_y.set_target_value(h);
                     }
                   }
-                  sg_sprite3.set_visibility(false);
-                  this.sprites.push(sg_sprite3);
+                  sg_sprite2.set_visibility(false);
+                  this.sprites.push(sg_sprite2);
                 }
                 break;
               default:
@@ -2484,30 +2516,30 @@
           action_group.complete_action("place");
           if (words.length > 0) {
             let sprite_tag2 = Parser.get_word(words);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               break;
             }
             const hidden = Parser.test_word(words, "hidden");
             Parser.test_word(words, "at");
             if (Parser.test_word(words, ["center", "centre"])) {
-              sg_sprite3.loc_x.set_target_value(Globals.app.screen.width / 2);
-              sg_sprite3.loc_y.set_target_value(Globals.app.screen.height / 2);
+              sg_sprite2.loc_x.set_target_value(Globals.app.screen.width / 2);
+              sg_sprite2.loc_y.set_target_value(Globals.app.screen.height / 2);
             } else {
-              sg_sprite3.loc_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
-              sg_sprite3.loc_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
+              sg_sprite2.loc_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
+              sg_sprite2.loc_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
             }
             Parser.test_word(words, "depth");
-            sg_sprite3.depth = Parser.get_int(words, 0);
+            sg_sprite2.depth = Parser.get_int(words, 0);
             Parser.test_word(words, ["size", "scale"]);
             const width = Parser.get_int(words, 0);
             const height = Parser.get_int(words, 0);
             if (width > 0 && height > 0) {
-              sg_sprite3.size_x.set_target_value(width * Globals.script_scale_x);
-              sg_sprite3.size_y.set_target_value(height * Globals.script_scale_y);
+              sg_sprite2.size_x.set_target_value(width * Globals.script_scale_x);
+              sg_sprite2.size_y.set_target_value(height * Globals.script_scale_y);
             }
             if (!hidden) {
-              sg_sprite3.set_visibility(true);
+              sg_sprite2.set_visibility(true);
             }
           } else {
             Globals.log.error("Missing place data at line " + line_no);
@@ -2531,15 +2563,15 @@
             Parser.test_word(words, "with");
             let image_tag = words.shift();
             let hidden = Parser.test_word(words, "hidden");
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               break;
             }
             if (hidden) {
-              sg_sprite3.set_visibility(false);
+              sg_sprite2.set_visibility(false);
             }
-            sg_sprite3.image_tag = image_tag;
-            sg_sprite3.pi_sprite.texture = PIXI.Texture.EMPTY;
+            sg_sprite2.image_tag = image_tag;
+            sg_sprite2.pi_sprite.texture = PIXI.Texture.EMPTY;
           } else {
             Globals.log.error("Missing replace data at line " + line_no);
           }
@@ -2583,15 +2615,15 @@
             if (sprite_tag2 == null) {
               sprite_tag2 = role;
             }
-            let sg_sprite3 = new SG_sprite(image_tag, sprite_tag2);
-            sg_sprite3.role = role;
+            let sg_sprite2 = new SG_sprite(image_tag, sprite_tag2);
+            sg_sprite2.role = role;
             Parser.test_word(words, ["as", "at"]);
             if (Parser.test_word(words, "depth")) {
-              sg_sprite3.depth = Parser.get_int(words, 0);
+              sg_sprite2.depth = Parser.get_int(words, 0);
             } else {
-              sg_sprite3.depth = null;
+              sg_sprite2.depth = null;
             }
-            this.sprites.push(sg_sprite3);
+            this.sprites.push(sg_sprite2);
           } else {
             Globals.log.error("Missing put data at line " + line_no);
           }
@@ -2664,30 +2696,30 @@
             const text_command = words.shift();
             const text_tag = words.shift();
             const text_args = words.join(" ");
-            let sg_sprite3 = null;
+            let sg_sprite2 = null;
             if (text_command == "create") {
-              sg_sprite3 = new SG_sprite(null, text_tag, defaults_default.SPRITE_TEXT);
+              sg_sprite2 = new SG_sprite(null, text_tag, defaults_default.SPRITE_TEXT);
               const text_item = new PIXI.Text({
                 text: text_args,
                 style: {
-                  fontFamily: sg_sprite3.text_font,
-                  fontSize: sg_sprite3.text_size,
-                  fill: sg_sprite3.fill_colour,
-                  align: sg_sprite3.text_align
+                  fontFamily: sg_sprite2.text_font,
+                  fontSize: sg_sprite2.text_size,
+                  fill: sg_sprite2.fill_colour,
+                  align: sg_sprite2.text_align
                 }
               });
-              sg_sprite3.pi_sprite = text_item;
-              sg_sprite3.pi_sprite.anchor = 0.5;
-              sg_sprite3.set_visibility(false);
-              sg_sprite3.size_x.set_target_value(text_item.width);
-              sg_sprite3.size_y.set_target_value(text_item.height);
+              sg_sprite2.pi_sprite = text_item;
+              sg_sprite2.pi_sprite.anchor = 0.5;
+              sg_sprite2.set_visibility(false);
+              sg_sprite2.size_x.set_target_value(text_item.width);
+              sg_sprite2.size_y.set_target_value(text_item.height);
               Globals.root.addChild(text_item);
-              this.sprites.push(sg_sprite3);
+              this.sprites.push(sg_sprite2);
               action_group.complete_action("text");
               break;
             }
-            sg_sprite3 = SG_sprite.get_sprite(this.name, text_tag);
-            if (sg_sprite3.type != defaults_default.SPRITE_TEXT) {
+            sg_sprite2 = SG_sprite.get_sprite(this.name, text_tag);
+            if (sg_sprite2.type != defaults_default.SPRITE_TEXT) {
               Globals.log.error("Sprite is not text at " + line_no);
               action_group.complete_action("text");
               break;
@@ -2696,28 +2728,28 @@
             switch (text_command) {
               case "font":
               case "fontfamily":
-                sg_sprite3.text_font = text_args;
+                sg_sprite2.text_font = text_args;
                 break;
               case "fontsize":
               case "size":
-                sg_sprite3.text_size = text_args;
+                sg_sprite2.text_size = text_args;
                 break;
               case "align":
-                sg_sprite3.text_align = text_args;
+                sg_sprite2.text_align = text_args;
                 break;
               case "color":
               case "colour":
               case "fill":
-                sg_sprite3.fill_colour = text_args;
+                sg_sprite2.fill_colour = text_args;
                 break;
               case "stroke":
-                sg_sprite3.stroke_colour = text_args;
+                sg_sprite2.stroke_colour = text_args;
                 break;
               case "add":
-                sg_sprite3.pi_sprite.text += "\n" + text_args;
+                sg_sprite2.pi_sprite.text += "\n" + text_args;
                 break;
               case "replace":
-                sg_sprite3.pi_sprite.text = text_args;
+                sg_sprite2.pi_sprite.text = text_args;
                 break;
               default:
                 do_update = false;
@@ -2725,9 +2757,9 @@
                 break;
             }
             if (do_update) {
-              sg_sprite3.set_style();
-              sg_sprite3.size_x.set_target_value(sg_sprite3.pi_sprite.width);
-              sg_sprite3.size_y.set_target_value(sg_sprite3.pi_sprite.height);
+              sg_sprite2.set_style();
+              sg_sprite2.size_x.set_target_value(sg_sprite2.pi_sprite.width);
+              sg_sprite2.size_y.set_target_value(sg_sprite2.pi_sprite.height);
             }
           } else {
             Globals.log.error("Missing argument at line " + line_no);
@@ -2837,12 +2869,12 @@
                 if (graphic != null) {
                   graphic.fill(this.graphic_fill).stroke({ width: this.graphic_stroke_width, color: this.graphic_stroke });
                   Globals.root.addChild(graphic);
-                  const sg_sprite3 = new SG_sprite(null, graphic_tag, defaults_default.SPRITE_GRAPHIC);
-                  sg_sprite3.pi_sprite = graphic;
-                  sg_sprite3.set_visibility(false);
-                  sg_sprite3.size_x.set_target_value(graphic.width);
-                  sg_sprite3.size_y.set_target_value(graphic.height);
-                  this.sprites.push(sg_sprite3);
+                  const sg_sprite2 = new SG_sprite(null, graphic_tag, defaults_default.SPRITE_GRAPHIC);
+                  sg_sprite2.pi_sprite = graphic;
+                  sg_sprite2.set_visibility(false);
+                  sg_sprite2.size_x.set_target_value(graphic.width);
+                  sg_sprite2.size_y.set_target_value(graphic.height);
+                  this.sprites.push(sg_sprite2);
                 } else {
                   Globals.log.error("Invalid graphic arguments at " + line_no);
                 }
@@ -2891,12 +2923,12 @@
             let y = Parser.get_int(words, 0) * Globals.script_scale_y;
             let in_or_at = Parser.test_word(words, ["in", "at"], "in");
             let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("moveX");
               break;
             }
-            sg_sprite3.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
+            sg_sprite2.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
           } else {
             Globals.log.error("Missing move data at line " + line_no);
             action_group.complete_action("moveX");
@@ -2917,8 +2949,8 @@
           let sprite_tag = words.shift();
           Parser.test_word(words, "to");
           let speed = Parser.get_int(words, 0) * Globals.script_scale_x;
-          let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag);
-          sg_sprite2.set_speed(speed);
+          let sg_sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+          sg_sprite.set_speed(speed);
           action_group.complete_action("speed");
           break;
         /**************************************************************************************************
@@ -2945,9 +2977,9 @@
             if (command == "lower") {
               value2 = -value2;
             }
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
             if (sprite != null) {
-              sg_sprite3.set_depth(depth_type, value2);
+              sg_sprite2.set_depth(depth_type, value2);
             }
           } else {
             Globals.log.error("Missing raise/lower data at line " + line_no);
@@ -2977,12 +3009,12 @@
             let h = Parser.get_int(words, 0) * Globals.script_scale_y;
             let in_or_at = Parser.test_word(words, ["in", "at"]);
             let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("resize");
               break;
             }
-            sg_sprite3.resize(
+            sg_sprite2.resize(
               w,
               h,
               to_or_by,
@@ -3039,16 +3071,16 @@
             }
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("scale");
               break;
             }
             if (action2 == "reset") {
-              sg_sprite3.reset_size();
+              sg_sprite2.reset_size();
               action_group.complete_action("scale");
             } else if (w > 0 || h > 0) {
-              sg_sprite3.scale(
+              sg_sprite2.scale(
                 w,
                 h,
                 duration2,
@@ -3107,12 +3139,12 @@
             let value2 = Parser.get_int(words, 0);
             let dur_type = Parser.test_word(words, ["in", "per"], "in");
             let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("rotate");
               break;
             }
-            sg_sprite3.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
+            sg_sprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
           } else {
             Globals.log.error("Missing rotate data at line " + line_no);
             action_group.complete_action("rotateX");
@@ -3138,12 +3170,12 @@
             let skew_y = Parser.get_int(words, 0);
             let dur_type = Parser.test_word(words, ["in", "per"], "in");
             let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("skew");
               break;
             }
-            sg_sprite3.set_skew(skew_x, skew_y, skew_type, duration2, now, makeCompletionCallback(action_group));
+            sg_sprite2.set_skew(skew_x, skew_y, skew_type, duration2, now, makeCompletionCallback(action_group));
           } else {
             Globals.log.error("Missing skew data at line " + line_no);
             action_group.complete_action("skew");
@@ -3170,15 +3202,15 @@
             Parser.test_word(words, "with");
             Parser.test_word(words, ["force", "velocity", "speed"]);
             let initial_velocity = Parser.get_int(words, 10);
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("throw");
               break;
             }
             if (stop_or_at == "stop") {
-              sg_sprite3.throw("stop");
+              sg_sprite2.throw("stop");
             } else {
-              sg_sprite3.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
+              sg_sprite2.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing throw data at line " + line_no);
@@ -3198,15 +3230,15 @@
         case "drop":
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("drop");
               break;
             }
             if (Parser.test_word(words, "stop")) {
-              sg_sprite3.throw("stop");
+              sg_sprite2.throw("stop");
             } else {
-              sg_sprite3.throw(180, 0, now, makeCompletionCallback(action_group));
+              sg_sprite2.throw(180, 0, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing drop data at line " + line_no);
@@ -3227,12 +3259,12 @@
           action_group.complete_action();
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               break;
             }
             let axis = Parser.get_word(words, "h");
-            sg_sprite3.flip(axis.charAt(0));
+            sg_sprite2.flip(axis.charAt(0));
           } else {
             Globals.log.error("Missing sprite tag at line " + line_no);
           }
@@ -3254,16 +3286,16 @@
           action_group.complete_action();
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               break;
             }
             if (command == "show") {
-              sg_sprite3.set_visibility(true);
+              sg_sprite2.set_visibility(true);
             } else if (command == "hide") {
-              sg_sprite3.set_visibility(false);
+              sg_sprite2.set_visibility(false);
             } else if (command == "toggle") {
-              sg_sprite3.set_visibility("toggle");
+              sg_sprite2.set_visibility("toggle");
             }
           } else {
             Globals.log.error("Missing sprite tag at line " + line_no);
@@ -3321,23 +3353,23 @@
               } else if (stop_type == "scene") {
                 const scene2 = _Scene.find(item);
                 if (scene2 !== false) {
-                  scene2.stop();
+                  scene2.stop(false);
                 }
               } else if (stop_type == "sprite") {
-                let sg_sprite3 = SG_sprite.get_sprite(this.name, item, false);
+                let sg_sprite2 = SG_sprite.get_sprite(this.name, item, false);
                 if (sprite != null) {
-                  sg_sprite3.stop();
+                  sg_sprite2.stop();
                 }
               } else if (AudioManager.exists(item)) {
                 AudioManager.delete(item);
               } else {
                 const scene2 = _Scene.find(item);
                 if (scene2 !== false) {
-                  scene2.stop();
+                  scene2.stop(false);
                 } else {
-                  let sg_sprite3 = SG_sprite.get_sprite(this.name, item, false);
+                  let sg_sprite2 = SG_sprite.get_sprite(this.name, item, false);
                   if (sprite != null) {
-                    sg_sprite3.stop();
+                    sg_sprite2.stop();
                   }
                 }
               }
@@ -3369,6 +3401,56 @@
           }
           action_group.complete_action("let");
           break;
+        case "assign":
+          if (words.length > 0) {
+            const assignIndex = words.indexOf("as");
+            if (assignIndex < 1) {
+              Globals.log.error("Missing assign separator 'as' at line " + line_no);
+            } else {
+              const varNames = words.slice(0, assignIndex);
+              const values = words.slice(assignIndex + 1);
+              const setVar = (name, value2) => {
+                if (this.varList.find(name) !== false) {
+                  this.varList.update(name, value2);
+                } else {
+                  this.varList.create(name, value2);
+                }
+              };
+              for (let i = 0; i < varNames.length; i++) {
+                let value2 = defaults_default.NOTFOUND;
+                if (values.length > i) {
+                  if (i == varNames.length - 1) {
+                    value2 = values.slice(i).join(" ");
+                  } else {
+                    value2 = values[i];
+                  }
+                }
+                setVar(varNames[i], value2);
+              }
+            }
+          } else {
+            Globals.log.error("Missing variable name at line " + line_no);
+          }
+          action_group.complete_action("assign");
+          break;
+        case "increment":
+        case "decrement":
+          if (words.length > 0) {
+            const varName = words.shift();
+            if (this.varList.find(varName) === false) {
+              Globals.log.error("Variable not found " + varName);
+            } else {
+              const currentValue = this.varList.get_value(varName);
+              if (`${currentValue}`.match(/^-?[0-9]+(\.[0-9]+)?$/)) {
+                const delta = command == "increment" ? 1 : -1;
+                this.varList.update(varName, parseFloat(currentValue) + delta);
+              }
+            }
+          } else {
+            Globals.log.error("Missing variable name at line " + line_no);
+          }
+          action_group.complete_action(command);
+          break;
         case "choose":
           if (words.length > 2) {
             let varName = words.shift();
@@ -3394,19 +3476,19 @@
           action_group.complete_action("flicker");
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               break;
             }
             let on_off = Parser.test_word(words, ["by", "stop"]);
             if (on_off == "stop") {
-              sg_sprite3.flicker(0, 0);
+              sg_sprite2.flicker(0, 0);
             } else {
               let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals.script_scale_x;
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let flicker_chance = Parser.get_int(words, 50);
-              sg_sprite3.flicker(flicker_size, flicker_chance);
+              sg_sprite2.flicker(flicker_size, flicker_chance);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -3428,13 +3510,13 @@
           action_group.complete_action("jiggle");
           if (words.length > 0) {
             let sg_sprite_tag = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
+            if (!sg_sprite2) {
               break;
             }
             let on_off = Parser.test_word(words, ["by", "stop"]);
             if (on_off == "stop") {
-              sg_sprite3.jiggle(0, 0, 0);
+              sg_sprite2.jiggle(0, 0, 0);
             } else {
               let jiggle_x = Parser.get_int(words, 0) * Globals.script_scale_x;
               let jiggle_y = Parser.get_int(words, 0) * Globals.script_scale_y;
@@ -3442,7 +3524,7 @@
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let jiggle_chance = Parser.get_int(words, 50);
-              sg_sprite3.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
+              sg_sprite2.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -3463,12 +3545,12 @@
           action_group.complete_action("flash");
           if (words.length > 0) {
             let sg_sprite_tag = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
+            if (!sg_sprite2) {
               break;
             }
             let flash_count = Parser.get_int(words, 0, 1, 10);
-            sg_sprite3.flash(flash_count, now);
+            sg_sprite2.flash(flash_count, now);
           } else {
             Globals.log.error("Missing values at line " + line_no);
           }
@@ -3488,13 +3570,13 @@
           action_group.complete_action("blink");
           if (words.length > 0) {
             let sg_sprite_tag = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
+            if (!sg_sprite2) {
               break;
             }
             let on_off = Parser.test_word(words, ["at", "stop"]);
             if (on_off == "stop") {
-              sg_sprite3.blink(0, 0, now);
+              sg_sprite2.blink(0, 0, now);
             } else {
               let blink_rate = Parser.get_int(words, 0, 1, 10);
               Parser.test_word(words, "per");
@@ -3502,7 +3584,7 @@
               Parser.test_word(words, "with");
               Parser.test_word(words, "chance");
               let blink_chance = Parser.get_int(words, 100, 0, 100);
-              sg_sprite3.blink(blink_rate, blink_chance, now);
+              sg_sprite2.blink(blink_rate, blink_chance, now);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -3524,13 +3606,13 @@
           action_group.complete_action("pulse");
           if (words.length > 0) {
             let sg_sprite_tag = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
+            if (!sg_sprite2) {
               break;
             }
             let on_off = Parser.test_word(words, "stop");
             if (on_off == "stop") {
-              sg_sprite3.pulse(0, 0, 100, now);
+              sg_sprite2.pulse(0, 0, 100, now);
             } else {
               Parser.test_word(words, "at");
               let pulse_rate = Parser.get_int(words, 0, 1, 10);
@@ -3540,7 +3622,7 @@
               let pulse_min = Parser.get_int(words, 0, 0, 100);
               Parser.test_word(words, "to");
               let pulse_max = Parser.get_int(words, 100, 0, 100);
-              sg_sprite3.pulse(pulse_rate, pulse_min, pulse_max, now);
+              sg_sprite2.pulse(pulse_rate, pulse_min, pulse_max, now);
             }
           } else {
             Globals.log.error("Missing values at line " + line_no);
@@ -3561,8 +3643,8 @@
         case "trans":
           if (words.length > 0) {
             let sg_sprite_tag = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
+            if (!sg_sprite2) {
               action_group.complete_action("fade");
               break;
             }
@@ -3571,7 +3653,7 @@
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
             if (sprite != null) {
-              sg_sprite3.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
+              sg_sprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing fade parameters");
@@ -3594,16 +3676,16 @@
           action_group.complete_action("wave");
           if (words.length > 0) {
             let sg_sprite_tag = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag);
+            if (!sg_sprite2) {
               break;
             }
             let on_off = Parser.test_word(words, ["to", "stop"]);
             if (on_off == "stop") {
               if (command == "wave") {
-                sg_sprite3.wave(0, 0, 0);
+                sg_sprite2.wave(0, 0, 0);
               } else {
-                sg_sprite3.sway(0, 0, 0);
+                sg_sprite2.sway(0, 0, 0);
               }
             } else {
               let wave_max = Parser.get_int(words, 0, 1, 10);
@@ -3613,9 +3695,9 @@
               Parser.test_word(words, "chance");
               let wave_chance = Parser.get_int(words, 100, 0, 100);
               if (command == "wave") {
-                sg_sprite3.wave(wave_max, wave_rate, wave_chance);
+                sg_sprite2.wave(wave_max, wave_rate, wave_chance);
               } else {
-                sg_sprite3.sway(wave_max, wave_rate, wave_chance);
+                sg_sprite2.sway(wave_max, wave_rate, wave_chance);
               }
             }
           } else {
@@ -3637,8 +3719,8 @@
         case "fuzz":
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action("blur");
               break;
             }
@@ -3647,7 +3729,7 @@
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
             if (sprite != null) {
-              sg_sprite3.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
+              sg_sprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
             }
           } else {
             Globals.log.error("Missing fade parameters");
@@ -3669,13 +3751,13 @@
           action_group.complete_action("tint");
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               break;
             }
             Parser.test_word(words, ["to", "by", "at"]);
             const value2 = Parser.get_word(words, "red");
-            sg_sprite3.set_tint(value2);
+            sg_sprite2.set_tint(value2);
           } else {
             Globals.log.error("Missing tint colour");
           }
@@ -3684,8 +3766,8 @@
         case "lighten":
           if (words.length > 0) {
             let sprite_tag2 = words.shift();
-            let sg_sprite3 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite3) {
+            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
+            if (!sg_sprite2) {
               action_group.complete_action(command);
               break;
             }
@@ -3696,7 +3778,7 @@
             }
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
-            sg_sprite3.set_tint(value2, duration2, now, makeCompletionCallback(action_group));
+            sg_sprite2.set_tint(value2, duration2, now, makeCompletionCallback(action_group));
           } else {
             Globals.log.error("Missing " + command + " parameters");
             action_group.complete_action(command);
@@ -3747,6 +3829,12 @@
           const type = Parser.get_word(words, "scene");
           const arg = Parser.get_word(words);
           switch (type) {
+            case "scenes":
+            case "all":
+              Globals.scenes.foreach((scene2) => {
+                Globals.log.report(scene2.scene_data());
+              });
+              break;
             case "scene":
               if (arg) {
                 const list_scene = _Scene.find(arg);
@@ -3829,7 +3917,7 @@
         }
         for (let i = 0; i < Globals.scenes.length; i++) {
           let current = Globals.scenes[i];
-          if (!current.enabled) {
+          if (current.state != defaults_default.SCENE_RUNNING) {
             continue;
           }
           for (let j = 0; j < current.timers.length; j++) {
@@ -3864,7 +3952,7 @@
       if (_SlowGlass.next_sprite_update < current_millis) {
         for (let i = 0; i < Globals.scenes.length; i++) {
           let current = Globals.scenes[i];
-          if (!current.enabled) {
+          if (current.state != defaults_default.SCENE_RUNNING) {
             continue;
           }
           for (let j = 0; j < current.sprites.length; j++) {

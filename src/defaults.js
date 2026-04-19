@@ -30,4 +30,7 @@ export default {
     SPRITE_IMAGE: "_IMAGE_",
     SPRITE_TEXT: "_TEXT_",
     SPRITE_GRAPHIC: "_GRAPHIC_",
+    SCENE_STOPPED: "_STOPPED_",
+    SCENE_RUNNING: "_RUNNING_",
+    SCENE_PAUSED: "_PAUSED_",
 };

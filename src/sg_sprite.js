@@ -666,7 +666,8 @@ export class SG_sprite {
         for ( let i = 0; i < Globals.scenes.length; i++ ) {
             if (Globals.scenes[i].name == scene) {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
-                    if (Globals.scenes[i].sprites[j].name == tag) {
+                    // Only return sprites from scenes that are currently running
+                    if (!(Globals.scenes[i].state == defaults.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
                         return(Globals.scenes[i].sprites[j]);
                     }
                 }

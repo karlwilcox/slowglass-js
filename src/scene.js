@@ -10,16 +10,20 @@ import defaults from "./defaults.js";
 export class Scene {
     constructor(sceneName) {
         this.name = sceneName;
+        this.state = defaults.SCENE_STOPPED;
         this.content = [];
-        this.enabled = sceneName == defaults.MAIN_NAME;
+        this.reset();
+    }
+
+    reset() {
         this.actionGroups = [];
         this.images = [];
         this.sprites = [];
         this.folder = '';
-        this.varList = new VarList(sceneName);
+        this.varList = new VarList(this.sceneName);
         this.timers = [];
         this.completion_callback = null;
-        this.message = defaults.NOTFOUND;
+        this.parameters = defaults.NOTFOUND;
         // Graphic creation options
         this.graphic_fill = "black";
         this.graphic_stroke = "black";
@@ -38,7 +42,7 @@ export class Scene {
 
     scene_data() {
         let text = "Scene: " + this.name + "\n";
-        text += this.enabled ? "enabled\n" : "disabled\n";
+        text += "State: " + this.state + "\n";
         text += "Contains " + this.actionGroups.length + " action groups\n";
         text += this.images.length + " images\n";
         text += this.sprites.length + " sprites\n"; 
@@ -246,20 +250,22 @@ export class Scene {
         return true;
     }
 
-    stop() {
-        this.enabled = false;
+    stop(reset = false) {
+        this.state  = defaults.SCENE_STOPPED;
+        this.parameters = defaults.NOTFOUND;
         this.actionGroups = [];
-        // delete any resources
+        // delete all sprites
         for (let i = 0; i < this.sprites; i++) {
-            const  sprite = this.sprites[i];
-            if (sprite.enabled) { // Pixi sprite exists
+            const sg_sprite = this.sprites[i];
+            if (sg_sprite.pi_sprite != null) { // Pixi sprite exists
                 sg_sprite.pi_sprite.destroy();
             }
         }
-        // delete any variables
-        this.varList = null;
         this.sprites = [];
-        this.images = [];
+        // Do we want to go back to an unused state?
+        if (reset) {
+            this.reset();
+        }
         if (this.completion_callback != null) {
             this.completion_callback();
             this.completion_callback = null;
@@ -267,11 +273,17 @@ export class Scene {
     }
 
     pause() {
-        this.enabled = true;
+        if (this.state == defaults.SCENE_RUNNING) {
+            this.state = defaults.SCENE_PAUSED;
+        }
+        // not an error to pause a stopped or already paused scene
     }
 
     resume() {
-        this.enabled = false;
+        if (this.state == defaults.SCENE_PAUSED) {
+            this.state = defaults.SCENE_RUNNING;
+        }
+        // not an error to resume a running or stopped scene
     }
 
 
@@ -287,10 +299,12 @@ export class Scene {
 
 **************************************************************************************************/
 
-    start(message) {
-        this.enabled = false; // prevent any updating
+    start(parameters) {
+        if (this.state != defaults.SCENE_STOPPED) {
+            return;
+        } // not necessarily an error
         this.actionGroups = [];
-        this.message = message;
+        this.parameters = parameters;
         let action_group = new Utils.ActionGroup();
         let state = "T";
         let timestamp = Date.now(); // Use same timestamp for all
@@ -394,16 +408,7 @@ export class Scene {
             action_group.addAction(this.content[i]);
         }
         this.actionGroups.push(action_group);
-        this.enabled = true;
-        // for ( let i = 0; i < this.actionGroups.length; i++ ) {
-        //     Globals.log.debug("Action group " + i );
-        //     for ( let j = 0; j < this.actionGroups[i].triggers.length; j++ ) {
-        //         Globals.log.debug("Trigger - " + this.actionGroups[i].triggers[j].constructor.name );
-        //     }
-        //     for ( let j = 0; j < this.actionGroups[i].actions.length; j++ ) {
-        //         Globals.log.debug("Action - " + this.actionGroups[i].actions[j].text );
-        //     }
-        // }
+        this.state = defaults.SCENE_RUNNING;
     }
 
 /**************************************************************************************************
@@ -663,22 +668,39 @@ export class Scene {
             case "reset":
                 {
                     action_group.complete_action("reset");
-                    Parser.test_word(words,"sprite");
-                    let sprite_tag = Parser.get_word(words);
-                    let sg_sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-                    if (!sg_sprite) { break; }
-                    sg_sprite.reset_size(); // go back to original size
-                    sg_sprite.jiggle(0,0,0,0);  // stop jiggling
-                    sg_spitre.flicker(0); // stop flickering
-                    sg_sprite.blink(0,0); // stop blinking (makes invisible)
-                    sg_sprite.pulse(0); // Also sets transparency
-                    sg_sprite.flip("r"); // go back to original orientation
-                    sg_sprite.set_tint("stop"); // original colour
-                    sg_sprite.set_blur(0); // unblur
-                    sg_spriet.set_skew(0,0); // unskew
-                    // sg_sprite.set_trans(100); // solid, but already done
-                    sg_sprite.rotate("to",0,"in"); // upright
-                    // we do not change the position or the depth, stop any movement
+                    const reset_type = Parser.test_word(words,["sprite","scene"], "scene");
+                    if (reset_type == "sprite") {
+                        if (words.length > 0) {
+                            let sprite_tag = Parser.get_word(words);
+                            let sg_sprite = SG_sprite.get_sprite(this.name, sprite_tag);
+                            if (!sg_sprite) { break; }
+                            sg_sprite.reset_size(); // go back to original size
+                            sg_sprite.jiggle(0,0,0,0);  // stop jiggling
+                            sg_spitre.flicker(0); // stop flickering
+                            sg_sprite.blink(0,0); // stop blinking (makes invisible)
+                            sg_sprite.pulse(0); // Also sets transparency
+                            sg_sprite.flip("r"); // go back to original orientation
+                            sg_sprite.set_tint("stop"); // original colour
+                            sg_sprite.set_blur(0); // unblur
+                            sg_spriet.set_skew(0,0); // unskew
+                            // sg_sprite.set_trans(100); // solid, but already done
+                            sg_sprite.rotate("to",0,"in"); // upright
+                            // we do not change the position or the depth, stop any movement
+                        } else {
+                            Globals.log.error("Missing sprite name at line " + line_no);
+                        }
+                    } else if (reset_type == "scene") {
+                        let sceneName = this.name;
+                        if (words.length > 0) {
+                            let sceneName = Parser.get_word(words);
+                        }
+                        const scene = Scene.find(sceneName);
+                        if (scene != false) {
+                            scene.stop(true);
+                        } else {
+                            Globals.log.error("Scene not found at line " + line_no);
+                        }
+                    }
                 }
                 break;
 
@@ -1634,7 +1656,7 @@ export class Scene {
                         } else if (stop_type == "scene") {
                             const scene = Scene.find(item);
                             if (scene !== false) {
-                                scene.stop();
+                                scene.stop(false);
                             }
                         } else if (stop_type == "sprite") {
                             let sg_sprite = SG_sprite.get_sprite(this.name, item, false);
@@ -1646,7 +1668,7 @@ export class Scene {
                         } else {
                             const scene = Scene.find(item);
                             if (scene !== false) {
-                                scene.stop();
+                                scene.stop(false);
                             } else {
                                 let sg_sprite = SG_sprite.get_sprite(this.name, item, false);
                                 if (sprite != null) {
@@ -1684,6 +1706,59 @@ export class Scene {
                 }
                 action_group.complete_action("let");
                 break;                   
+
+            case "assign":
+                if (words.length > 0) {
+                    const assignIndex = words.indexOf("as");
+                    if (assignIndex < 1) {
+                        Globals.log.error("Missing assign separator 'as' at line " + line_no);
+                    } else {
+                        const varNames = words.slice(0, assignIndex);
+                        const values = words.slice(assignIndex + 1);
+                        const setVar = (name, value) => {
+                            if (this.varList.find(name) !== false) {
+                                this.varList.update(name, value);
+                            } else {
+                                this.varList.create(name, value);
+                            }
+                        };
+
+                        for (let i = 0; i < varNames.length; i++) {
+                            let value = defaults.NOTFOUND;
+                            if (values.length > i) {
+                                if (i == varNames.length - 1) {
+                                    value = values.slice(i).join(" ");
+                                } else {
+                                    value = values[i];
+                                }
+                            }
+                            setVar(varNames[i], value);
+                        }
+                    }
+                } else {
+                    Globals.log.error("Missing variable name at line " + line_no);
+                }
+                action_group.complete_action("assign");
+                break;
+
+            case "increment":
+            case "decrement":
+                if (words.length > 0) {
+                    const varName = words.shift();
+                    if (this.varList.find(varName) === false) {
+                        Globals.log.error("Variable not found " + varName);
+                    } else {
+                        const currentValue = this.varList.get_value(varName);
+                        if (`${currentValue}`.match(/^-?[0-9]+(\.[0-9]+)?$/)) {
+                            const delta = command == "increment" ? 1 : -1;
+                            this.varList.update(varName, parseFloat(currentValue) + delta);
+                        }
+                    }
+                } else {
+                    Globals.log.error("Missing variable name at line " + line_no);
+                }
+                action_group.complete_action(command);
+                break;
 
             case "choose":
                 if (words.length > 2) {
@@ -2083,6 +2158,10 @@ export class Scene {
                 const type = Parser.get_word(words,"scene");
                 const arg = Parser.get_word(words);
                 switch(type) {
+                    case "scenes":
+                    case "all":
+                        Globals.scenes.foreach((scene) => { Globals.log.report(scene.scene_data()) });
+                        break;
                     case "scene":
                         if (arg) {
                             const list_scene = Scene.find(arg);

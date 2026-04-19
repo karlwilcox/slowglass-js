@@ -51,6 +51,20 @@ If there are other actions needed at the end of the scene make sure that they ar
 
 Any sprites created by the scene will automatically be removed when the scene is stopped, however any sounds currently playing will continue to do so until the normal end of the sound file.
 
+## Resetting Scenes
+
+When you **stop** a scene, all of its sprites are deleted and variables become
+inaccessible from other scenes. However, image resources, variable contents and
+the graphic drawing options are retained. If you want to also remove these
+preserved items then use the command:
+
+`reset {scene-name}`
+
+This will make it look like the scene was never called, so images will be reloaded.
+
+Use the **reset** command if you are not going to use the scene again, or if it has
+loaded a lot of images and will not be used again for some time.
+
 ## Loading Images and Sounds
 
 You can safely repeat `load` commands inside scenes, a repeated load does NOT cause the resource to be re-opened. If the resource tag is already present then no action is taken.
@@ -61,18 +75,14 @@ If you want to override this behaviour (for example, if you have an infrequently
 
 This should be placed under the same trigger that stops the scene, before the stop command. Next time the scene is run the resource will be reloaded.
 
-## Resource Tags
+## Resource Names
 
-It is safe to re-use resource tag names in different scenes as they will silently have the scene's own tag and a colon prefixed to them, hence the tag "cloud" within the scene "rainy-sky" can be safely used alongside the same tag in the "sunny-sky" scene, each reference to the tag will be restricted to that in the named scene.
+It is safe to re-use resource names in different scenes as they will silently have the scene's own and a colon prefixed to them, hence the "cloud" within the scene "rainy-sky" can be safely used alongside the same in the "sunny-sky" scene, each reference to the will be restricted to that in the named scene.
 
-It is also possible to refer to resources loaded at the top level within scenes, just use their usual tag names. The program will look first for local tags (within the scene), then top level tags. Hence local tags will "hide" top-level tags - if you really want to access a top-level tag that is hidden by a local one (not a recommended practice!) this can be done by putting a colon (:) in front of the tag name.
+It is also possible to refer to resources loaded at the top level within scenes, just use their usual names. The program will look first for local names (within the scene), then top level tags. Hence local tags will "hide" top-level tags - if you really want to access a top-level tag that is hidden by a local one (not a recommended practice!) this can be done by putting a colon (:) in front of the tag name.
 
 The pre-fixing of scene names means that it is also possible to refer to resource tags from other scenes, for example we can say:
 
-`
-hide sunny-sky:cloud
-`
+` hide sunny-sky:cloud `
 
 from within the rainy-sky scene; although I recommend only very careful use of this - if the other scene isn't running its resources will not be accessible.
-
-
