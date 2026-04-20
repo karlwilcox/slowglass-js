@@ -20,7 +20,7 @@ export class Scene {
         this.images = [];
         this.sprites = [];
         this.folder = '';
-        this.varList = new VarList(this.sceneName);
+        this.varList = new VarList(this.name);
         this.timers = [];
         this.completion_callback = null;
         this.parameters = defaults.NOTFOUND;
@@ -49,206 +49,39 @@ export class Scene {
         return text;
     }
 
-    list_sprites() {
-        let text = "Sprites in Scene " + this.name + "\n";
+    list_sprites(verbose = true) {
+        let text = verbose ? "Sprites in Scene " + this.name + "\n" : "";
         for (let i = 0; i < this.sprites.length; i++ ) {
             const sprite = this.sprites[i];
-            const x = sprite.loc_x.value();
-            const y = sprite.loc_y.value();
-            const z = sprite.depth;
-            text += `${sprite.name} (${sprite.type}) `;
-            text += sprite.visible ? "visible" : "hidden";
-            text += ` at ${x} ${y} ${z}\n`;
+            if (verbose) {
+                const x = sprite.loc_x.value();
+                const y = sprite.loc_y.value();
+                const z = sprite.depth;
+                text += `${sprite.name} (${sprite.type}) `;
+                text += sprite.visible ? "visible" : "hidden";
+                text += ` at ${x} ${y} ${z}\n`;
+            } else {
+                text += `${sprite.name} `;
+            }
         }
         return text;
     }
 
-    list_images() {
-        let text = "Images in Scene " + this.name + "\n";
+    list_images(verbose = true) {
+        let text = verbose ? "Images in Scene " + this.name + "\n" : "";
         for (let i = 0; i < this.images.length; i++ ) {
             const image = this.images[i];
-            text += `Name ${image.name} `;
-            text += image.loading ? "loaded" : "loading";
-            text += ` from ${image.url}\n`;
+            if (verbose) {
+                text += `Name ${image.name} `;
+                text += image.loading ? "loaded" : "loading";
+                text += ` from ${image.url}\n`;
+            } else {
+                text += `${image.name} `;
+            }
         }
         return text;
     }
 
-/**************************************************************************************************
-
-   ########  ########    ###    ########  ######## ######## ##     ## ######## 
-   ##     ## ##         ## ##   ##     ##    ##    ##        ##   ##     ##    
-   ##     ## ##        ##   ##  ##     ##    ##    ##         ## ##      ##    
-   ########  ######   ##     ## ##     ##    ##    ######      ###       ##    
-   ##   ##   ##       ######### ##     ##    ##    ##         ## ##      ##    
-   ##    ##  ##       ##     ## ##     ##    ##    ##        ##   ##     ##    
-   ##     ## ######## ##     ## ########     ##    ######## ##     ##    ##    
-
-**************************************************************************************************/
-
-    static readFromText(text) {
-        const script = text.split(/\r?\n/);
-        const count = script.length;
-        const top = new Scene(defaults.MAIN_NAME);
-        let holding = null;
-        let in_comment = false;
-        for(let i = 0; i < script.length; i++ ) {
-            let lineCount = i + 1;
-            let currentLine = script[i].trim();
-            // handle 'C' style comments
-            // remove all within single line
-            currentLine = currentLine.replace(/\/\*[\s\S]*?\*\//g, '');
-            // Now deal with multi-line comments
-            if (in_comment) {
-                if (currentLine.match(/\*\//)) {
-                    let end_pos = currentLine.search(/\*\//);
-                    // discard up to comment end
-                    currentLine = currentLine.substr(end_pos + 1);
-                    in_comment = false;
-                } else {
-                    continue; // discard whole line
-                }
-            }
-            if (currentLine.match(/\/\*/)) {
-                let start_pos = currentLine.search(/\/\*/);
-                // discard from the start comment onwards
-                currentLine = currentLine.substr(0, start_pos);
-                in_comment = true;
-            }
-            /* discard single line comments, empty lines etc.  */
-            currentLine.replace(/\/\/.*$/,'');
-            if (currentLine.length < 2 || currentLine.startsWith('#')) { // we have no short commands etc.
-                continue;
-            }
-            if (!currentLine.match(/\w+/)) { // and all commands are text
-                continue;
-            }
-            // Handle scene management commands
-            let words = currentLine.toLowerCase().split(/[\s,]+/);
-            // ignore and as the first word (syntactic sugar)
-            if (words[0] == 'and') {
-                words.shift();
-            }
-            let command = words[0];
-            let argument = "";
-            let argument2 = "";
-            if (words.length > 1) {
-                argument = words[1];
-            }
-            if (words.length > 2) {
-                argument2 = words[2];
-            }
-            // Look for a new scene
-            if (command == 'scene') {
-                if (argument == null) {
-                    Globals.log.error(`expected scene name on line ${lineCount}`);
-                } else {
-                    if (holding != null) {
-                        Globals.scenes.push(holding);
-                    }
-                    holding = new Scene(argument);
-                }
-            // look for an explicit scene end
-            } else if (command == 'end') {
-                if (argument == 'file') {
-                    break;
-                } else if (argument == 'scene') {
-                    if (holding != null) {
-                        Globals.scenes.push(holding);
-                        holding = null;
-                    } else {
-                        Globals.log.error(`no current scene at line ${lineCount}`);
-                    }
-                } else {
-                    Globals.log.error("end must be followed by file or scene");
-                }
-            // end processing (ignore rest of file)
-            } else if (command == "display") {
-                if (argument == 'width') {
-                    let display_width = parseInt(argument2);
-                    if (display_width < 50 || display_width > 5000) {
-                        Globals.log.error("silly display width");
-                        display_width = defaults.DISPLAY_WIDTH;
-                    }
-                    Globals.display_width = display_width;
-                } else if (argument == 'height') {
-                    let display_height = parseInt(argument2);
-                    if (display_height < 50 || display_height > 5000) {
-                        Globals.log.error("silly display height");
-                        display_height = defaults.DISPLAY_HEIGHT;
-                    }
-                    Globals.display_height = display_height;
-                } // else look for fullscreen
-            } else if (command == 'include') {
-                Globals.log.error('Include not supported yet');
-            } else if (command == 'script') {
-                if (argument == 'width') {
-                    let script_width = parseInt(argument2);
-                    if (script_width < 50 || script_width > 5000) {
-                        Globals.log.error("silly script width");
-                        script_width = defaults.DISPLAY_WIDTH;
-                    }
-                    Globals.script_width = script_width;
-                } else if (argument == 'height') {
-                    let script_height = parseInt(argument2);
-                    if (script_height < 50 || script_height > 5000) {
-                        Globals.log.error("silly script height");
-                        script_height = defaults.DISPLAY_HEIGHT;
-                    }
-                    Globals.script_height = script_height;
-                } else if (argument == "scale") {
-                    Globals.script_scale_type = argument2;
-                }
-            } else if (command == 'gravity') {
-                let gravity = Parrser.parseFloat(argument);
-                if (gravity <= 0) {
-                    Globals.log.error("silly gravity setting");
-                    gravity = defaults.GRAVITY_PS2;
-                }
-                Globals.gravity_ps2 = gravity; // NOTE, not scaled, scale on use
-            } else if (command == "ground") {
-                if (argument == "level") {
-                    argument = argument2;
-                }
-                Globals.ground_level = parseInt(argument);
-            } else {
-                // must be an action, trigger or condition
-                const line = new Utils.Line(lineCount, currentLine);
-                if (holding == null) {
-                    top.content.push(line);
-                } else {
-                    holding.content.push(line);
-                }
-            }
-        }
-        // add the final scene if unterminated
-        if (holding != null) {
-            Globals.scenes.push(holding);
-        }
-        if (top.content.length < 1) {
-            Globals.log.error('No top level actions, nothing will happen!');
-            return false;
-        } else {
-            // calculate overall scaling
-            switch (Globals.script_scale_type) {
-                case defaults.SCALE_STRETCH:
-                    Globals.script_scale_x = Globals.display_width / Globals.script_width;
-                    Globals.script_scale_y = Globals.display_height / Globals.script_height;
-                    break;
-                case defaults.SCALE_FIT:
-                    // todo
-                case defaults.SCALE_NONE:
-                default:
-                    break;
-            }
-            top.start();
-            // Add an empty action group to the top level for interactive actions
-            const dummyActionGroup = new Utils.ActionGroup();
-            top.actionGroups.push(dummyActionGroup);
-            Globals.scenes.push(top);
-        }
-        return true;
-    }
 
     stop(reset = false) {
         this.state  = defaults.SCENE_STOPPED;
@@ -1267,7 +1100,7 @@ export class Scene {
                         value = -value;
                     }
                     let sg_sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-                    if (sprite != null) {
+                    if (sg_sprite != null) {
                         sg_sprite.set_depth(depth_type, value);
                     }
                 } else {
@@ -1395,15 +1228,31 @@ export class Scene {
             case "remove":
             case "erase":
             case "delete":
-                while (words.length) {
-                    const item = words.shift();
-                    if (AudioManager.exists(item)) {
-                        AudioManager.delete(item);
-                    } else {
-                        SG_sprite.remove_sprite(this.name, item);
-                    }
-                }
                 action_group.complete_action("remove");
+                if (words.length > 1) {
+                    const type = Parser.test_word(words,["sprite","audio","sound","var","variable"]);
+                    const item = Parser.get_word(words);
+                    switch (type) {
+                        case "sprite":
+                            SG_sprite.remove_sprite(this.name, item, false);
+                            break;
+                        case "audio":
+                        case "sound":
+                            if (AudioManager.exists(item)) {
+                                AudioManager.delete(item);
+                            }
+                            break;
+                        case "var":
+                        case "variable":
+                            this.varList.delete(item, false);
+                            break;
+                        default:
+                            Globals.log.error("Unknown deletion type on line " + line_no);
+                            break;
+                        }
+                } else {
+                    Globals.log.error("Nothing to remove at line " + line_no);
+                }
                 break;
 
 /**************************************************************************************************
@@ -1640,12 +1489,16 @@ export class Scene {
             
             case "stop":
             case "halt":
+                action_group.complete_action("stop");
                 this.completion_callback = Utils.makeCompletionCallback(action_group);
                 if (words.length > 0) {
                     while (words.length > 0) {
                         const stop_type = Parser.test_word(words, ["scene", "audio", "sound", "track", "sprite"]);
                         const item = words.shift();
                         if (item == null) {
+                            if (stop_type == "scene") {
+                                this.stop(false);
+                            }
                             break;
                         }
                         // todo allow an option here to fade out the sound after a set duration
@@ -1660,7 +1513,7 @@ export class Scene {
                             }
                         } else if (stop_type == "sprite") {
                             let sg_sprite = SG_sprite.get_sprite(this.name, item, false);
-                            if (sprite != null) {
+                            if (sg_sprite != null) {
                                 sg_sprite.stop();
                             }
                         } else if (AudioManager.exists(item)) {
@@ -1671,16 +1524,15 @@ export class Scene {
                                 scene.stop(false);
                             } else {
                                 let sg_sprite = SG_sprite.get_sprite(this.name, item, false);
-                                if (sprite != null) {
+                                if (sg_sprite != null) {
                                     sg_sprite.stop();
                                 }
                             }
                         }
                     }
                 } else {
-                    this.stop();
+                    Globals.log.error("Nothing to stop on line " + line_no);
                 }
-                action_group.complete_action("stop");
                 break;
 
 /**************************************************************************************************
@@ -1700,7 +1552,7 @@ export class Scene {
                 if (words.length > 0) {
                     let varName = words.shift();
                     Parser.test_word(words,["be","to"]);
-                    this.varList.create(varName, words.join(" "));
+                    this.varList.set_value(varName, words.join(" "));
                 } else {
                     Globals.log.error("Missing variable name at line " + line_no);
                 }
@@ -1715,13 +1567,6 @@ export class Scene {
                     } else {
                         const varNames = words.slice(0, assignIndex);
                         const values = words.slice(assignIndex + 1);
-                        const setVar = (name, value) => {
-                            if (this.varList.find(name) !== false) {
-                                this.varList.update(name, value);
-                            } else {
-                                this.varList.create(name, value);
-                            }
-                        };
 
                         for (let i = 0; i < varNames.length; i++) {
                             let value = defaults.NOTFOUND;
@@ -1732,7 +1577,7 @@ export class Scene {
                                     value = values[i];
                                 }
                             }
-                            setVar(varNames[i], value);
+                            this.varList.set_value(varNames[i], value);
                         }
                     }
                 } else {
@@ -1751,7 +1596,7 @@ export class Scene {
                         const currentValue = this.varList.get_value(varName);
                         if (`${currentValue}`.match(/^-?[0-9]+(\.[0-9]+)?$/)) {
                             const delta = command == "increment" ? 1 : -1;
-                            this.varList.update(varName, parseFloat(currentValue) + delta);
+                            this.varList.set_value(varName, parseFloat(currentValue) + delta);
                         }
                     }
                 } else {
@@ -1764,7 +1609,7 @@ export class Scene {
                 if (words.length > 2) {
                     let varName = words.shift();
                     Parser.test_word(words,"from");
-                    this.varList.create(varName, words[Math.floor(Math.random() * words.length)]);
+                    this.varList.set_value(varName, words[Math.floor(Math.random() * words.length)]);
                 } else {
                     Globals.log.error("Missing variable name at line " + line_no);
                 }
@@ -1967,7 +1812,7 @@ export class Scene {
                         let value = Parser.get_int(words,100);
                         Parser.test_word(words, "in");
                         let duration = Parser.get_duration(words, 0);
-                        if (sprite != null) {
+                        if (sg_sprite != null) {
                             sg_sprite.set_trans(value, duration, fade_type, now, Utils.makeCompletionCallback(action_group));
                         }
                     } else {
@@ -2047,7 +1892,7 @@ export class Scene {
                         let value = Parser.get_int(words,100);
                         Parser.test_word(words, "in");
                         let duration = Parser.get_duration(words, 0);
-                        if (sprite != null) {
+                        if (sg_sprite != null) {
                             sg_sprite.set_blur(value, duration, blur_type, now, Utils.makeCompletionCallback(action_group));
                         }
                     } else {
@@ -2160,7 +2005,9 @@ export class Scene {
                 switch(type) {
                     case "scenes":
                     case "all":
-                        Globals.scenes.foreach((scene) => { Globals.log.report(scene.scene_data()) });
+                        for (let i = 0; i < Globals.scenes.length; i++) {
+                            Globals.log.report(Globals.scenes[i].scene_data());
+                        }
                         break;
                     case "scene":
                         if (arg) {
@@ -2190,6 +2037,11 @@ export class Scene {
                             }
                         } else {
                             Globals.log.report(this.list_images());
+                        }
+                        break;
+                    case "actions":
+                        for (let i = 0; i < this.actionGroups.length; i++) {
+                            Globals.log.report(this.actionGroups[i].list());
                         }
                         break;
                     case "globals":

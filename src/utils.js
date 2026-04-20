@@ -123,7 +123,18 @@ export class ActionGroup {
 
     reset_count() {
         this.completed_actions = 0;
-        // console.log("reset count");
+    }
+
+    list() {
+        let text = this.any_trigger ? "Any trigger\n" : "All triggers\n";
+        for(let i = 0; i < this.triggers.length; i++) {
+            text += this.triggers[i].constructor.name + " ";
+            text += this.triggers[i].params + "\n";
+        }
+        for(let i = 0; i < this.actions.length; i++) {
+            text += this.actions[i].text + "\n";
+        }
+        return text;
     }
 }
 
@@ -148,37 +159,101 @@ export function makeCompletionCallback(object) {
 
 
 export function evaluate(input) {
-    // Evaluate a single expression safely
-    function safeEval(expr) {
-        try {
-            // Only allow numbers, operators, decimal points, and whitespace
-            if (!/^[0-9+\-*/%.()\s]+$/.test(expr)) {
-                return "(" + expr + ")";
-            }
-            return Function('"use strict"; return (' + expr + ')')();
-        } catch {
-            return "(" + expr + ")";
-        }
-    }
-
-    let str = input;
-    if (!input.match(/\)/)) {
-        return str;
-    }
-
-    // Handle nested parentheses by resolving innermost first
-    const regex = /\(([^()]+)\)/g;
-
-    let previous;
+    let str = ""; // holds the output string
+    // find a bracketed expression in the input
+    let i = 0;
+    let expr = ""; // temporarily holds the expression to be evaluated
+    let brackets = 0; // bracket counter
+    let escaped = false; // did we find a backslash?
     do {
-        previous = str;
-        str = str.replace(regex, (_, expr) => {
-            return safeEval(expr);
-        });
-    } while (str !== previous);
-
+        const char = input.charAt(i);
+        if (escaped) { // just copy the next character
+            str += char;
+            escaped = false;
+            continue;
+        }
+        if (char == '\\') {
+            escaped = true;
+            continue;
+        }
+        if (brackets > 0) { // we are in an expression
+            if (char == ')') {
+                if (--brackets == 0) { // matched brackets
+                    // Globals.log.report("Found: " + expr);
+                    str += Globals.evaluator.eval(expr);
+                    expr = "";
+                } else {
+                    expr += char;
+                }
+                continue;
+            } // else
+            if (char == '(') {
+                brackets++;
+            }
+            expr += char;
+            continue;
+        } // else in normal text
+        if (char == '(') { // found an expression! Start counting
+            brackets = 1;
+            continue;
+        } // else
+        str += char;
+    } while(++i < input.length);
     return str;
 }
+
+    // const trigFunctions = {
+    //     sin: Math.sin,
+    //     cos: Math.cos,
+    //     tan: Math.tan,
+    //     int: Math.floor,
+    // };
+
+    // // Evaluate a single expression safely
+    // function safeEval(expr) {
+    //     try {
+    //         // Only allow numbers, operators, decimal points, and whitespace
+    //         if (!/^[0-9+\-*/%.()\s]+$/.test(expr)) {
+    //             return "(" + expr + ")";
+    //         }
+    //         return Function('"use strict"; return (' + expr + ')')();
+    //     } catch {
+    //         return "(" + expr + ")";
+    //     }
+    // }
+
+    // function safeTrigEval(name, expr) {
+    //     const value = safeEval(expr);
+    //     if (typeof value !== "number" || Number.isNaN(value)) {
+    //         return name + "(" + expr + ")";
+    //     }
+
+    //     const radians = value * Math.PI / 180;
+    //     return trigFunctions[name](radians);
+    // }
+
+    // let str = input;
+    // if (!input.match(/\)/)) {
+    //     return str;
+    // }
+
+    // // Handle nested parentheses by resolving innermost first
+    // const regex = /\(([^()]+)\)/g;
+    // const trigRegex = /\b(sin|cos|tan|int)\(([^()]+)\)/gi;
+
+    // let previous;
+    // do {
+    //     previous = str;
+    //     str = str.replace(trigRegex, (_, name, expr) => {
+    //         return safeTrigEval(name.toLowerCase(), expr);
+    //     });
+    //     str = str.replace(regex, (_, expr) => {
+    //         return safeEval(expr);
+    //     });
+    // } while (str !== previous);
+
+    // return str;
+// }
 
 
 /**************************************************************************************************

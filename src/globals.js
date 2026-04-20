@@ -9,6 +9,7 @@ export class Globals {
     static app = null;
     static log = new Utils.Log(defaults.DEBUG);
     static reporter = new Utils.Reporter();
+    static evaluator = new Mexp();
     static current_trigger = "";
     static display_width = defaults.DISPLAY_WIDTH;
     static display_height = defaults.DISPLAY_HEIGHT;
@@ -40,6 +41,15 @@ export class Globals {
         let text = "";
         for (const propt in this) {
             text += `${propt} = ${this[propt]}\n`;
+        }
+        return text;
+    }
+
+    static list_scenes(verbose = true) {
+        // verbose version later
+        let text = "";
+        for ( let i = 0; i < Globals.scenes.length; i++) {
+            text += Globals.scenes[i].name + " ";
         }
         return text;
     }

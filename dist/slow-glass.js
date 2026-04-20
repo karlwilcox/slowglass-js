@@ -253,13 +253,18 @@
       this.sceneName = sceneName;
       getHemisphere();
     }
-    create(name, value2) {
+    set_value(name, value2) {
       if (_VarList.built_in(name)) {
         Globals.log.error("Cannot create built-in variable " + name);
       } else if (name.match(/[\.:]/)) {
         Globals.log.error("Cannot create variable with dot or colon in name " + name);
       } else {
-        this.variables.push(new Variable(name, value2));
+        const index = this.find(name);
+        if (index !== false) {
+          this.variables[index].setValue(value2);
+        } else {
+          this.variables.push(new Variable(name, value2));
+        }
       }
     }
     /**************************************************************************************************
@@ -372,8 +377,8 @@
           return this.sceneName;
         case "PARAMS":
         case "PARAMETERS":
-          const scene2 = Scene.find(this.sceneName);
-          return scene2.parameters;
+          const scene = Scene2.find(this.sceneName);
+          return scene.parameters;
         case "ELAPSED":
           return Math.floor((Date.now() - Globals.start_time) / 1e3);
         case "MILLIS":
@@ -386,9 +391,9 @@
     static scene_var(varName) {
       let value2 = "NONE";
       const parts = varName.split(/:/);
-      const scene2 = Scene.find(parts[0]);
-      if (scene2 !== false) {
-        value2 = scene2.varList.get_value(parts[1]);
+      const scene = Scene2.find(parts[0]);
+      if (scene !== false) {
+        value2 = scene.varList.get_value(parts[1]);
       }
       return value2;
     }
@@ -409,49 +414,66 @@
         varName = colonParts[1];
         sceneName = colonParts[0];
       }
-      if (varName.match(/\./)) {
+      if (["SPRITES", "IMAGES", "IMGS"].includes(varName)) {
+        const scene = Scene2.find(sceneName);
+        if (scene) {
+          switch (varName.charAt(0)) {
+            case "S":
+              value2 = scene.list_sprites(false);
+              break;
+            case "I":
+              value2 = scene.list_images(false);
+              break;
+            default:
+              break;
+          }
+        } else {
+          value2 = defaults_default.NOTFOUND;
+        }
+      }
+      if (value2 === false && varName.match(/\./)) {
         const parts = varName.split(/\./, 2);
-        const sprite2 = SG_sprite.get_sprite(sceneName, parts[0], false);
-        if (sprite2 != null) {
+        const sprite = SG_sprite.get_sprite(sceneName, parts[0], false);
+        if (sprite != null) {
           switch (parts[1]) {
             case "x":
             case "loc.x":
             case "location.x":
             case "pos.x":
             case "position.x":
-              value2 = sprite2.loc_x.value();
+              value2 = sprite.loc_x.value();
               break;
             case "y":
             case "loc.y":
             case "location.y":
             case "pos.y":
             case "position.y":
-              value2 = sprite2.loc_y.value();
+              value2 = sprite.loc_y.value();
               break;
             case "z":
             case "depth":
-              value2 = sprite2.depth;
+              value2 = sprite.depth;
               break;
             case "sx":
             case "size.x":
-              value2 = sprite2.size_x.value();
+              value2 = sprite.size_x.value();
               break;
             case "sy":
             case "size.y":
-              value2 = sprite2.size_y.value();
+              value2 = sprite.size_y.value();
               break;
             case "angle":
             case "rotation":
-              value2 = sprite2.angle.value();
+              value2 = sprite.angle.value();
               break;
             case "visible":
-              value2 = t_or_f(sprite2.visible);
+              value2 = t_or_f(sprite.visible);
               break;
             case "role":
-              if (sprite2.role == null) {
+              if (sprite.role == null) {
                 value2 = defaults_default.NOTFOUND;
               } else {
-                value2 = sprite2.role;
+                value2 = sprite.role;
               }
               break;
             // More still to do
@@ -464,8 +486,8 @@
       }
       if (value2 === false) {
         if (sceneName != this.sceneName) {
-          const otherScene = Scene.find(sceneName);
-          if (scene !== false) {
+          const otherScene = Scene2.find(sceneName);
+          if (otherScene !== false) {
             value2 = otherScene.varList.get_value(varName);
           }
         } else {
@@ -481,26 +503,10 @@
       }
       return value2;
     }
-    update(name, value2) {
-      if (_VarList.built_in(name)) {
-        Globals.log.error("Cannot update built-in variable " + name);
-        return false;
-      }
+    delete(name, report = false) {
       let index = this.find(name);
-      if (index === false) {
+      if (index === false && report) {
         Globals.log.error("Variable not found " + name);
-        return defaults_default.NOTFOUND;
-      }
-      return this.variables[index].setValue(value2);
-    }
-    delete(name) {
-      let index = this.find(name);
-      if (index === false) {
-        Globals.log.error("Variable not found " + name);
-        return false;
-      }
-      if (!this.variables[index].setValue(0)) {
-        Globals.log.error("Cannot delete readonly variable " + name);
         return false;
       }
       this.variables.splice(index, 1);
@@ -620,6 +626,17 @@
     reset_count() {
       this.completed_actions = 0;
     }
+    list() {
+      let text = this.any_trigger ? "Any trigger\n" : "All triggers\n";
+      for (let i = 0; i < this.triggers.length; i++) {
+        text += this.triggers[i].constructor.name + " ";
+        text += this.triggers[i].params + "\n";
+      }
+      for (let i = 0; i < this.actions.length; i++) {
+        text += this.actions[i].text + "\n";
+      }
+      return text;
+    }
   };
   function makeCompletionCallback(object) {
     return function(action) {
@@ -627,28 +644,44 @@
     };
   }
   function evaluate(input) {
-    function safeEval(expr) {
-      try {
-        if (!/^[0-9+\-*/%.()\s]+$/.test(expr)) {
-          return "(" + expr + ")";
-        }
-        return Function('"use strict"; return (' + expr + ")")();
-      } catch {
-        return "(" + expr + ")";
-      }
-    }
-    let str = input;
-    if (!input.match(/\)/)) {
-      return str;
-    }
-    const regex = /\(([^()]+)\)/g;
-    let previous;
+    let str = "";
+    let i = 0;
+    let expr = "";
+    let brackets = 0;
+    let escaped = false;
     do {
-      previous = str;
-      str = str.replace(regex, (_, expr) => {
-        return safeEval(expr);
-      });
-    } while (str !== previous);
+      const char = input.charAt(i);
+      if (escaped) {
+        str += char;
+        escaped = false;
+        continue;
+      }
+      if (char == "\\") {
+        escaped = true;
+        continue;
+      }
+      if (brackets > 0) {
+        if (char == ")") {
+          if (--brackets == 0) {
+            str += Globals.evaluator.eval(expr);
+            expr = "";
+          } else {
+            expr += char;
+          }
+          continue;
+        }
+        if (char == "(") {
+          brackets++;
+        }
+        expr += char;
+        continue;
+      }
+      if (char == "(") {
+        brackets = 1;
+        continue;
+      }
+      str += char;
+    } while (++i < input.length);
     return str;
   }
   var Timer = class {
@@ -694,11 +727,11 @@
   var Reporter = class {
     constructor() {
     }
-    dumpScene(scene2) {
-      if (typeof scene2 === "string") {
-        scene2 = Scene.find(scene2);
+    dumpScene(scene) {
+      if (typeof scene === "string") {
+        scene = Scene.find(scene);
       }
-      Globals.log.report(scene2.dump());
+      Globals.log.report(scene.dump());
     }
   };
 
@@ -710,6 +743,7 @@
     static app = null;
     static log = new Log(defaults_default.DEBUG);
     static reporter = new Reporter();
+    static evaluator = new Mexp();
     static current_trigger = "";
     static display_width = defaults_default.DISPLAY_WIDTH;
     static display_height = defaults_default.DISPLAY_HEIGHT;
@@ -772,14 +806,14 @@
   };
 
   // src/sg_sprite.js
-  function get_image(scene2, tag) {
+  function get_image(scene, tag) {
     let parts = tag.split(":");
     if (parts.length > 1) {
-      scene2 = parts[0];
+      scene = parts[0];
       tag = parts[1];
     }
     for (let i = 0; i < Globals.scenes.length; i++) {
-      if (Globals.scenes[i].name == scene2) {
+      if (Globals.scenes[i].name == scene) {
         for (let j = 0; j < Globals.scenes[i].images.length; j++) {
           if (Globals.scenes[i].images[j].name == tag) {
             if (Globals.scenes[i].images[j].loading) {
@@ -791,7 +825,7 @@
         }
       }
     }
-    Globals.log.error("No image found- " + scene2 + ":" + tag);
+    Globals.log.error("No image found- " + scene + ":" + tag);
     return null;
   }
   var SG_image = class {
@@ -1100,12 +1134,12 @@
       this.size_x.set_target_value(old_w * new_w / 100, duration, now, callback);
       this.size_y.set_target_value(old_h * new_h / 100);
     }
-    update(scene2, now) {
+    update(scene, now) {
       if (!this.enabled) {
         return;
       }
       if (this.type == defaults_default.SPRITE_IMAGE && (this.pi_sprite === null || this.pi_sprite.texture == PIXI.Texture.EMPTY)) {
-        let image = get_image(scene2, this.image_tag);
+        let image = get_image(scene, this.image_tag);
         if (image === null) {
           this.enabled = false;
           return;
@@ -1305,14 +1339,14 @@
         this.pi_sprite.skew.y = this.skew_y.value() * (Math.PI / 180);
       }
     }
-    static get_sprite(scene2, tag, report = true) {
+    static get_sprite(scene, tag, report = true) {
       let parts = tag.split(":");
       if (parts.length > 1) {
-        scene2 = parts[0];
+        scene = parts[0];
         tag = parts[1];
       }
       for (let i = 0; i < Globals.scenes.length; i++) {
-        if (Globals.scenes[i].name == scene2) {
+        if (Globals.scenes[i].name == scene) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
             if (!(Globals.scenes[i].state == defaults_default.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
               return Globals.scenes[i].sprites[j];
@@ -1321,28 +1355,31 @@
         }
       }
       if (report) {
-        Globals.log.error("No sprite found- " + scene2 + ":" + tag);
+        Globals.log.error("No sprite found- " + scene + ":" + tag);
       }
       return false;
     }
-    static remove_sprite(scene2, tag) {
+    static remove_sprite(scene, tag, report = false) {
       let parts = tag.split(":");
       if (parts.length > 1) {
-        scene2 = parts[0];
+        scene = parts[0];
         tag = parts[1];
       }
       for (let i = 0; i < Globals.scenes.length; i++) {
-        if (Globals.scenes[i].name == scene2) {
+        if (Globals.scenes[i].name == scene) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
             if (Globals.scenes[i].sprites[j].tag == tag) {
               Globals.scenes[i].sprites[j].pi_sprite.destroy();
               Globals.scenes[i].sprites.splice(j, 1);
-              return;
+              return true;
             }
           }
         }
       }
-      Globals.log.error("No sprite found- " + scene2 + ":" + tag);
+      if (report) {
+        Globals.log.error("No sprite found- " + scene + ":" + tag);
+      }
+      return false;
     }
   };
 
@@ -1433,8 +1470,8 @@
 
   // src/triggers.js
   var Trigger = class {
-    constructor(scene2, timestamp, params) {
-      this.scene = scene2;
+    constructor(scene, timestamp, params) {
+      this.scene = scene;
       this.triggered = false;
       this.expired = false;
       this.next_update = 0;
@@ -1453,8 +1490,8 @@
     }
   };
   var Begin = class extends Trigger {
-    constructor(scene2, timestamp, params) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params) {
+      super(scene, timestamp, params);
     }
     fired(timestamp) {
       if (this.expired) {
@@ -1466,8 +1503,8 @@
     }
   };
   var After = class extends Trigger {
-    constructor(scene2, timestamp, params) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params) {
+      super(scene, timestamp, params);
       this.trigger_time = null;
     }
     fired(timestamp) {
@@ -1487,8 +1524,8 @@
     }
   };
   var Every = class extends Trigger {
-    constructor(scene2, timestamp, params) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params) {
+      super(scene, timestamp, params);
       this.trigger_rate = null;
       this.last_triggered = timestamp;
     }
@@ -1507,8 +1544,8 @@
     }
   };
   var IfWhile = class extends Trigger {
-    constructor(scene2, timestamp, params, keyword) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params, keyword) {
+      super(scene, timestamp, params);
       this.keyword = keyword;
     }
     fired(timestamp) {
@@ -1579,8 +1616,8 @@
     }
   };
   var AtClass = class extends Trigger {
-    constructor(scene2, timestamp, params) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params) {
+      super(scene, timestamp, params);
       this.minutes = null;
       this.hours = null;
       this.seconds = 0;
@@ -1633,8 +1670,8 @@
     }
   };
   var ThenClass = class extends Trigger {
-    constructor(scene2, timestamp, params, linked_action_group) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params, linked_action_group) {
+      super(scene, timestamp, params);
       this.linked_action_group = linked_action_group;
     }
     fired(timestamp) {
@@ -1649,8 +1686,8 @@
     }
   };
   var Each = class extends Trigger {
-    constructor(scene2, timestamp, params) {
-      super(scene2, timestamp, params);
+    constructor(scene, timestamp, params) {
+      super(scene, timestamp, params);
       this.minutes = null;
       this.hours = null;
       this.seconds = 0;
@@ -1853,7 +1890,7 @@
       this.images = [];
       this.sprites = [];
       this.folder = "";
-      this.varList = new VarList(this.sceneName);
+      this.varList = new VarList(this.name);
       this.timers = [];
       this.completion_callback = null;
       this.parameters = defaults_default.NOTFOUND;
@@ -1878,189 +1915,38 @@
       text += this.sprites.length + " sprites\n";
       return text;
     }
-    list_sprites() {
-      let text = "Sprites in Scene " + this.name + "\n";
+    list_sprites(verbose = true) {
+      let text = verbose ? "Sprites in Scene " + this.name + "\n" : "";
       for (let i = 0; i < this.sprites.length; i++) {
-        const sprite2 = this.sprites[i];
-        const x = sprite2.loc_x.value();
-        const y = sprite2.loc_y.value();
-        const z = sprite2.depth;
-        text += `${sprite2.name} (${sprite2.type}) `;
-        text += sprite2.visible ? "visible" : "hidden";
-        text += ` at ${x} ${y} ${z}
+        const sprite = this.sprites[i];
+        if (verbose) {
+          const x = sprite.loc_x.value();
+          const y = sprite.loc_y.value();
+          const z = sprite.depth;
+          text += `${sprite.name} (${sprite.type}) `;
+          text += sprite.visible ? "visible" : "hidden";
+          text += ` at ${x} ${y} ${z}
 `;
+        } else {
+          text += `${sprite.name} `;
+        }
       }
       return text;
     }
-    list_images() {
-      let text = "Images in Scene " + this.name + "\n";
+    list_images(verbose = true) {
+      let text = verbose ? "Images in Scene " + this.name + "\n" : "";
       for (let i = 0; i < this.images.length; i++) {
         const image = this.images[i];
-        text += `Name ${image.name} `;
-        text += image.loading ? "loaded" : "loading";
-        text += ` from ${image.url}
+        if (verbose) {
+          text += `Name ${image.name} `;
+          text += image.loading ? "loaded" : "loading";
+          text += ` from ${image.url}
 `;
+        } else {
+          text += `${image.name} `;
+        }
       }
       return text;
-    }
-    /**************************************************************************************************
-    
-       ########  ########    ###    ########  ######## ######## ##     ## ######## 
-       ##     ## ##         ## ##   ##     ##    ##    ##        ##   ##     ##    
-       ##     ## ##        ##   ##  ##     ##    ##    ##         ## ##      ##    
-       ########  ######   ##     ## ##     ##    ##    ######      ###       ##    
-       ##   ##   ##       ######### ##     ##    ##    ##         ## ##      ##    
-       ##    ##  ##       ##     ## ##     ##    ##    ##        ##   ##     ##    
-       ##     ## ######## ##     ## ########     ##    ######## ##     ##    ##    
-    
-    **************************************************************************************************/
-    static readFromText(text) {
-      const script = text.split(/\r?\n/);
-      const count = script.length;
-      const top = new _Scene(defaults_default.MAIN_NAME);
-      let holding = null;
-      let in_comment = false;
-      for (let i = 0; i < script.length; i++) {
-        let lineCount = i + 1;
-        let currentLine = script[i].trim();
-        currentLine = currentLine.replace(/\/\*[\s\S]*?\*\//g, "");
-        if (in_comment) {
-          if (currentLine.match(/\*\//)) {
-            let end_pos = currentLine.search(/\*\//);
-            currentLine = currentLine.substr(end_pos + 1);
-            in_comment = false;
-          } else {
-            continue;
-          }
-        }
-        if (currentLine.match(/\/\*/)) {
-          let start_pos = currentLine.search(/\/\*/);
-          currentLine = currentLine.substr(0, start_pos);
-          in_comment = true;
-        }
-        currentLine.replace(/\/\/.*$/, "");
-        if (currentLine.length < 2 || currentLine.startsWith("#")) {
-          continue;
-        }
-        if (!currentLine.match(/\w+/)) {
-          continue;
-        }
-        let words = currentLine.toLowerCase().split(/[\s,]+/);
-        if (words[0] == "and") {
-          words.shift();
-        }
-        let command = words[0];
-        let argument = "";
-        let argument2 = "";
-        if (words.length > 1) {
-          argument = words[1];
-        }
-        if (words.length > 2) {
-          argument2 = words[2];
-        }
-        if (command == "scene") {
-          if (argument == null) {
-            Globals.log.error(`expected scene name on line ${lineCount}`);
-          } else {
-            if (holding != null) {
-              Globals.scenes.push(holding);
-            }
-            holding = new _Scene(argument);
-          }
-        } else if (command == "end") {
-          if (argument == "file") {
-            break;
-          } else if (argument == "scene") {
-            if (holding != null) {
-              Globals.scenes.push(holding);
-              holding = null;
-            } else {
-              Globals.log.error(`no current scene at line ${lineCount}`);
-            }
-          } else {
-            Globals.log.error("end must be followed by file or scene");
-          }
-        } else if (command == "display") {
-          if (argument == "width") {
-            let display_width = parseInt(argument2);
-            if (display_width < 50 || display_width > 5e3) {
-              Globals.log.error("silly display width");
-              display_width = defaults_default.DISPLAY_WIDTH;
-            }
-            Globals.display_width = display_width;
-          } else if (argument == "height") {
-            let display_height = parseInt(argument2);
-            if (display_height < 50 || display_height > 5e3) {
-              Globals.log.error("silly display height");
-              display_height = defaults_default.DISPLAY_HEIGHT;
-            }
-            Globals.display_height = display_height;
-          }
-        } else if (command == "include") {
-          Globals.log.error("Include not supported yet");
-        } else if (command == "script") {
-          if (argument == "width") {
-            let script_width = parseInt(argument2);
-            if (script_width < 50 || script_width > 5e3) {
-              Globals.log.error("silly script width");
-              script_width = defaults_default.DISPLAY_WIDTH;
-            }
-            Globals.script_width = script_width;
-          } else if (argument == "height") {
-            let script_height = parseInt(argument2);
-            if (script_height < 50 || script_height > 5e3) {
-              Globals.log.error("silly script height");
-              script_height = defaults_default.DISPLAY_HEIGHT;
-            }
-            Globals.script_height = script_height;
-          } else if (argument == "scale") {
-            Globals.script_scale_type = argument2;
-          }
-        } else if (command == "gravity") {
-          let gravity = Parrser.parseFloat(argument);
-          if (gravity <= 0) {
-            Globals.log.error("silly gravity setting");
-            gravity = defaults_default.GRAVITY_PS2;
-          }
-          Globals.gravity_ps2 = gravity;
-        } else if (command == "ground") {
-          if (argument == "level") {
-            argument = argument2;
-          }
-          Globals.ground_level = parseInt(argument);
-        } else {
-          const line = new Line(lineCount, currentLine);
-          if (holding == null) {
-            top.content.push(line);
-          } else {
-            holding.content.push(line);
-          }
-        }
-      }
-      if (holding != null) {
-        Globals.scenes.push(holding);
-      }
-      if (top.content.length < 1) {
-        Globals.log.error("No top level actions, nothing will happen!");
-        return false;
-      } else {
-        switch (Globals.script_scale_type) {
-          case defaults_default.SCALE_STRETCH:
-            Globals.script_scale_x = Globals.display_width / Globals.script_width;
-            Globals.script_scale_y = Globals.display_height / Globals.script_height;
-            break;
-          case defaults_default.SCALE_FIT:
-          // todo
-          case defaults_default.SCALE_NONE:
-          default:
-            break;
-        }
-        top.start();
-        const dummyActionGroup = new ActionGroup();
-        top.actionGroups.push(dummyActionGroup);
-        Globals.scenes.push(top);
-      }
-      return true;
     }
     stop(reset = false) {
       this.state = defaults_default.SCENE_STOPPED;
@@ -2441,9 +2327,9 @@
               if (words.length > 0) {
                 let sceneName2 = Parser.get_word(words);
               }
-              const scene2 = _Scene.find(sceneName);
-              if (scene2 != false) {
-                scene2.stop(true);
+              const scene = _Scene.find(sceneName);
+              if (scene != false) {
+                scene.stop(true);
               } else {
                 Globals.log.error("Scene not found at line " + line_no);
               }
@@ -2978,7 +2864,7 @@
               value2 = -value2;
             }
             let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (sprite != null) {
+            if (sg_sprite2 != null) {
               sg_sprite2.set_depth(depth_type, value2);
             }
           } else {
@@ -3110,15 +2996,31 @@
         case "remove":
         case "erase":
         case "delete":
-          while (words.length) {
-            const item = words.shift();
-            if (AudioManager.exists(item)) {
-              AudioManager.delete(item);
-            } else {
-              SG_sprite.remove_sprite(this.name, item);
-            }
-          }
           action_group.complete_action("remove");
+          if (words.length > 1) {
+            const type2 = Parser.test_word(words, ["sprite", "audio", "sound", "var", "variable"]);
+            const item = Parser.get_word(words);
+            switch (type2) {
+              case "sprite":
+                SG_sprite.remove_sprite(this.name, item, false);
+                break;
+              case "audio":
+              case "sound":
+                if (AudioManager.exists(item)) {
+                  AudioManager.delete(item);
+                }
+                break;
+              case "var":
+              case "variable":
+                this.varList.delete(item, false);
+                break;
+              default:
+                Globals.log.error("Unknown deletion type on line " + line_no);
+                break;
+            }
+          } else {
+            Globals.log.error("Nothing to remove at line " + line_no);
+          }
           break;
         /**************************************************************************************************
         
@@ -3315,10 +3217,10 @@
         case "start":
           if (words.length > 0) {
             const scene_name = Parser.get_word(words);
-            const scene2 = _Scene.find(scene_name);
-            if (scene2 !== false) {
+            const scene = _Scene.find(scene_name);
+            if (scene !== false) {
               this.completion_callback = makeCompletionCallback(action_group);
-              scene2.start(words.join(" "));
+              scene.start(words.join(" "));
             }
           } else {
             Globals.log.error("Missing scene name at line " + line_no);
@@ -3338,12 +3240,16 @@
         **************************************************************************************************/
         case "stop":
         case "halt":
+          action_group.complete_action("stop");
           this.completion_callback = makeCompletionCallback(action_group);
           if (words.length > 0) {
             while (words.length > 0) {
               const stop_type = Parser.test_word(words, ["scene", "audio", "sound", "track", "sprite"]);
               const item = words.shift();
               if (item == null) {
+                if (stop_type == "scene") {
+                  this.stop(false);
+                }
                 break;
               }
               if (stop_type == "audio" || stop_type == "sound" || stop_type == "track") {
@@ -3351,33 +3257,32 @@
                   AudioManager.delete(item);
                 }
               } else if (stop_type == "scene") {
-                const scene2 = _Scene.find(item);
-                if (scene2 !== false) {
-                  scene2.stop(false);
+                const scene = _Scene.find(item);
+                if (scene !== false) {
+                  scene.stop(false);
                 }
               } else if (stop_type == "sprite") {
                 let sg_sprite2 = SG_sprite.get_sprite(this.name, item, false);
-                if (sprite != null) {
+                if (sg_sprite2 != null) {
                   sg_sprite2.stop();
                 }
               } else if (AudioManager.exists(item)) {
                 AudioManager.delete(item);
               } else {
-                const scene2 = _Scene.find(item);
-                if (scene2 !== false) {
-                  scene2.stop(false);
+                const scene = _Scene.find(item);
+                if (scene !== false) {
+                  scene.stop(false);
                 } else {
                   let sg_sprite2 = SG_sprite.get_sprite(this.name, item, false);
-                  if (sprite != null) {
+                  if (sg_sprite2 != null) {
                     sg_sprite2.stop();
                   }
                 }
               }
             }
           } else {
-            this.stop();
+            Globals.log.error("Nothing to stop on line " + line_no);
           }
-          action_group.complete_action("stop");
           break;
         /**************************************************************************************************
         
@@ -3395,7 +3300,7 @@
           if (words.length > 0) {
             let varName = words.shift();
             Parser.test_word(words, ["be", "to"]);
-            this.varList.create(varName, words.join(" "));
+            this.varList.set_value(varName, words.join(" "));
           } else {
             Globals.log.error("Missing variable name at line " + line_no);
           }
@@ -3409,13 +3314,6 @@
             } else {
               const varNames = words.slice(0, assignIndex);
               const values = words.slice(assignIndex + 1);
-              const setVar = (name, value2) => {
-                if (this.varList.find(name) !== false) {
-                  this.varList.update(name, value2);
-                } else {
-                  this.varList.create(name, value2);
-                }
-              };
               for (let i = 0; i < varNames.length; i++) {
                 let value2 = defaults_default.NOTFOUND;
                 if (values.length > i) {
@@ -3425,7 +3323,7 @@
                     value2 = values[i];
                   }
                 }
-                setVar(varNames[i], value2);
+                this.varList.set_value(varNames[i], value2);
               }
             }
           } else {
@@ -3443,7 +3341,7 @@
               const currentValue = this.varList.get_value(varName);
               if (`${currentValue}`.match(/^-?[0-9]+(\.[0-9]+)?$/)) {
                 const delta = command == "increment" ? 1 : -1;
-                this.varList.update(varName, parseFloat(currentValue) + delta);
+                this.varList.set_value(varName, parseFloat(currentValue) + delta);
               }
             }
           } else {
@@ -3455,7 +3353,7 @@
           if (words.length > 2) {
             let varName = words.shift();
             Parser.test_word(words, "from");
-            this.varList.create(varName, words[Math.floor(Math.random() * words.length)]);
+            this.varList.set_value(varName, words[Math.floor(Math.random() * words.length)]);
           } else {
             Globals.log.error("Missing variable name at line " + line_no);
           }
@@ -3652,7 +3550,7 @@
             let value2 = Parser.get_int(words, 100);
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
-            if (sprite != null) {
+            if (sg_sprite2 != null) {
               sg_sprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
             }
           } else {
@@ -3728,7 +3626,7 @@
             let value2 = Parser.get_int(words, 100);
             Parser.test_word(words, "in");
             let duration2 = Parser.get_duration(words, 0);
-            if (sprite != null) {
+            if (sg_sprite2 != null) {
               sg_sprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
             }
           } else {
@@ -3831,9 +3729,9 @@
           switch (type) {
             case "scenes":
             case "all":
-              Globals.scenes.foreach((scene2) => {
-                Globals.log.report(scene2.scene_data());
-              });
+              for (let i = 0; i < Globals.scenes.length; i++) {
+                Globals.log.report(Globals.scenes[i].scene_data());
+              }
               break;
             case "scene":
               if (arg) {
@@ -3865,6 +3763,11 @@
                 Globals.log.report(this.list_images());
               }
               break;
+            case "actions":
+              for (let i = 0; i < this.actionGroups.length; i++) {
+                Globals.log.report(this.actionGroups[i].list());
+              }
+              break;
             case "globals":
               Globals.log.report(Globals.list());
               break;
@@ -3884,6 +3787,165 @@
     static sg_id = "body";
     static clean = true;
     constructor() {
+    }
+    /**************************************************************************************************
+    
+       ########  ########    ###    ########  ######## ######## ##     ## ######## 
+       ##     ## ##         ## ##   ##     ##    ##    ##        ##   ##     ##    
+       ##     ## ##        ##   ##  ##     ##    ##    ##         ## ##      ##    
+       ########  ######   ##     ## ##     ##    ##    ######      ###       ##    
+       ##   ##   ##       ######### ##     ##    ##    ##         ## ##      ##    
+       ##    ##  ##       ##     ## ##     ##    ##    ##        ##   ##     ##    
+       ##     ## ######## ##     ## ########     ##    ######## ##     ##    ##    
+    
+    **************************************************************************************************/
+    readFromText(text) {
+      const script = text.split(/\r?\n/);
+      const count = script.length;
+      const top = new Scene2(defaults_default.MAIN_NAME);
+      let holding = null;
+      let in_comment = false;
+      for (let i = 0; i < script.length; i++) {
+        let lineCount = i + 1;
+        let currentLine = script[i].trim();
+        currentLine = currentLine.replace(/\/\*[\s\S]*?\*\//g, "");
+        if (in_comment) {
+          if (currentLine.match(/\*\//)) {
+            let end_pos = currentLine.search(/\*\//);
+            currentLine = currentLine.substr(end_pos + 1);
+            in_comment = false;
+          } else {
+            continue;
+          }
+        }
+        if (currentLine.match(/\/\*/)) {
+          let start_pos = currentLine.search(/\/\*/);
+          currentLine = currentLine.substr(0, start_pos);
+          in_comment = true;
+        }
+        currentLine.replace(/\/\/.*$/, "");
+        if (currentLine.length < 2 || currentLine.startsWith("#")) {
+          continue;
+        }
+        if (!currentLine.match(/\w+/)) {
+          continue;
+        }
+        let words = currentLine.toLowerCase().split(/[\s,]+/);
+        if (words[0] == "and") {
+          words.shift();
+        }
+        let command = words[0];
+        let argument = "";
+        let argument2 = "";
+        if (words.length > 1) {
+          argument = words[1];
+        }
+        if (words.length > 2) {
+          argument2 = words[2];
+        }
+        if (command == "scene") {
+          if (argument == null) {
+            Globals.log.error(`expected scene name on line ${lineCount}`);
+          } else {
+            if (holding != null) {
+              Globals.scenes.push(holding);
+            }
+            holding = new Scene2(argument);
+          }
+        } else if (command == "end") {
+          if (argument == "file") {
+            break;
+          } else if (argument == "scene") {
+            if (holding != null) {
+              Globals.scenes.push(holding);
+              holding = null;
+            } else {
+              Globals.log.error(`no current scene at line ${lineCount}`);
+            }
+          } else {
+            Globals.log.error("end must be followed by file or scene");
+          }
+        } else if (command == "display") {
+          if (argument == "width") {
+            let display_width = parseInt(argument2);
+            if (display_width < 50 || display_width > 5e3) {
+              Globals.log.error("silly display width");
+              display_width = defaults_default.DISPLAY_WIDTH;
+            }
+            Globals.display_width = display_width;
+          } else if (argument == "height") {
+            let display_height = parseInt(argument2);
+            if (display_height < 50 || display_height > 5e3) {
+              Globals.log.error("silly display height");
+              display_height = defaults_default.DISPLAY_HEIGHT;
+            }
+            Globals.display_height = display_height;
+          }
+        } else if (command == "include") {
+          Globals.log.error("Include not supported yet");
+        } else if (command == "script") {
+          if (argument == "width") {
+            let script_width = parseInt(argument2);
+            if (script_width < 50 || script_width > 5e3) {
+              Globals.log.error("silly script width");
+              script_width = defaults_default.DISPLAY_WIDTH;
+            }
+            Globals.script_width = script_width;
+          } else if (argument == "height") {
+            let script_height = parseInt(argument2);
+            if (script_height < 50 || script_height > 5e3) {
+              Globals.log.error("silly script height");
+              script_height = defaults_default.DISPLAY_HEIGHT;
+            }
+            Globals.script_height = script_height;
+          } else if (argument == "scale") {
+            Globals.script_scale_type = argument2;
+          }
+        } else if (command == "gravity") {
+          let gravity = parseFloat(argument);
+          if (gravity <= 0) {
+            Globals.log.error("silly gravity setting");
+            gravity = defaults_default.GRAVITY_PS2;
+          }
+          Globals.gravity_ps2 = gravity;
+        } else if (command == "ground") {
+          if (argument == "level") {
+            argument = argument2;
+          }
+          Globals.ground_level = parseInt(argument);
+        } else {
+          const line = new Line(lineCount, currentLine);
+          if (holding == null) {
+            top.content.push(line);
+          } else {
+            holding.content.push(line);
+          }
+        }
+      }
+      if (holding != null) {
+        Globals.scenes.push(holding);
+      }
+      if (top.content.length < 1) {
+        Globals.log.error("No top level actions, nothing will happen!");
+        return false;
+      } else {
+        switch (Globals.script_scale_type) {
+          case defaults_default.SCALE_STRETCH:
+            Globals.script_scale_x = Globals.display_width / Globals.script_width;
+            Globals.script_scale_y = Globals.display_height / Globals.script_height;
+            break;
+          case defaults_default.SCALE_FIT:
+          // todo
+          case defaults_default.SCALE_NONE:
+          default:
+            break;
+        }
+        top.start();
+        const dummyActionGroup = new ActionGroup();
+        top.actionGroups.push(dummyActionGroup);
+        Globals.scenes.push(top);
+      }
+      return true;
     }
     async run() {
       this.clean = false;
@@ -3970,7 +4032,7 @@
         Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
       }
       const text = await response.text();
-      if (Scene2.readFromText(text)) {
+      if (this.readFromText(text)) {
         this.run();
       }
     }
@@ -4020,7 +4082,7 @@
     scriptFromText(text) {
       Globals.log.report("Starting Slow Glass from textarea");
       this.cleanUp();
-      if (Scene2.readFromText(text)) {
+      if (this.readFromText(text)) {
         this.run();
       }
     }

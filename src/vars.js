@@ -3,6 +3,7 @@ import { Globals } from "./globals.js";
 import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
 import { SG_sprite } from "./sg_sprite";
+import { Scene } from "./scene.js";
 
 class Variable {
     constructor(name, value) {
@@ -32,13 +33,18 @@ export class VarList {
         Utils.getHemisphere();
     }
 
-    create(name, value) {
+    set_value(name, value) {
         if (VarList.built_in(name)) {
             Globals.log.error("Cannot create built-in variable " + name);
         } else if (name.match(/[\.:]/)) {
             Globals.log.error("Cannot create variable with dot or colon in name " + name);
         } else {
-            this.variables.push(new Variable(name, value));
+            const index = this.find(name);
+            if (index !== false) {
+                this.variables[index].setValue(value);
+            } else {
+                this.variables.push(new Variable(name, value));
+            }
         }
     }
 
@@ -168,7 +174,7 @@ export class VarList {
         }
     }
 
-    static  scene_var(varName) {
+    static scene_var(varName) {
         let value = "NONE";
         const parts = varName.split(/:/);
         const scene = Scene.find(parts[0]);
@@ -196,8 +202,28 @@ export class VarList {
             varName = colonParts[1];
             sceneName = colonParts[0];
         }
-        // Is this is a sprite name?
-        if (varName.match(/\./)) { // should be a sprite name/property pair
+        // First, find out which scene we are looking at
+        const scene = Scene.find(sceneName);
+        if (!scene) {
+            value = defaults.NOTFOUND;
+        }
+        // Is this a list request?
+        switch(varName) {
+            case 'SPRITES':
+                value = scene.list_sprites(false);
+                break;
+            case 'IMAGES':
+            case 'IMGS':
+                value = scene.list_images(false);
+                break;
+            case 'SCENES':
+                value = Globals.list_scenes(false);
+                break;
+            default:
+                break;
+        }
+        // Or is this is a sprite name?
+        if (value === false && varName.match(/\./)) { // should be a sprite name/property pair
             const parts = varName.split(/\./, 2);
             const sprite = SG_sprite.get_sprite(sceneName, parts[0], false);
             if (sprite != null) {
@@ -254,10 +280,7 @@ export class VarList {
         if (value === false) {
             // then look for user defined 
             if (sceneName != this.sceneName) { // look in a different scene
-                const otherScene = Scene.find(sceneName);
-                if (scene !== false) {
-                    value = otherScene.varList.get_value(varName);
-                }
+                    value = scene.varList.get_value(varName);
             } else {
                 let index = this.find(varName);
                 if (index !== false) {
@@ -272,28 +295,10 @@ export class VarList {
         return value;
     }
 
-    update(name, value) {
-        if (VarList.built_in(name)) {
-            Globals.log.error("Cannot update built-in variable " + name);
-            return false;
-        }
+    delete(name, report = false) {
         let index = this.find(name);
-        if (index === false) {
+        if (index === false && report) {
             Globals.log.error("Variable not found " + name);
-            return defaults.NOTFOUND;
-        } // else
-        return this.variables[index].setValue(value);
-    }
-
-    delete(name) {
-        let index = this.find(name);
-        if (index === false) {
-            Globals.log.error("Variable not found " + name);
-            return false;
-        } // else
-        // can we update it?
-        if (!this.variables[index].setValue(0)) {
-            Globals.log.error("Cannot delete readonly variable " + name);
             return false;
         } // else
         this.variables.splice(index, 1);

@@ -14,6 +14,181 @@ class SlowGlass {
 
     constructor() {
     }
+/**************************************************************************************************
+
+   ########  ########    ###    ########  ######## ######## ##     ## ######## 
+   ##     ## ##         ## ##   ##     ##    ##    ##        ##   ##     ##    
+   ##     ## ##        ##   ##  ##     ##    ##    ##         ## ##      ##    
+   ########  ######   ##     ## ##     ##    ##    ######      ###       ##    
+   ##   ##   ##       ######### ##     ##    ##    ##         ## ##      ##    
+   ##    ##  ##       ##     ## ##     ##    ##    ##        ##   ##     ##    
+   ##     ## ######## ##     ## ########     ##    ######## ##     ##    ##    
+
+**************************************************************************************************/
+
+    readFromText(text) {
+        const script = text.split(/\r?\n/);
+        const count = script.length;
+        const top = new Scene(defaults.MAIN_NAME);
+        let holding = null;
+        let in_comment = false;
+        for(let i = 0; i < script.length; i++ ) {
+            let lineCount = i + 1;
+            let currentLine = script[i].trim();
+            // handle 'C' style comments
+            // remove all within single line
+            currentLine = currentLine.replace(/\/\*[\s\S]*?\*\//g, '');
+            // Now deal with multi-line comments
+            if (in_comment) {
+                if (currentLine.match(/\*\//)) {
+                    let end_pos = currentLine.search(/\*\//);
+                    // discard up to comment end
+                    currentLine = currentLine.substr(end_pos + 1);
+                    in_comment = false;
+                } else {
+                    continue; // discard whole line
+                }
+            }
+            if (currentLine.match(/\/\*/)) {
+                let start_pos = currentLine.search(/\/\*/);
+                // discard from the start comment onwards
+                currentLine = currentLine.substr(0, start_pos);
+                in_comment = true;
+            }
+            /* discard single line comments, empty lines etc.  */
+            currentLine.replace(/\/\/.*$/,'');
+            if (currentLine.length < 2 || currentLine.startsWith('#')) { // we have no short commands etc.
+                continue;
+            }
+            if (!currentLine.match(/\w+/)) { // and all commands are text
+                continue;
+            }
+            // Handle scene management commands
+            let words = currentLine.toLowerCase().split(/[\s,]+/);
+            // ignore and as the first word (syntactic sugar)
+            if (words[0] == 'and') {
+                words.shift();
+            }
+            let command = words[0];
+            let argument = "";
+            let argument2 = "";
+            if (words.length > 1) {
+                argument = words[1];
+            }
+            if (words.length > 2) {
+                argument2 = words[2];
+            }
+            // Look for a new scene
+            if (command == 'scene') {
+                if (argument == null) {
+                    Globals.log.error(`expected scene name on line ${lineCount}`);
+                } else {
+                    if (holding != null) {
+                        Globals.scenes.push(holding);
+                    }
+                    holding = new Scene(argument);
+                }
+            // look for an explicit scene end
+            } else if (command == 'end') {
+                if (argument == 'file') {
+                    break;
+                } else if (argument == 'scene') {
+                    if (holding != null) {
+                        Globals.scenes.push(holding);
+                        holding = null;
+                    } else {
+                        Globals.log.error(`no current scene at line ${lineCount}`);
+                    }
+                } else {
+                    Globals.log.error("end must be followed by file or scene");
+                }
+            // end processing (ignore rest of file)
+            } else if (command == "display") {
+                if (argument == 'width') {
+                    let display_width = parseInt(argument2);
+                    if (display_width < 50 || display_width > 5000) {
+                        Globals.log.error("silly display width");
+                        display_width = defaults.DISPLAY_WIDTH;
+                    }
+                    Globals.display_width = display_width;
+                } else if (argument == 'height') {
+                    let display_height = parseInt(argument2);
+                    if (display_height < 50 || display_height > 5000) {
+                        Globals.log.error("silly display height");
+                        display_height = defaults.DISPLAY_HEIGHT;
+                    }
+                    Globals.display_height = display_height;
+                } // else look for fullscreen
+            } else if (command == 'include') {
+                Globals.log.error('Include not supported yet');
+            } else if (command == 'script') {
+                if (argument == 'width') {
+                    let script_width = parseInt(argument2);
+                    if (script_width < 50 || script_width > 5000) {
+                        Globals.log.error("silly script width");
+                        script_width = defaults.DISPLAY_WIDTH;
+                    }
+                    Globals.script_width = script_width;
+                } else if (argument == 'height') {
+                    let script_height = parseInt(argument2);
+                    if (script_height < 50 || script_height > 5000) {
+                        Globals.log.error("silly script height");
+                        script_height = defaults.DISPLAY_HEIGHT;
+                    }
+                    Globals.script_height = script_height;
+                } else if (argument == "scale") {
+                    Globals.script_scale_type = argument2;
+                }
+            } else if (command == 'gravity') {
+                let gravity = parseFloat(argument);
+                if (gravity <= 0) {
+                    Globals.log.error("silly gravity setting");
+                    gravity = defaults.GRAVITY_PS2;
+                }
+                Globals.gravity_ps2 = gravity; // NOTE, not scaled, scale on use
+            } else if (command == "ground") {
+                if (argument == "level") {
+                    argument = argument2;
+                }
+                Globals.ground_level = parseInt(argument);
+            } else {
+                // must be an action, trigger or condition
+                const line = new Utils.Line(lineCount, currentLine);
+                if (holding == null) {
+                    top.content.push(line);
+                } else {
+                    holding.content.push(line);
+                }
+            }
+        }
+        // add the final scene if unterminated
+        if (holding != null) {
+            Globals.scenes.push(holding);
+        }
+        if (top.content.length < 1) {
+            Globals.log.error('No top level actions, nothing will happen!');
+            return false;
+        } else {
+            // calculate overall scaling
+            switch (Globals.script_scale_type) {
+                case defaults.SCALE_STRETCH:
+                    Globals.script_scale_x = Globals.display_width / Globals.script_width;
+                    Globals.script_scale_y = Globals.display_height / Globals.script_height;
+                    break;
+                case defaults.SCALE_FIT:
+                    // todo
+                case defaults.SCALE_NONE:
+                default:
+                    break;
+            }
+            top.start();
+            // Add an empty action group to the top level for interactive actions
+            const dummyActionGroup = new Utils.ActionGroup();
+            top.actionGroups.push(dummyActionGroup);
+            Globals.scenes.push(top);
+        }
+        return true;
+    }
 
     async run() {
         this.clean = false;
@@ -123,7 +298,7 @@ class SlowGlass {
             Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
         const text = await response.text();
-        if (Scene.readFromText(text)) {
+        if (this.readFromText(text)) {
             this.run();
         }
     }
@@ -179,7 +354,7 @@ class SlowGlass {
         Globals.log.report("Starting Slow Glass from textarea");
         // tidy up previous run
         this.cleanUp();
-        if (Scene.readFromText(text)) {
+        if (this.readFromText(text)) {
             this.run();
         }
     }

@@ -679,7 +679,7 @@ export class SG_sprite {
         return(false);
     }
 
-    static remove_sprite(scene, tag) {
+    static remove_sprite(scene, tag, report = false) {
         let parts = tag.split(":");
         if (parts.length > 1) {
             scene = parts[0];
@@ -691,11 +691,14 @@ export class SG_sprite {
                     if (Globals.scenes[i].sprites[j].tag == tag) {
                         Globals.scenes[i].sprites[j].pi_sprite.destroy();
                         Globals.scenes[i].sprites.splice(j,1);
-                        return;
+                        return true;
                     }
                 }
             }
         }
-        Globals.log.error("No sprite found- " + scene + ":" + tag);
+        if (report) {
+            Globals.log.error("No sprite found- " + scene + ":" + tag);
+        }
+        return false;
     }
 }
