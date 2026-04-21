@@ -49,13 +49,23 @@ You can assign these values to variables like this:
 
 and _*$density*_ will be 50 and _*$volume*_ will be 'medium'.
 
-Finally, you can also randomly assign values from a list provided:
+You can randomly assign values from a list provided:
 
 `choose {variable-name} [from] {list...}`
 
 This will create (or overwrite) a variable with the given
 name and set the value randomly to one of the items from
 the space-separated list.
+
+You can also select all items from a list that contain a given word:
+
+`match {variable-name} to {search-word} [at (start|end)] from {list...}`
+
+This will create (or overwrite) a variable with the given
+name and set the value to the matching items from the
+space-separated list, joined back together with spaces. If
+there are no matches then the value will be set to the
+default "not found" value.
 
 ## Updating Variables
 
@@ -98,4 +108,3 @@ same way as variables that you define yourself, however I have
 adopted the convention that built-in variables are all upper-case,
 
 ## Sprite Properties
-

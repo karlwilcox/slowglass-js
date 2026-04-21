@@ -13,6 +13,10 @@ header:
 SlowGlass uses Pixi.js and you will need to include the latest release in your
 web page, before using SlowGlass.
 
+It also uses the
+[https://bugwheels94.github.io/math-expression-evaluator/](math expression evaluator)
+and a copy of the library is provided in the dist folder.
+
 SlowGlass will also attempt to determine the location of the browser - this is
 just to allow the correct assignment of the season (so we need to know which
 hemisphere we are in). If location services are not available then the
@@ -66,6 +70,7 @@ A minimal HTML fragment is shown below:
 
 ```html
 <div id="sg-id" style="min-height: 600px;"></div>
+<script type="module" src="/slow-glass/dist/math-expression-evaluator.min.js";></script>
 <script src="https://pixijs.download/release/pixi.min.js"></script>
 <script type="module" src="https://karlwilcox.com/slow-glass/web/dist/slow-glass.js";></script>
 <script>

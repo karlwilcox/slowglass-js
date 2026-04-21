@@ -243,7 +243,7 @@
       return true;
     }
   };
-  var VarList = class _VarList {
+  var VarList = class {
     static key = null;
     static lastKey = null;
     static hemisphere = null;
@@ -254,7 +254,7 @@
       getHemisphere();
     }
     set_value(name, value2) {
-      if (_VarList.built_in(name)) {
+      if (this.built_in(name)) {
         Globals.log.error("Cannot create built-in variable " + name);
       } else if (name.match(/[\.:]/)) {
         Globals.log.error("Cannot create variable with dot or colon in name " + name);
@@ -278,7 +278,7 @@
        ########   #######  #### ########    ##            #### ##    ##  ######  
     
     **************************************************************************************************/
-    static built_in(name) {
+    built_in(name) {
       const date = /* @__PURE__ */ new Date();
       const month = date.getMonth() + 1;
       switch (name) {
@@ -388,7 +388,7 @@
           return false;
       }
     }
-    static scene_var(varName) {
+    scene_var(varName) {
       let value2 = "NONE";
       const parts = varName.split(/:/);
       const scene = Scene2.find(parts[0]);
@@ -414,22 +414,23 @@
         varName = colonParts[1];
         sceneName = colonParts[0];
       }
-      if (["SPRITES", "IMAGES", "IMGS"].includes(varName)) {
-        const scene = Scene2.find(sceneName);
-        if (scene) {
-          switch (varName.charAt(0)) {
-            case "S":
-              value2 = scene.list_sprites(false);
-              break;
-            case "I":
-              value2 = scene.list_images(false);
-              break;
-            default:
-              break;
-          }
-        } else {
-          value2 = defaults_default.NOTFOUND;
-        }
+      const scene = Scene2.find(sceneName);
+      if (!scene) {
+        value2 = defaults_default.NOTFOUND;
+      }
+      switch (varName) {
+        case "SPRITES":
+          value2 = scene.list_sprites(false);
+          break;
+        case "IMAGES":
+        case "IMGS":
+          value2 = scene.list_images(false);
+          break;
+        case "SCENES":
+          value2 = Globals.list_scenes(false);
+          break;
+        default:
+          break;
       }
       if (value2 === false && varName.match(/\./)) {
         const parts = varName.split(/\./, 2);
@@ -482,14 +483,11 @@
         }
       }
       if (value2 === false) {
-        value2 = _VarList.built_in(varName);
+        value2 = this.built_in(varName);
       }
       if (value2 === false) {
         if (sceneName != this.sceneName) {
-          const otherScene = Scene2.find(sceneName);
-          if (otherScene !== false) {
-            value2 = otherScene.varList.get_value(varName);
-          }
+          value2 = scene.varList.get_value(varName);
         } else {
           let index = this.find(varName);
           if (index !== false) {
@@ -773,6 +771,13 @@
       for (const propt in this) {
         text += `${propt} = ${this[propt]}
 `;
+      }
+      return text;
+    }
+    static list_scenes(verbose = true) {
+      let text = "";
+      for (let i = 0; i < _Globals.scenes.length; i++) {
+        text += _Globals.scenes[i].name + " ";
       }
       return text;
     }
@@ -3229,6 +3234,40 @@
           break;
         /**************************************************************************************************
         
+            ######  ##        #######  ##    ## ######## 
+           ##    ## ##       ##     ## ###   ## ##       
+           ##       ##       ##     ## ####  ## ##       
+           ##       ##       ##     ## ## ## ## ######   
+           ##       ##       ##     ## ##  #### ##       
+           ##    ## ##       ##     ## ##   ### ##       
+            ######  ########  #######  ##    ## ######## 
+        
+        **************************************************************************************************/
+        case "copy":
+        case "clone":
+          action_group.complete_action("clone");
+          if (words.length > 0) {
+            const scene_name = Parser.get_word(words);
+            Parser.test_word(words, "as");
+            const new_name = Parser.get_word(words);
+            const scene = _Scene.find(scene_name);
+            if (scene === false) {
+              Globals.log.error("Scene not found at line " + line_no);
+              break;
+            }
+            if (_Scene.find(new_name)) {
+              Globals.log.error("Scene with that name already exists " + line_no);
+              break;
+            }
+            const new_scene = new _Scene(new_name);
+            new_scene.content = scene.content;
+            Globals.scenes.push(new_scene);
+          } else {
+            Globals.log.error("Missing scene name at line " + line_no);
+          }
+          break;
+        /**************************************************************************************************
+        
             ######  ########  #######  ########  
            ##    ##    ##    ##     ## ##     ## 
            ##          ##    ##     ## ##     ## 
@@ -3286,13 +3325,13 @@
           break;
         /**************************************************************************************************
         
-        ##       ######## ########       ## ##     ##    ###    ##    ## ######## 
-        ##       ##          ##         ##  ###   ###   ## ##   ##   ##  ##       
-        ##       ##          ##        ##   #### ####  ##   ##  ##  ##   ##       
-        ##       ######      ##       ##    ## ### ## ##     ## #####    ######   
-        ##       ##          ##      ##     ##     ## ######### ##  ##   ##       
-        ##       ##          ##     ##      ##     ## ##     ## ##   ##  ##       
-        ######## ########    ##    ##       ##     ## ##     ## ##    ## ######## 
+              ###     ######   ######  ####  ######   ##    ## ##     ## ######## ##    ## ######## 
+             ## ##   ##    ## ##    ##  ##  ##    ##  ###   ## ###   ### ##       ###   ##    ##    
+            ##   ##  ##       ##        ##  ##        ####  ## #### #### ##       ####  ##    ##    
+           ##     ##  ######   ######   ##  ##   #### ## ## ## ## ### ## ######   ## ## ##    ##    
+           #########       ##       ##  ##  ##    ##  ##  #### ##     ## ##       ##  ####    ##    
+           ##     ## ##    ## ##    ##  ##  ##    ##  ##   ### ##     ## ##       ##   ###    ##    
+           ##     ##  ######   ######  ####  ######   ##    ## ##     ## ######## ##    ##    ##    
         
         **************************************************************************************************/
         case "let":
@@ -3358,6 +3397,38 @@
             Globals.log.error("Missing variable name at line " + line_no);
           }
           action_group.complete_action("choose");
+          break;
+        case "match":
+          if (words.length > 4) {
+            const varName = words.shift();
+            if (!Parser.test_word(words, "to")) {
+              Globals.log.error("Missing match separator 'to' at line " + line_no);
+            } else {
+              const searchWord = words.shift();
+              if (searchWord == null) {
+                Globals.log.error("Missing search word at line " + line_no);
+              } else {
+                Parser.test_word(words, "at");
+                const anchor = Parser.test_word(words, ["start", "end"]);
+                if (!Parser.test_word(words, "from")) {
+                  Globals.log.error("Missing match separator 'from' at line " + line_no);
+                } else {
+                  let matches = [];
+                  if (anchor == "start") {
+                    matches = words.filter((word) => word.startsWith(searchWord));
+                  } else if (anchor == "end") {
+                    matches = words.filter((word) => word.endsWith(searchWord));
+                  } else {
+                    matches = words.filter((word) => word.includes(searchWord));
+                  }
+                  this.varList.set_value(varName, matches.length > 0 ? matches.join(" ") : defaults_default.NOTFOUND);
+                }
+              }
+            }
+          } else {
+            Globals.log.error("Missing values for match at line " + line_no);
+          }
+          action_group.complete_action("match");
           break;
         /**************************************************************************************************
         

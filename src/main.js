@@ -63,12 +63,14 @@ class SlowGlass {
             if (!currentLine.match(/\w+/)) { // and all commands are text
                 continue;
             }
-            // Handle scene management commands
+            // ignore any punctuation used to show indenting
+            currentLine = currentLine.replace(/^[^a-ZA-Z\$]+/,"");
             let words = currentLine.toLowerCase().split(/[\s,]+/);
             // ignore and as the first word (syntactic sugar)
             if (words[0] == 'and') {
                 words.shift();
             }
+            // Handle scene management commands
             let command = words[0];
             let argument = "";
             let argument2 = "";

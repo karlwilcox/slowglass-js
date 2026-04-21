@@ -34,7 +34,7 @@ export class VarList {
     }
 
     set_value(name, value) {
-        if (VarList.built_in(name)) {
+        if (this.built_in(name)) {
             Globals.log.error("Cannot create built-in variable " + name);
         } else if (name.match(/[\.:]/)) {
             Globals.log.error("Cannot create variable with dot or colon in name " + name);
@@ -60,7 +60,7 @@ export class VarList {
 
 **************************************************************************************************/
 
-    static built_in(name) {
+    built_in(name) {
         const date = new Date();
         const month = date.getMonth() + 1;
         switch (name) {
@@ -158,7 +158,7 @@ export class VarList {
                 return Globals.script_scale_x;
             case "SCALEY":
                 return Globals.script_scale_y;
-            case "SCENE":
+            case "SCENENAME":
                 return this.sceneName;
             case "PARAMS":
             case "PARAMETERS":
@@ -168,13 +168,13 @@ export class VarList {
                 return Math.floor((Date.now() - Globals.start_time) / 1000);
             case "MILLIS":
             case "MS":
-                return (Date.now() - Globals.start_time) / 1000;
+                return (Date.now() - Globals.start_time);
             default:
                 return false;
         }
     }
 
-    static scene_var(varName) {
+    scene_var(varName) {
         let value = "NONE";
         const parts = varName.split(/:/);
         const scene = Scene.find(parts[0]);
@@ -275,7 +275,7 @@ export class VarList {
         }
         if (value === false) {
             // Otherwise, Look for built-ins first
-            value = VarList.built_in(varName);
+            value = this.built_in(varName);
         }
         if (value === false) {
             // then look for user defined 

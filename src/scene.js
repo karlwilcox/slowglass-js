@@ -30,13 +30,15 @@ export class Scene {
         this.graphic_stroke_width = 1;
     }
 
-    static find(scene_name) {
+    static find(scene_name, report = true) {
         for (let i = 0; i < Globals.scenes.length; i++) {
             if (scene_name == Globals.scenes[i].name) {
                 return Globals.scenes[i];
             }
         } // else
-        Globals.log.error("Cannot find scene " + scene_name);
+        if (report) {
+            Globals.log.error("Cannot find scene " + scene_name);
+        }
         return false;
     }
 
@@ -1246,6 +1248,23 @@ export class Scene {
                         case "variable":
                             this.varList.delete(item, false);
                             break;
+                        case "scene":
+                            if (item == defaults.MAIN_NAME) {
+                                Globals.log.error("Cannot delete main scene on line " + line_no);
+                            } else {
+                                for (let i = 0; i < Globals.scenes.length; i++) {
+                                    if (Globals.scenes[i].name == item) { // delete this one
+                                        if (Globals.scenes[i].state != defaults.SCENE_STOPPED) {
+                                            Globals.log.error("Cannot delete running scene on line " + line_no);
+                                        } else {
+                                            Globals.scenes.splice(i,1);
+                                            break;
+                                        }
+                                    }
+                                }
+                                // Not an error if scene doesn't exist
+                            }
+                            break;
                         default:
                             Globals.log.error("Unknown deletion type on line " + line_no);
                             break;
@@ -1477,6 +1496,48 @@ export class Scene {
 
 /**************************************************************************************************
 
+    ######  ##        #######  ##    ## ######## 
+   ##    ## ##       ##     ## ###   ## ##       
+   ##       ##       ##     ## ####  ## ##       
+   ##       ##       ##     ## ## ## ## ######   
+   ##       ##       ##     ## ##  #### ##       
+   ##    ## ##       ##     ## ##   ### ##       
+    ######  ########  #######  ##    ## ######## 
+
+**************************************************************************************************/
+
+            case "copy":
+            case "clone":
+                action_group.complete_action("clone");
+                if (words.length > 0) {
+                    const scene_name = Parser.get_word(words);
+                    if (scene_name == defaults.MAIN_NAME) {
+                        Globals.log.error("Cannot duplicate main scene at line " + line_no);
+                        break;
+                    }
+                    Parser.test_word(words,"as");
+                    const new_name = Parser.get_word(words);
+                    const scene = Scene.find(scene_name, false);
+                    if (scene === false) {
+                        Globals.log.error("Scene not found at line " + line_no);
+                        break;
+                    }
+                    if (Scene.find(new_name, false)) {
+                        Globals.log.error("Scene with that name already exists " + line_no);
+                        break;
+                    }
+                    // Everything checks out, make the copy
+                    const new_scene = new Scene(new_name);
+                    new_scene.content = scene.content; // this is the only bit we need to copy over
+                    // but can do others if we ever want to preserve variable states etc...?
+                    Globals.scenes.push(new_scene);
+                } else {
+                    Globals.log.error("Missing scene name" + " at line " + line_no);
+                }
+                break;
+
+/**************************************************************************************************
+
     ######  ########  #######  ########  
    ##    ##    ##    ##     ## ##     ## 
    ##          ##    ##     ## ##     ## 
@@ -1537,13 +1598,13 @@ export class Scene {
 
 /**************************************************************************************************
 
-##       ######## ########       ## ##     ##    ###    ##    ## ######## 
-##       ##          ##         ##  ###   ###   ## ##   ##   ##  ##       
-##       ##          ##        ##   #### ####  ##   ##  ##  ##   ##       
-##       ######      ##       ##    ## ### ## ##     ## #####    ######   
-##       ##          ##      ##     ##     ## ######### ##  ##   ##       
-##       ##          ##     ##      ##     ## ##     ## ##   ##  ##       
-######## ########    ##    ##       ##     ## ##     ## ##    ## ######## 
+      ###     ######   ######  ####  ######   ##    ## ##     ## ######## ##    ## ######## 
+     ## ##   ##    ## ##    ##  ##  ##    ##  ###   ## ###   ### ##       ###   ##    ##    
+    ##   ##  ##       ##        ##  ##        ####  ## #### #### ##       ####  ##    ##    
+   ##     ##  ######   ######   ##  ##   #### ## ## ## ## ### ## ######   ## ## ##    ##    
+   #########       ##       ##  ##  ##    ##  ##  #### ##     ## ##       ##  ####    ##    
+   ##     ## ##    ## ##    ##  ##  ##    ##  ##   ### ##     ## ##       ##   ###    ##    
+   ##     ##  ######   ######  ####  ######   ##    ## ##     ## ######## ##    ##    ##    
 
 **************************************************************************************************/
 
@@ -1614,7 +1675,40 @@ export class Scene {
                     Globals.log.error("Missing variable name at line " + line_no);
                 }
                 action_group.complete_action("choose");
-                break;                   
+                break;
+
+            case "match":
+                if (words.length > 4) {
+                    const varName = words.shift();
+                    if (!Parser.test_word(words, "to")) {
+                        Globals.log.error("Missing match separator 'to' at line " + line_no);
+                    } else {
+                        const searchWord = words.shift();
+                        if (searchWord == null) {
+                            Globals.log.error("Missing search word at line " + line_no);
+                        } else {
+                            Parser.test_word(words,"at");
+                            const anchor = Parser.test_word(words,["start","end"]);
+                            if (!Parser.test_word(words, "from")) {
+                                Globals.log.error("Missing match separator 'from' at line " + line_no);
+                            } else {
+                                let matches = [];
+                                if (anchor == "start" ) {
+                                    matches = words.filter(word => word.startsWith(searchWord));
+                                } else if (anchor == "end") {
+                                    matches = words.filter(word => word.endsWith(searchWord));
+                                } else {
+                                    matches = words.filter(word => word.includes(searchWord));
+                                }
+                                this.varList.set_value(varName, matches.length > 0 ? matches.join(" ") : defaults.NOTFOUND);
+                            }
+                        }
+                    }
+                } else {
+                    Globals.log.error("Missing values for match at line " + line_no);
+                }
+                action_group.complete_action("match");
+                break;
 
 /**************************************************************************************************
 
