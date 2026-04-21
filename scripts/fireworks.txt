@@ -22,6 +22,12 @@ begin
     place left-tree at 20 200 depth 250
     place right-tree at 780 200 depth  251
 
+===> for test in one two three
+===> log test is now $test
+===> next
+
+end file
+
 every 3 seconds
     wait (1 + (4 * $CHANCE)) seconds
     start firework1

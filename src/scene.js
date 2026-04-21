@@ -262,10 +262,10 @@ export class Scene {
         let action_group = this.actionGroups[index];
         action_group.reset_count();
         let actions = action_group.actions;
-        for ( let i = 0; i < actions.length; i++ ) {
-            let action = actions[i];
-            this.runAction(action, action_group, now);
-        }
+        action_group.next_action = 0; // start at the top
+        do {
+            this.runAction(action_group.next_action, action_group, now);
+        } while (action_group.next_action < actions.length );
     }
 
 
@@ -282,10 +282,13 @@ export class Scene {
 **************************************************************************************************/
 
 
-    runAction(action, action_group, now) {
+    runAction(action_index, action_group, now) {
+        const action = action_group.actions[action_index];
         let words = this.varList.expand_vars(action.text);
         words = Utils.evaluate(words).split(/[\s,]+/);;
         let line_no = action.number;
+        // assume that the next action will be the next line
+        action_group.next_action += 1; // might be overwritten by the actual action, below
         // remove initial "and" (just syntactic sugar)
         if (words[0].match(/^and$/i)) {
             words.shift();
@@ -2044,7 +2047,54 @@ export class Scene {
                     }
                     break;
 
+/**************************************************************************************************
 
+   ########  #######  ########     #### ##    ## 
+   ##       ##     ## ##     ##     ##  ###   ## 
+   ##       ##     ## ##     ##     ##  ####  ## 
+   ######   ##     ## ########      ##  ## ## ## 
+   ##       ##     ## ##   ##       ##  ##  #### 
+   ##       ##     ## ##    ##      ##  ##   ### 
+   ##        #######  ##     ##    #### ##    ## 
+
+**************************************************************************************************/
+
+                case "for":
+                    // At the moment this breaks the completion callbacks for "then" 
+                    // we will need to up the count depending on how many lines are
+                    // in the loop
+                    action_group.complete_action("for");
+                    if (words.length > 0) {
+                        let var_name = words.shift();
+                        Parser.test_word(words, "in");
+                        this.varList.set_value(var_name,Parser.get_word(words,defaults.NOTFOUND));
+                        const stackFrame = new Utils.StackFrame(action_index + 1, words, var_name);
+                        action_group.stack.push(stackFrame);
+                    } else {
+                        Globals.log.error("Missing for loop");
+                    }
+                    break;
+
+                case "next":
+                case "endfor": {
+                        action_group.complete_action("next");
+                        const stack_size = action_group.stack.length;
+                        // error cases first
+                        if (stack_size < 1) {
+                            Globals.log.error("No for loop for next at " + line_no);
+                            break;
+                        }
+                        const stackFrame = action_group.stack[stack_size - 1];
+                        if (stackFrame.for_values.length < 1) {
+                            // used all words, unwind stack.
+                            action_group.stack.pop();
+                            // just carry on with next line
+                        } else { // still got more values to use up
+                            this.varList.set_value(stackFrame.var_name, stackFrame.for_values.shift());
+                            action_group.next_action = stackFrame.jump_line;
+                        }
+                    }
+                    break;
 
 /**************************************************************************************************
 

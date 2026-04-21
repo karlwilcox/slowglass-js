@@ -373,7 +373,7 @@
           return Globals.script_scale_x;
         case "SCALEY":
           return Globals.script_scale_y;
-        case "SCENE":
+        case "SCENENAME":
           return this.sceneName;
         case "PARAMS":
         case "PARAMETERS":
@@ -383,7 +383,7 @@
           return Math.floor((Date.now() - Globals.start_time) / 1e3);
         case "MILLIS":
         case "MS":
-          return (Date.now() - Globals.start_time) / 1e3;
+          return Date.now() - Globals.start_time;
         default:
           return false;
       }
@@ -599,12 +599,22 @@
       this.text = text;
     }
   };
+  var StackFrame = class {
+    constructor(line_no, values, var_name) {
+      this.type = "";
+      this.var_name = var_name;
+      this.jump_line = line_no;
+      this.for_values = values;
+    }
+  };
   var ActionGroup = class {
     constructor() {
       this.triggers = [];
       this.actions = [];
       this.any_trigger = true;
       this.completed_actions = 0;
+      this.stack = [];
+      this.next_action = 0;
     }
     complete_action(action) {
       this.completed_actions += 1;
@@ -623,6 +633,9 @@
     }
     reset_count() {
       this.completed_actions = 0;
+    }
+    add_count(new_actions) {
+      this.complete_action_actions -= new_actions;
     }
     list() {
       let text = this.any_trigger ? "Any trigger\n" : "All triggers\n";
@@ -1903,13 +1916,15 @@
       this.graphic_stroke = "black";
       this.graphic_stroke_width = 1;
     }
-    static find(scene_name) {
+    static find(scene_name, report = true) {
       for (let i = 0; i < Globals.scenes.length; i++) {
         if (scene_name == Globals.scenes[i].name) {
           return Globals.scenes[i];
         }
       }
-      Globals.log.error("Cannot find scene " + scene_name);
+      if (report) {
+        Globals.log.error("Cannot find scene " + scene_name);
+      }
       return false;
     }
     scene_data() {
@@ -2115,10 +2130,10 @@
       let action_group = this.actionGroups[index];
       action_group.reset_count();
       let actions = action_group.actions;
-      for (let i = 0; i < actions.length; i++) {
-        let action = actions[i];
-        this.runAction(action, action_group, now);
-      }
+      action_group.next_action = 0;
+      do {
+        this.runAction(action_group.next_action, action_group, now);
+      } while (action_group.next_action < actions.length);
     }
     /**************************************************************************************************
     
@@ -2131,11 +2146,13 @@
        ##     ##  #######  ##    ## ##     ##  ######     ##    ####  #######  ##    ## 
     
     **************************************************************************************************/
-    runAction(action, action_group, now) {
+    runAction(action_index, action_group, now) {
+      const action = action_group.actions[action_index];
       let words = this.varList.expand_vars(action.text);
       words = evaluate(words).split(/[\s,]+/);
       ;
       let line_no = action.number;
+      action_group.next_action += 1;
       if (words[0].match(/^and$/i)) {
         words.shift();
       }
@@ -3019,6 +3036,22 @@
               case "variable":
                 this.varList.delete(item, false);
                 break;
+              case "scene":
+                if (item == defaults_default.MAIN_NAME) {
+                  Globals.log.error("Cannot delete main scene on line " + line_no);
+                } else {
+                  for (let i = 0; i < Globals.scenes.length; i++) {
+                    if (Globals.scenes[i].name == item) {
+                      if (Globals.scenes[i].state != defaults_default.SCENE_STOPPED) {
+                        Globals.log.error("Cannot delete running scene on line " + line_no);
+                      } else {
+                        Globals.scenes.splice(i, 1);
+                        break;
+                      }
+                    }
+                  }
+                }
+                break;
               default:
                 Globals.log.error("Unknown deletion type on line " + line_no);
                 break;
@@ -3248,14 +3281,18 @@
           action_group.complete_action("clone");
           if (words.length > 0) {
             const scene_name = Parser.get_word(words);
+            if (scene_name == defaults_default.MAIN_NAME) {
+              Globals.log.error("Cannot duplicate main scene at line " + line_no);
+              break;
+            }
             Parser.test_word(words, "as");
             const new_name = Parser.get_word(words);
-            const scene = _Scene.find(scene_name);
+            const scene = _Scene.find(scene_name, false);
             if (scene === false) {
               Globals.log.error("Scene not found at line " + line_no);
               break;
             }
-            if (_Scene.find(new_name)) {
+            if (_Scene.find(new_name, false)) {
               Globals.log.error("Scene with that name already exists " + line_no);
               break;
             }
@@ -3755,6 +3792,47 @@
           break;
         /**************************************************************************************************
         
+           ########  #######  ########     #### ##    ## 
+           ##       ##     ## ##     ##     ##  ###   ## 
+           ##       ##     ## ##     ##     ##  ####  ## 
+           ######   ##     ## ########      ##  ## ## ## 
+           ##       ##     ## ##   ##       ##  ##  #### 
+           ##       ##     ## ##    ##      ##  ##   ### 
+           ##        #######  ##     ##    #### ##    ## 
+        
+        **************************************************************************************************/
+        case "for":
+          action_group.complete_action("for");
+          if (words.length > 0) {
+            let var_name = words.shift();
+            Parser.test_word(words, "in");
+            this.varList.set_value(var_name, Parser.get_word(words, defaults_default.NOTFOUND));
+            const stackFrame = new StackFrame(action_index + 1, words, var_name);
+            action_group.stack.push(stackFrame);
+          } else {
+            Globals.log.error("Missing for loop");
+          }
+          break;
+        case "next":
+        case "endfor":
+          {
+            action_group.complete_action("next");
+            const stack_size = action_group.stack.length;
+            if (stack_size < 1) {
+              Globals.log.error("No for loop for next at " + line_no);
+              break;
+            }
+            const stackFrame = action_group.stack[stack_size - 1];
+            if (stackFrame.for_values.length < 1) {
+              action_group.stack.pop();
+            } else {
+              this.varList.set_value(stackFrame.var_name, stackFrame.for_values.shift());
+              action_group.next_action = stackFrame.jump_line;
+            }
+          }
+          break;
+        /**************************************************************************************************
+        
            ##      ##    ###    #### ######## 
            ##  ##  ##   ## ##    ##     ##    
            ##  ##  ##  ##   ##   ##     ##    
@@ -3901,6 +3979,7 @@
         if (!currentLine.match(/\w+/)) {
           continue;
         }
+        currentLine = currentLine.replace(/^[^a-zA-Z\$]+/, "");
         let words = currentLine.toLowerCase().split(/[\s,]+/);
         if (words[0] == "and") {
           words.shift();

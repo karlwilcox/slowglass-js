@@ -78,6 +78,27 @@ export class Line {
     }
 }
 
+/**************************************************************************************************
+
+    ######  ########    ###     ######  ##    ## ######## ########     ###    ##     ## ######## 
+   ##    ##    ##      ## ##   ##    ## ##   ##  ##       ##     ##   ## ##   ###   ### ##       
+   ##          ##     ##   ##  ##       ##  ##   ##       ##     ##  ##   ##  #### #### ##       
+    ######     ##    ##     ## ##       #####    ######   ########  ##     ## ## ### ## ######   
+         ##    ##    ######### ##       ##  ##   ##       ##   ##   ######### ##     ## ##       
+   ##    ##    ##    ##     ## ##    ## ##   ##  ##       ##    ##  ##     ## ##     ## ##       
+    ######     ##    ##     ##  ######  ##    ## ##       ##     ## ##     ## ##     ## ######## 
+
+**************************************************************************************************/
+
+export class StackFrame {
+    constructor(line_no, values, var_name) {
+        this.type = "";
+        // Looping constructs
+        this.var_name = var_name;
+        this.jump_line = line_no;
+        this.for_values = values;
+    }
+}
 
 /**************************************************************************************************
    #                                  #####                              
@@ -98,6 +119,8 @@ export class ActionGroup {
         this.actions = [];
         this.any_trigger = true;
         this.completed_actions = 0;
+        this.stack = [];
+        this.next_action = 0; // for looping
     }
 
 
@@ -125,6 +148,10 @@ export class ActionGroup {
         this.completed_actions = 0;
     }
 
+    add_count(new_actions) {
+        this.complete_action_actions -= new_actions; // more to do
+    }
+
     list() {
         let text = this.any_trigger ? "Any trigger\n" : "All triggers\n";
         for(let i = 0; i < this.triggers.length; i++) {
@@ -137,7 +164,6 @@ export class ActionGroup {
         return text;
     }
 }
-
 
 export function makeCompletionCallback(object) {
     return function(action) {

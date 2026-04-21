@@ -64,7 +64,7 @@ class SlowGlass {
                 continue;
             }
             // ignore any punctuation used to show indenting
-            currentLine = currentLine.replace(/^[^a-ZA-Z\$]+/,"");
+            currentLine = currentLine.replace(/^[^a-zA-Z\$]+/,"");
             let words = currentLine.toLowerCase().split(/[\s,]+/);
             // ignore and as the first word (syntactic sugar)
             if (words[0] == 'and') {
