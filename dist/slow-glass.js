@@ -1,70 +1,70 @@
 (() => {
   // src/adjustable.js
   var Adjustable = class {
-    constructor(in_value, min_value, max_value, wrap) {
+    constructor(inValue, minValue, maxValue, wrap) {
       if (arguments.length < 4) {
         wrap = false;
       }
-      this.current_value = in_value;
-      this.target_value = in_value;
-      this.delta_value = 0;
+      this.currentValue = inValue;
+      this.targetValue = inValue;
+      this.deltaValue = 0;
       if (arguments.length >= 3) {
-        this.lower_limit = min_value;
-        this.upper_limit = max_value;
+        this.lowerLimit = minValue;
+        this.upperLimit = maxValue;
       } else {
-        this.lower_limit = Number.MIN_SAFE_INTEGER;
-        this.upper_limit = Number.MAX_SAFE_INTEGER;
+        this.lowerLimit = Number.MIN_SAFE_INTEGER;
+        this.upperLimit = Number.MAX_SAFE_INTEGER;
       }
-      this.last_adjustment = 0;
+      this.lastAdjustment = 0;
       this.changing = false;
       this.wrap = wrap;
-      this.jig_step = 0;
-      this.jig_limit = 0;
-      this.jig_chance = 0;
-      this.acceleration_rate = 0;
+      this.jigStep = 0;
+      this.jigLimit = 0;
+      this.jigChance = 0;
+      this.accelerationRate = 0;
       this.acceleration_time = 0;
-      this.position_callback = null;
-      this.accelerate_callback = null;
-      this.sway_limit = 0;
-      this.sway_step = 0;
-      this.sway_rate = 0;
-      this.sway_up = false;
-      this.sway_chance = 0;
-      this.last_sway = 0;
+      this.positionCallback = null;
+      this.accelerateCallback = null;
+      this.swayLimit = 0;
+      this.swayStep = 0;
+      this.swayRate = 0;
+      this.swayUp = false;
+      this.swayChance = 0;
+      this.lastSway = 0;
     }
     value() {
-      return this.current_value + this.jig_step + this.sway_step;
+      return this.currentValue + this.jigStep + this.swayStep;
     }
     speed() {
-      return this.delta_value;
+      return this.deltaValue;
     }
     sway_stop() {
-      this.sway_limit = 0;
-      this.sway_step = 0;
-      this.sway_rate = 0;
-      this.sway_chance = 0;
+      this.swayLimit = 0;
+      this.swayStep = 0;
+      this.swayRate = 0;
+      this.swayChance = 0;
     }
     sway_start(limit, rate, chance) {
-      this.sway_limit = limit;
-      this.sway_rate = rate * 1e3;
-      this.sway_chance = chance;
-      this.sway_step = 0;
-      this.sway_up = true;
-      this.last_sway = Date.now();
+      this.swayLimit = limit;
+      this.swayRate = rate * 1e3;
+      this.swayChance = chance;
+      this.swayStep = 0;
+      this.swayUp = true;
+      this.lastSway = Date.now();
     }
     stop() {
-      if (typeof this.position_callback === "function") {
-        this.position_callback("stop");
+      if (typeof this.positionCallback === "function") {
+        this.positionCallback("stop");
       }
-      if (typeof this.acceleration_callback === "function") {
-        this.acceleration_callback("stop");
+      if (typeof this.accelerationCallback === "function") {
+        this.accelerationCallback("stop");
       }
-      this.delta_value = 0;
+      this.deltaValue = 0;
       this.changing = false;
     }
     set_speed(delta) {
       if (Math.abs(delta) > 0) {
-        this.delta_value = delta;
+        this.deltaValue = delta;
         this.changing = true;
       }
     }
@@ -76,28 +76,28 @@
         timestamp = Date.now();
       }
       if (arguments.length > 3) {
-        this.acceleration_callback = callback;
+        this.accelerationCallback = callback;
       }
-      this.acceleration_rate = rate;
+      this.accelerationRate = rate;
     }
     // adjust(delta) {
-    //     let new_value = this.value + delta;
+    //     let newValue = this.value + delta;
     //     // but check limits
-    //     if ( new_value < this.lower_limit ) {
-    //         new_value = this.wrap ? this.upper_limit : this.lower_limit;
-    //     } else if ( new_value > this.upper_limit ) {
-    //         new_value = this.wrap ? this.lower_limit : this.upper_limit;
+    //     if ( newValue < this.lowerLimit ) {
+    //         newValue = this.wrap ? this.upperLimit : this.lowerLimit;
+    //     } else if ( newValue > this.upperLimit ) {
+    //         newValue = this.wrap ? this.lowerLimit : this.upperLimit;
     //     }
-    //     this.value = this.new_value;
+    //     this.value = this.newValue;
     // }
     // Some things need to be kept in step (e.g. size and scale) without triggering
     // an update, so do it here.
-    force_value(value2) {
+    forceValue(value2) {
       this.value = value2;
-      this.delta_value = 0;
+      this.deltaValue = 0;
       this.changing = false;
     }
-    set_target_value(target, seconds, timestamp, callback) {
+    setTargetValue(target, seconds, timestamp, callback) {
       if (arguments.length == 1) {
         seconds = 0;
       }
@@ -105,84 +105,84 @@
         timestamp = Date.now();
       }
       if (arguments.length > 3) {
-        this.position_callback = callback;
+        this.positionCallback = callback;
       }
-      if (target < this.lower_limit) {
-        target = this.lower_limit;
-      } else if (target > this.upper_limit) {
-        target = this.upper_limit;
+      if (target < this.lowerLimit) {
+        target = this.lowerLimit;
+      } else if (target > this.upperLimit) {
+        target = this.upperLimit;
       }
-      this.target_value = target;
+      this.targetValue = target;
       if (seconds == 0) {
-        this.current_value = target;
-        this.delta_value = 0;
+        this.currentValue = target;
+        this.deltaValue = 0;
         if (this.callback != null) {
-          this.position_callback("adjustable");
+          this.positionCallback("adjustable");
         }
       } else {
-        this.delta_value = (this.target_value - this.current_value) / (seconds * 1e3);
-        this.last_adjustment = timestamp;
+        this.deltaValue = (this.targetValue - this.currentValue) / (seconds * 1e3);
+        this.lastAdjustment = timestamp;
       }
       this.changing = true;
     }
-    update_value() {
+    updateValue() {
       let updated = false;
-      let this_adjustment = Date.now();
-      if (this.jig_limit > 0 && this.jig_chance > 0) {
-        if (Math.random() * 100 < this.jig_chance) {
+      let thisAdjustment = Date.now();
+      if (this.jigLimit > 0 && this.jigChance > 0) {
+        if (Math.random() * 100 < this.jigChance) {
           updated = true;
-          this.jig_step += this.jig_limit / 4 - Math.random() * (this.jig_limit / 2);
-          if (this.jig_step > this.jig_limit) {
-            this.jig_step = this.jig_limit;
-          } else if (this.jig_step < this.jig_limit * -1) {
-            this.jig_step = this.jig_limit * -1;
+          this.jigStep += this.jigLimit / 4 - Math.random() * (this.jigLimit / 2);
+          if (this.jigStep > this.jigLimit) {
+            this.jigStep = this.jigLimit;
+          } else if (this.jigStep < this.jigLimit * -1) {
+            this.jigStep = this.jigLimit * -1;
           }
         }
       }
-      if (this.sway_limit > 0) {
-        if (Math.random() * 100 < this.sway_chance) {
-          let step = this.sway_limit / this.sway_rate * (this_adjustment - this.last_sway);
-          if (this.sway_up) {
-            this.sway_step += step;
-            if (this.sway_step > this.sway_limit) {
-              this.sway_step = this.sway_limit;
-              this.sway_up = false;
+      if (this.swayLimit > 0) {
+        if (Math.random() * 100 < this.swayChance) {
+          let step = this.swayLimit / this.swayRate * (thisAdjustment - this.lastSway);
+          if (this.swayUp) {
+            this.swayStep += step;
+            if (this.swayStep > this.swayLimit) {
+              this.swayStep = this.swayLimit;
+              this.swayUp = false;
             }
           } else {
-            this.sway_step -= step;
-            if (this.sway_step < this.sway_limit * -1) {
-              this.sway_step = this.sway_limit * -1;
-              this.sway_up = true;
+            this.swayStep -= step;
+            if (this.swayStep < this.swayLimit * -1) {
+              this.swayStep = this.swayLimit * -1;
+              this.swayUp = true;
             }
           }
-          this.last_sway = this_adjustment;
+          this.lastSway = thisAdjustment;
           updated = true;
         }
       }
       if (!this.changing) {
         return updated;
       }
-      if (this.delta_value < 0 && this.current_value < this.target_value || this.delta_value > 0 && this.current_value > this.target_value || Math.abs(this.current_value - this.target_value) < this.delta_value) {
-        this.current_value = this.target_value;
-        this.delta_value = 0;
+      if (this.deltaValue < 0 && this.currentValue < this.targetValue || this.deltaValue > 0 && this.currentValue > this.targetValue || Math.abs(this.currentValue - this.targetValue) < this.deltaValue) {
+        this.currentValue = this.targetValue;
+        this.deltaValue = 0;
         this.changing = false;
         if (this.callback != null) {
-          this.position_callback("adjustable");
+          this.positionCallback("adjustable");
         }
       } else {
-        this.current_value += this.delta_value * (this_adjustment - this.last_adjustment);
-        this.last_adjustment = this_adjustment;
+        this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);
+        this.lastAdjustment = thisAdjustment;
       }
       return true;
     }
     jiggle_stop() {
-      this.jig_step = 0;
-      this.jig_limit = 0;
-      this.jig_chance = 0;
+      this.jigStep = 0;
+      this.jigLimit = 0;
+      this.jigChance = 0;
     }
     jiggle_start(limit, chance) {
-      this.jig_limit = limit;
-      this.jig_chance = chance;
+      this.jigLimit = limit;
+      this.jigChance = chance;
     }
   };
 
@@ -194,20 +194,12 @@
     // to give the correct calendar season
     DEBUG: true,
     LOCALE: "en-GB",
-    TRUEVALUE: "YES",
-    FALSEVALUE: "NO",
-    NOTFOUND: "NONE",
     TRIGGER_RATE: 500,
     // milliseconds between trigger tests
     SPRITE_RATE: 40,
     // milliseconds between sprite updates
-    MAIN_NAME: "_MAIN_",
     VOLUME_MIN: 0,
     VOLUME_MAX: 100,
-    // scaling types
-    SCALE_FIT: "fit",
-    SCALE_STRETCH: "stretch",
-    SCALE_NONE: "none",
     GRAVITY_PS2: 100,
     // force of gravity in pixels per second per second
     BOUNDS_X: 2,
@@ -220,14 +212,18 @@
     DEPTH_LEFT: 300,
     DEPTH_RIGHT: 301,
     DEPTH_FOREGROUND: 400,
-    DEPTH_FRAME: 1e3,
-    SPRITE_IMAGE: "_IMAGE_",
-    SPRITE_TEXT: "_TEXT_",
-    SPRITE_GRAPHIC: "_GRAPHIC_",
-    SCENE_STOPPED: "_STOPPED_",
-    SCENE_RUNNING: "_RUNNING_",
-    SCENE_PAUSED: "_PAUSED_"
+    DEPTH_FRAME: 1e3
   };
+
+  // src/constants.js
+  var TRUE_VALUE = "YES";
+  var MAIN_NAME = "_MAIN_";
+  var SPRITE_IMAGE = "_IMAGE_";
+  var SPRITE_TEXT = "_TEXT_";
+  var SPRITE_GRAPHIC = "_GRAPHIC_";
+  var SCALE_FIT = "_FIT_";
+  var SCALE_STRETCH = "_STRETCH_";
+  var SCALE_NONE = "_NONE_";
 
   // src/vars.js
   var Variable = class {
@@ -253,7 +249,7 @@
       this.sceneName = sceneName;
       getHemisphere();
     }
-    set_value(name, value2) {
+    setValue(name, value2) {
       if (this.built_in(name)) {
         Globals.log.error("Cannot create built-in variable " + name);
       } else if (name.match(/[\.:]/)) {
@@ -325,13 +321,13 @@
           }
           break;
         case "WINTER":
-          return this.hemisphere == "northern" && (month >= 12 || month <= 2) || this.hemisphere == "southern" && (month >= 6 && month <= 8) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return this.hemisphere == "northern" && (month >= 12 || month <= 2) || this.hemisphere == "southern" && (month >= 6 && month <= 8) ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "SPRING":
-          return this.hemisphere == "northern" && (month >= 3 && month <= 5) || this.hemisphere == "southern" && (month >= 9 && month <= 11) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return this.hemisphere == "northern" && (month >= 3 && month <= 5) || this.hemisphere == "southern" && (month >= 9 && month <= 11) ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "SUMMER":
-          return this.hemisphere == "northern" && (month >= 6 && month <= 8) || this.hemisphere == "southern" && (month >= 12 || month <= 2) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return this.hemisphere == "northern" && (month >= 6 && month <= 8) || this.hemisphere == "southern" && (month >= 12 || month <= 2) ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "AUTUMN":
-          return this.hemisphere == "northern" && (month >= 9 && month <= 11) || this.hemisphere == "southern" && (month >= 3 && month <= 5) ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return this.hemisphere == "northern" && (month >= 9 && month <= 11) || this.hemisphere == "southern" && (month >= 3 && month <= 5) ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "WIDTH":
           return Globals.app.screen.width;
         case "HEIGHT":
@@ -354,15 +350,15 @@
         case "TRIGGER":
           return this.trigger;
         case "WEEKDAY":
-          return date.getDay() > 0 && date.getDay() < 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return date.getDay() > 0 && date.getDay() < 6 ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "WEEKEND":
-          return date.getDay() == 0 || date.getDay() == 6 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return date.getDay() == 0 || date.getDay() == 6 ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "MORNING":
-          return date.getHours() > 6 && date.getHour() < 13 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return date.getHours() > 6 && date.getHour() < 13 ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "AFTERNOON":
-          return date.getHours() > 11 && date.getHour() < 18 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return date.getHours() > 11 && date.getHour() < 18 ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "EVENING":
-          return date.getHours() > 18 && date.getHour() < 22 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+          return date.getHours() > 18 && date.getHour() < 22 ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "NIGHT":
           return t_or_f(date.getHours() > 22 || date.getHour() < 6);
         case "KEY":
@@ -370,9 +366,9 @@
         case "LASTKEY":
           return Globals.lastKey == null ? defaults_default.NOTFOUND : Globals.lastKey;
         case "SCALEX":
-          return Globals.script_scale_x;
+          return Globals.scriptScaleX;
         case "SCALEY":
-          return Globals.script_scale_y;
+          return Globals.scriptScaleY;
         case "SCENENAME":
           return this.sceneName;
         case "PARAMS":
@@ -380,10 +376,10 @@
           const scene = Scene2.find(this.sceneName);
           return scene.parameters;
         case "ELAPSED":
-          return Math.floor((Date.now() - Globals.start_time) / 1e3);
+          return Math.floor((Date.now() - Globals.startTime) / 1e3);
         case "MILLIS":
         case "MS":
-          return Date.now() - Globals.start_time;
+          return Date.now() - Globals.startTime;
         default:
           return false;
       }
@@ -393,7 +389,7 @@
       const parts = varName.split(/:/);
       const scene = Scene2.find(parts[0]);
       if (scene !== false) {
-        value2 = scene.varList.get_value(parts[1]);
+        value2 = scene.varList.getValue(parts[1]);
       }
       return value2;
     }
@@ -406,7 +402,7 @@
       }
       return false;
     }
-    get_value(varName) {
+    getValue(varName) {
       let value2 = false;
       let sceneName = this.sceneName;
       if (varName.match(/:/)) {
@@ -427,14 +423,14 @@
           value2 = scene.list_images(false);
           break;
         case "SCENES":
-          value2 = Globals.list_scenes(false);
+          value2 = Globals.listScenes(false);
           break;
         default:
           break;
       }
       if (value2 === false && varName.match(/\./)) {
         const parts = varName.split(/\./, 2);
-        const sprite = SG_sprite.get_sprite(sceneName, parts[0], false);
+        const sprite = SGSprite.getSprite(sceneName, parts[0], false);
         if (sprite != null) {
           switch (parts[1]) {
             case "x":
@@ -487,7 +483,7 @@
       }
       if (value2 === false) {
         if (sceneName != this.sceneName) {
-          value2 = scene.varList.get_value(varName);
+          value2 = scene.varList.getValue(varName);
         } else {
           let index = this.find(varName);
           if (index !== false) {
@@ -543,7 +539,7 @@
             }
             varName = input.slice(start, j);
           }
-          let replacement = this.get_value(varName);
+          let replacement = this.getValue(varName);
           output += replacement;
           i = j;
           continue;
@@ -600,11 +596,11 @@
     }
   };
   var StackFrame = class {
-    constructor(line_no, values, var_name) {
+    constructor(line_no, values, varName) {
       this.type = "";
-      this.var_name = var_name;
+      this.varName = varName;
       this.jump_line = line_no;
-      this.for_values = values;
+      this.forValues = values;
     }
   };
   var ActionGroup = class {
@@ -615,6 +611,7 @@
       this.completed_actions = 0;
       this.stack = [];
       this.next_action = 0;
+      this.failedIfCount = 0;
     }
     complete_action(action) {
       this.completed_actions += 1;
@@ -695,9 +692,63 @@
     } while (++i < input.length);
     return str;
   }
+  function logical(words) {
+    let result = false;
+    let inverted = false;
+    if (words[0] == "not") {
+      words.shift();
+      inverted = true;
+    }
+    if (words.length == 0) {
+      result = !inverted;
+    } else if (words.length == 1) {
+      if (words[0].match(/^[-0-9\.\+]+$/)) {
+        result = !(Math.abs(parseFloat(words[0])) < 1e-3);
+      } else if (["false", "no", "n", "none"].includes(words[0].toLowerCase())) {
+        result = false;
+      } else {
+        result = true;
+      }
+    } else if (words.length == 2) {
+      result = words[0].toLowerCase == words[1].toLowerCase;
+    } else if (words.length > 2) {
+      let lvalue = words[0].toLowerCase();
+      let rvalue = words[2].toLowerCase();
+      let comparison = words[1].toLowerCase();
+      switch (comparison) {
+        case "is":
+        case "equals":
+        case "=":
+        case "==":
+          result = lvalue == rvalue;
+          break;
+        case "not":
+        case "!=":
+        case "!==":
+          result = lvalue != rvalue;
+          break;
+        case ">":
+          result = lvalue > rvalue;
+          break;
+        case "<":
+          result = lvalue < rvalue;
+          break;
+        case ">=":
+          result = lvalue >= rvalue;
+          break;
+        case "<=":
+          result = lvalue <= rvalue;
+          break;
+        default:
+          Globals.log.error("Unknown comparison - " + comparison);
+          break;
+      }
+    }
+    return inverted ? !result : result;
+  }
   var Timer = class {
-    constructor(start_time, duration, callback) {
-      this.endtime = start_time + 1e3 * duration;
+    constructor(startTime, duration, callback) {
+      this.endtime = startTime + 1e3 * duration;
       this.callback = callback;
     }
     expired(now) {
@@ -733,7 +784,7 @@
     );
   }
   function t_or_f(value2) {
-    return value2 ? defaults_default.TRUEVALUE : defaults_default.FALSEVALUE;
+    return value2 ? TRUE_VALUE : defaults_default.FALSEVALUE;
   }
   var Reporter = class {
     constructor() {
@@ -748,21 +799,21 @@
 
   // src/globals.js
   var Globals = class _Globals {
-    static start_time = Date.now();
+    static startTime = Date.now();
     static root = null;
     static scenes = [];
     static app = null;
     static log = new Log(defaults_default.DEBUG);
     static reporter = new Reporter();
     static evaluator = new Mexp();
-    static current_trigger = "";
-    static display_width = defaults_default.DISPLAY_WIDTH;
-    static display_height = defaults_default.DISPLAY_HEIGHT;
-    static script_width = defaults_default.DISPLAY_WIDTH;
-    static script_height = defaults_default.DISPLAY_HEIGHT;
-    static script_scale_type = defaults_default.SCALE_NONE;
-    static script_scale_x = 1;
-    static script_scale_y = 1;
+    static currentTrigger = "";
+    static displayWidth = defaults_default.DISPLAY_WIDTH;
+    static displayHeight = defaults_default.DISPLAY_HEIGHT;
+    static scriptWidth = defaults_default.DISPLAY_WIDTH;
+    static scriptHeight = defaults_default.DISPLAY_HEIGHT;
+    static scriptScaleType = SCALE_NONE;
+    static scriptScaleX = 1;
+    static scriptScaleY = 1;
     static gravity = defaults_default.GRAVITY_PS2;
     static ground_level = defaults_default.DISPLAY_HEIGHT;
     static lastKey = null;
@@ -787,7 +838,7 @@
       }
       return text;
     }
-    static list_scenes(verbose = true) {
+    static listScenes(verbose = true) {
       let text = "";
       for (let i = 0; i < _Globals.scenes.length; i++) {
         text += _Globals.scenes[i].name + " ";
@@ -798,14 +849,14 @@
       _Globals.root = null;
       _Globals.scenes = [];
       _Globals.app = null;
-      _Globals.current_trigger = "";
-      _Globals.display_width = defaults_default.DISPLAY_WIDTH;
-      _Globals.display_height = defaults_default.DISPLAY_HEIGHT;
-      _Globals.script_width = defaults_default.DISPLAY_WIDTH;
-      _Globals.script_height = defaults_default.DISPLAY_HEIGHT;
-      _Globals.script_scale_type = defaults_default.SCALE_NONE;
-      _Globals.script_scale_x = 1;
-      _Globals.script_scale_y = 1;
+      _Globals.currentTrigger = "";
+      _Globals.displayWidth = defaults_default.DISPLAY_WIDTH;
+      _Globals.displayHeight = defaults_default.DISPLAY_HEIGHT;
+      _Globals.scriptWidth = defaults_default.DISPLAY_WIDTH;
+      _Globals.scriptHeight = defaults_default.DISPLAY_HEIGHT;
+      _Globals.scriptScaleType = SCALE_NONE;
+      _Globals.scriptScaleX = 1;
+      _Globals.scriptScaleY = 1;
       _Globals.gravity = defaults_default.GRAVITY_PS2;
       _Globals.lastKey = null;
       _Globals.key = null;
@@ -823,7 +874,7 @@
     }
   };
 
-  // src/sg_sprite.js
+  // src/sgsprite.js
   function get_image(scene, tag) {
     let parts = tag.split(":");
     if (parts.length > 1) {
@@ -864,13 +915,13 @@
       this.loading = false;
     }
   };
-  var SG_sprite = class {
-    constructor(image_tag, sprite_tag = image_tag, type = defaults_default.SPRITE_IMAGE) {
+  var SGSprite = class {
+    constructor(imageName, spriteName = imageName, type = SPRITE_IMAGE) {
       this.type = type;
-      this.image_tag = image_tag;
-      this.name = sprite_tag;
+      this.imageName = imageName;
+      this.name = spriteName;
       this.image_portion = null;
-      this.pi_sprite = null;
+      this.piSprite = null;
       this.enabled = true;
       this.loc_x = new Adjustable(0);
       this.loc_y = new Adjustable(0);
@@ -884,24 +935,24 @@
       this.flip_v = false;
       this.visible = true;
       this.transparency = new Adjustable(100, 0, 100);
-      this.tint_value = new Adjustable(0, 0, 100);
+      this.tintValue = new Adjustable(0, 0, 100);
       this.tint_colour = null;
       this.new_tint = false;
       this.role = null;
       this.next_blink = 0;
-      this.blink_rate = 0;
-      this.blink_chance = 0;
-      this.pulse_rate = 0;
+      this.blinkRate = 0;
+      this.blinkChance = 0;
+      this.pulseRate = 0;
       this.pulse_min = 0;
       this.pulse_max = 0;
-      this.pulse_up = true;
+      this.pulseUp = true;
       this.flash_count = 0;
       this.next_flash = 0;
       this.throw_vx = 0;
       this.throw_vy = 0;
       this.throw_time = 0;
       this.falling = false;
-      this.throw_callback = null;
+      this.throwCallback = null;
       this.bluriness = new Adjustable(0, 0, 100);
       this.blur_filter = null;
       this.text_font = "arial";
@@ -913,8 +964,8 @@
       this.skew_y = new Adjustable(0);
     }
     set_pos(x, y, depth = 0) {
-      this.loc_x.set_target_value(x);
-      this.loc_y.set_target_value(y);
+      this.loc_x.setTargetValue(x);
+      this.loc_y.setTargetValue(y);
       this.set_depth("to", depth);
     }
     set_depth(depth_type, value2) {
@@ -926,8 +977,8 @@
       if (this.depth < 1) {
         this.depth = 1;
       }
-      if (this.enabled && this.pi_sprite != null) {
-        this.pi_sprite.zIndex = this.depth;
+      if (this.enabled && this.piSprite != null) {
+        this.piSprite.zIndex = this.depth;
       }
     }
     set_skew(new_x, new_y, to_or_by, duration, now, callback) {
@@ -935,12 +986,12 @@
         new_x += this.skew_x.value();
         new_y += this.skew_y.value();
       }
-      this.skew_x.set_target_value(new_x, duration, now, callback);
-      this.skew_y.set_target_value(new_y, duration, now);
+      this.skew_x.setTargetValue(new_x, duration, now, callback);
+      this.skew_y.setTargetValue(new_y, duration, now);
     }
     set_style() {
-      if (this.image_tag == defaults_default.TEXT_NAME) {
-        this.pi_sprite.style = {
+      if (this.imageName == defaults_default.TEXT_NAME) {
+        this.piSprite.style = {
           fontFamily: this.text_font,
           fontSize: this.text_size,
           fill: this.fill_colour,
@@ -956,19 +1007,19 @@
       }
       if (in_or_at == "at") {
       }
-      this.loc_x.set_target_value(new_x, duration, now, callback);
-      this.loc_y.set_target_value(new_y, duration, now);
+      this.loc_x.setTargetValue(new_x, duration, now, callback);
+      this.loc_y.setTargetValue(new_y, duration, now);
       this.enabled = true;
     }
     rotate(turn_type, value2, dur_type, duration, now, callback) {
-      let new_value = 0;
+      let newValue = 0;
       if (turn_type == "to") {
-        new_value = value2;
+        newValue = value2;
       } else if (turn_type == "by") {
-        new_value = this.angle.value() + value2;
+        newValue = this.angle.value() + value2;
       }
       if (dur_type == "in") {
-        this.angle.set_target_value(new_value, duration, now, callback);
+        this.angle.setTargetValue(newValue, duration, now, callback);
       }
     }
     set_trans(target, duration, fade_type, now, callback) {
@@ -984,7 +1035,7 @@
         default:
           break;
       }
-      this.transparency.set_target_value(target, duration, now, callback);
+      this.transparency.setTargetValue(target, duration, now, callback);
     }
     set_blur(target, duration, blur_type, now, callback) {
       switch (blur_type) {
@@ -1006,39 +1057,39 @@
       } else {
         this.blur_filter = null;
       }
-      this.bluriness.set_target_value(target, duration, now, callback);
+      this.bluriness.setTargetValue(target, duration, now, callback);
     }
     set_tint(target, duration, now, callback) {
       if (arguments.length == 1) {
         if (target == "stop") {
           this.tint_colour = null;
-          this.tint_value.set_target_value(100, 0, now, callback);
+          this.tintValue.setTargetValue(100, 0, now, callback);
         } else {
           this.tint_colour = target;
         }
         this.new_tint = true;
       } else {
-        this.tint_value.set_target_value(target, duration, now, callback);
+        this.tintValue.setTargetValue(target, duration, now, callback);
       }
     }
     flip(axis) {
       if (axis == "h") {
-        this.scale_x.set_target_value(this.flip_h ? 1 : -1);
-        this.scale_y.set_target_value(1);
+        this.scale_x.setTargetValue(this.flip_h ? 1 : -1);
+        this.scale_y.setTargetValue(1);
         this.flip_h = !this.flip_h;
       } else if (axis == "v") {
-        this.scale_x.set_target_value(1);
-        this.scale_y.set_target_value(this.flip_v ? 1 : -1);
+        this.scale_x.setTargetValue(1);
+        this.scale_y.setTargetValue(this.flip_v ? 1 : -1);
         this.flip_v = !this.flip_v;
       } else if (axis == "r") {
-        this.scale_x.set_target_value(this.flip_h ? 1 : -1);
-        this.scale_y.set_target_value(this.flip_v ? 1 : -1);
+        this.scale_x.setTargetValue(this.flip_h ? 1 : -1);
+        this.scale_y.setTargetValue(this.flip_v ? 1 : -1);
         this.flip_v = false;
         this.flip_h = false;
       }
     }
     current_tint() {
-      const shade = Math.round(255 * (100 - this.tint_value.value()) / 100);
+      const shade = Math.round(255 * (100 - this.tintValue.value()) / 100);
       return shade << 16 | shade << 8 | shade;
     }
     flash(flash_count, now) {
@@ -1079,12 +1130,12 @@
     }
     throw(angle, initial_velocity, now, callback) {
       if (arguments.length > 3) {
-        this.throw_callback = callback;
+        this.throwCallback = callback;
       }
       if (angle == "stop") {
         this.falling = false;
-        if (this.throw_callback != null) {
-          this.throw_callback();
+        if (this.throwCallback != null) {
+          this.throwCallback();
         }
       } else {
         this.falling = true;
@@ -1095,26 +1146,26 @@
       }
     }
     blink(rate, chance, now) {
-      this.blink_rate = rate;
-      this.blink_chance = chance;
+      this.blinkRate = rate;
+      this.blinkChance = chance;
       if (rate <= 0) {
         this.visible = false;
       }
-      this.next_blink = now + 1e3 / this.blink_rate;
+      this.next_blink = now + 1e3 / this.blinkRate;
     }
     pulse(rate, pulse_min, pulse_max, now) {
       if (rate == 0) {
-        this.pulse_rate = 0;
-        this.transparency.set_target_value(100);
+        this.pulseRate = 0;
+        this.transparency.setTargetValue(100);
       } else {
-        this.pulse_rate = 1 / rate;
+        this.pulseRate = 1 / rate;
         this.pulse_min = pulse_min;
         this.pulse_max = pulse_max;
-        this.transparency.set_target_value(this.pulse_min);
-        this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now);
+        this.transparency.setTargetValue(this.pulse_min);
+        this.transparency.setTargetValue(this.pulse_max, this.pulseRate, now);
       }
     }
-    set_visibility(visible) {
+    setVisibility(visible) {
       if (visible === true) {
         this.visible = true;
       } else if (visible === false) {
@@ -1122,8 +1173,8 @@
       } else if (visible == "toggle") {
         this.visible = !this.visible;
       }
-      if (this.enabled && this.pi_sprite != null) {
-        this.pi_sprite.visible = this.visible;
+      if (this.enabled && this.piSprite != null) {
+        this.piSprite.visible = this.visible;
       }
     }
     resize(new_w, new_h, to_or_by, in_or_at, duration, now, callback) {
@@ -1133,12 +1184,12 @@
       }
       if (in_or_at == "at") {
       }
-      this.size_x.set_target_value(new_w, duration, now, callback);
-      this.size_y.set_target_value(new_h, duration, now);
+      this.size_x.setTargetValue(new_w, duration, now, callback);
+      this.size_y.setTargetValue(new_h, duration, now);
     }
     reset_size() {
-      this.size_x.set_target_value(this.pi_image.orig.width);
-      this.size_y.set_target_value(this.pi_image.orig.height);
+      this.size_x.setTargetValue(this.pi_image.orig.width);
+      this.size_y.setTargetValue(this.pi_image.orig.height);
     }
     scale(new_w, new_h, duration, now, callback) {
       const old_w = this.size_x.value();
@@ -1149,15 +1200,15 @@
       if (new_h < 1) {
         new_h = new_w;
       }
-      this.size_x.set_target_value(old_w * new_w / 100, duration, now, callback);
-      this.size_y.set_target_value(old_h * new_h / 100);
+      this.size_x.setTargetValue(old_w * new_w / 100, duration, now, callback);
+      this.size_y.setTargetValue(old_h * new_h / 100);
     }
     update(scene, now) {
       if (!this.enabled) {
         return;
       }
-      if (this.type == defaults_default.SPRITE_IMAGE && (this.pi_sprite === null || this.pi_sprite.texture == PIXI.Texture.EMPTY)) {
-        let image = get_image(scene, this.image_tag);
+      if (this.type == SPRITE_IMAGE && (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) {
+        let image = get_image(scene, this.imageName);
         if (image === null) {
           this.enabled = false;
           return;
@@ -1175,41 +1226,41 @@
               case "background":
               // centre, and scale to window size
               case "backdrop":
-                this.loc_x.set_target_value(wdw_width / 2);
-                this.loc_y.set_target_value(wdw_height / 2);
-                this.size_x.set_target_value(wdw_width);
-                this.size_y.set_target_value(wdw_height);
+                this.loc_x.setTargetValue(wdw_width / 2);
+                this.loc_y.setTargetValue(wdw_height / 2);
+                this.size_x.setTargetValue(wdw_width);
+                this.size_y.setTargetValue(wdw_height);
                 depth = defaults_default.DEPTH_BACKGROUND;
                 break;
               case "left":
-                this.loc_x.set_target_value(img_width / 2);
-                this.loc_y.set_target_value(wdw_height / 2);
-                this.size_x.set_target_value(scale_y * img_width);
-                this.size_y.set_target_value(scale_y * img_height);
+                this.loc_x.setTargetValue(img_width / 2);
+                this.loc_y.setTargetValue(wdw_height / 2);
+                this.size_x.setTargetValue(scale_y * img_width);
+                this.size_y.setTargetValue(scale_y * img_height);
                 depth = defaults_default.DEPTH_LEFT;
                 break;
               case "right":
-                this.loc_x.set_target_value(wdw_width - img_width / 2);
-                this.loc_y.set_target_value(wdw_height / 2);
-                this.size_x.set_target_value(scale_y * img_width);
-                this.size_y.set_target_value(scale_y * img_height);
+                this.loc_x.setTargetValue(wdw_width - img_width / 2);
+                this.loc_y.setTargetValue(wdw_height / 2);
+                this.size_x.setTargetValue(scale_y * img_width);
+                this.size_y.setTargetValue(scale_y * img_height);
                 depth = defaults_default.DEPTH_RIGHT;
                 break;
               case "top":
               case "sky":
-                this.loc_x.set_target_value(wdw_width / 2);
-                this.loc_y.set_target_value(img_height / 2);
-                this.size_x.set_target_value(scale_x * img_width);
-                this.size_y.set_target_value(scale_x * img_height);
+                this.loc_x.setTargetValue(wdw_width / 2);
+                this.loc_y.setTargetValue(img_height / 2);
+                this.size_x.setTargetValue(scale_x * img_width);
+                this.size_y.setTargetValue(scale_x * img_height);
                 depth = defaults_default.DEPTH_SKY;
                 break;
               case "bottom":
               case "ground":
               case "foreground":
-                this.loc_x.set_target_value(wdw_width / 2);
-                this.loc_y.set_target_value(wdw_height - img_height / 2);
-                this.size_x.set_target_value(scale_x * img_width);
-                this.size_y.set_target_value(scale_x * img_height);
+                this.loc_x.setTargetValue(wdw_width / 2);
+                this.loc_y.setTargetValue(wdw_height - img_height / 2);
+                this.size_x.setTargetValue(scale_x * img_width);
+                this.size_y.setTargetValue(scale_x * img_height);
                 depth = this.role == "ground" ? defaults_default.DEPTH_GROUND : defaults_default.DEPTH_FOREGROUND;
                 break;
             }
@@ -1218,10 +1269,10 @@
             }
           } else {
             if (this.size_x.value() == 0) {
-              this.size_x.set_target_value(img_width);
+              this.size_x.setTargetValue(img_width);
             }
             if (this.size_y.value() == 0) {
-              this.size_y.set_target_value(img_height);
+              this.size_y.setTargetValue(img_height);
             }
           }
           const fullTexture = new PIXI.Texture(image.pi_image);
@@ -1234,7 +1285,7 @@
           } else {
             texture = fullTexture;
           }
-          this.pi_sprite = new PIXI.Sprite({
+          this.piSprite = new PIXI.Sprite({
             texture,
             anchor: 0.5,
             position: {
@@ -1244,17 +1295,17 @@
             visible: this.visible
           });
           this.depth = Globals.nextZ(this.depth);
-          this.pi_sprite.zIndex = this.depth;
-          this.pi_sprite.tint = this.current_tint();
-          this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
-          Globals.root.addChild(this.pi_sprite);
+          this.piSprite.zIndex = this.depth;
+          this.piSprite.tint = this.current_tint();
+          this.piSprite.setSize(this.size_x.value(), this.size_y.value());
+          Globals.root.addChild(this.piSprite);
         }
       }
-      let change_x = this.loc_x.update_value();
-      let change_y = this.loc_y.update_value();
+      let change_x = this.loc_x.updateValue();
+      let change_y = this.loc_y.updateValue();
       if (change_x || change_y) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.position.set(this.loc_x.value(), this.loc_y.value());
+        if (this.piSprite !== null) {
+          this.piSprite.position.set(this.loc_x.value(), this.loc_y.value());
         }
       }
       if (Math.abs(this.loc_x.value()) > Globals.width * defaults_default.BOUNDS_X || Math.abs(this.loc_y.value()) > Globals.width * defaults_default.BOUNDS_Y) {
@@ -1263,72 +1314,72 @@
       }
       if (this.falling) {
         const falling_time = (now - this.throw_time) / 1e3;
-        const delta_x = this.thrown_vx * falling_time * Globals.script_scale_x;
-        const delta_y = (this.thrown_vy * falling_time - 0.5 * Globals.gravity * -1 * falling_time * falling_time) * Globals.script_scale_y;
+        const delta_x = this.thrown_vx * falling_time * Globals.scriptScaleX;
+        const delta_y = (this.thrown_vy * falling_time - 0.5 * Globals.gravity * -1 * falling_time * falling_time) * Globals.scriptScaleY;
         if (Math.abs(delta_x) > Globals.app.screen.width * 2 || Math.abs(delta_y) > Globals.app.screen.height * 2 || Globals.ground_level > 0 && this.loc_y.value + delta_y > Globals.ground_level) {
           this.falling = false;
           this.visible = false;
           this.enabled = false;
-          if (this.throw_callback != null) {
-            this.throw_callback();
+          if (this.throwCallback != null) {
+            this.throwCallback();
           }
         }
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.position.set(this.loc_x.value() + delta_x, this.loc_y.value() + delta_y);
+        if (this.piSprite !== null) {
+          this.piSprite.position.set(this.loc_x.value() + delta_x, this.loc_y.value() + delta_y);
         }
       }
-      if (this.angle.update_value()) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.angle = this.angle.value();
+      if (this.angle.updateValue()) {
+        if (this.piSprite !== null) {
+          this.piSprite.angle = this.angle.value();
         }
       }
-      if (this.transparency.update_value()) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.alpha = this.transparency.value() / 100;
+      if (this.transparency.updateValue()) {
+        if (this.piSprite !== null) {
+          this.piSprite.alpha = this.transparency.value() / 100;
         }
       } else {
-        if (this.pulse_rate > 0) {
-          if (this.pulse_up) {
-            this.transparency.set_target_value(this.pulse_min, this.pulse_rate, now);
-            this.pulse_up = false;
+        if (this.pulseRate > 0) {
+          if (this.pulseUp) {
+            this.transparency.setTargetValue(this.pulse_min, this.pulseRate, now);
+            this.pulseUp = false;
           } else {
-            this.transparency.set_target_value(this.pulse_max, this.pulse_rate, now);
-            this.pulse_up = true;
+            this.transparency.setTargetValue(this.pulse_max, this.pulseRate, now);
+            this.pulseUp = true;
           }
         }
       }
       if (this.new_tint) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.tint = this.tint_colour;
+        if (this.piSprite !== null) {
+          this.piSprite.tint = this.tint_colour;
           this.new_tint = false;
         }
       }
-      if (this.tint_value.update_value()) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.tint = this.current_tint();
+      if (this.tintValue.updateValue()) {
+        if (this.piSprite !== null) {
+          this.piSprite.tint = this.current_tint();
         }
       }
-      change_x = this.size_x.update_value();
-      change_y = this.size_y.update_value();
+      change_x = this.size_x.updateValue();
+      change_y = this.size_y.updateValue();
       if (change_x || change_y) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
+        if (this.piSprite !== null) {
+          this.piSprite.setSize(this.size_x.value(), this.size_y.value());
         }
       }
-      change_x = this.scale_x.update_value();
-      change_y = this.scale_y.update_value();
+      change_x = this.scale_x.updateValue();
+      change_y = this.scale_y.updateValue();
       if (change_x || change_y) {
-        if (this.pi_sprite !== null) {
-          this.pi_sprite.scale.set(this.scale_x.value(), this.scale_y.value());
-          this.pi_sprite.setSize(this.size_x.value(), this.size_y.value());
+        if (this.piSprite !== null) {
+          this.piSprite.scale.set(this.scale_x.value(), this.scale_y.value());
+          this.piSprite.setSize(this.size_x.value(), this.size_y.value());
         }
       }
-      if (this.blink_rate > 0 && this.next_blink < now) {
-        if (this.blink_chance >= 100 || Math.random() * 100 < this.blink_chance) {
+      if (this.blinkRate > 0 && this.next_blink < now) {
+        if (this.blinkChance >= 100 || Math.random() * 100 < this.blinkChance) {
           this.visible = !this.visible;
-          this.next_blink += 1e3 / this.blink_rate;
-          if (this.pi_sprite !== null) {
-            this.pi_sprite.visible = this.visible;
+          this.next_blink += 1e3 / this.blinkRate;
+          if (this.piSprite !== null) {
+            this.piSprite.visible = this.visible;
           }
         }
       }
@@ -1340,24 +1391,24 @@
           this.visible = true;
         }
         this.next_flash = now + 100;
-        this.pi_sprite.visible = this.visible;
+        this.piSprite.visible = this.visible;
       }
-      if (this.bluriness.update_value()) {
-        if (this.pi_sprite !== null) {
-          if (this.pi_sprite.filters == null) {
-            this.pi_sprite.filters = [this.blur_filter];
+      if (this.bluriness.updateValue()) {
+        if (this.piSprite !== null) {
+          if (this.piSprite.filters == null) {
+            this.piSprite.filters = [this.blur_filter];
           }
           this.blur_filter.strength = this.bluriness.value() / 10;
         }
       }
-      const change_skew_x = this.skew_x.update_value();
-      const change_skew_y = this.skew_y.update_value();
+      const change_skew_x = this.skew_x.updateValue();
+      const change_skew_y = this.skew_y.updateValue();
       if (change_skew_x || change_skew_y) {
-        this.pi_sprite.skew.x = this.skew_x.value() * (Math.PI / 180);
-        this.pi_sprite.skew.y = this.skew_y.value() * (Math.PI / 180);
+        this.piSprite.skew.x = this.skew_x.value() * (Math.PI / 180);
+        this.piSprite.skew.y = this.skew_y.value() * (Math.PI / 180);
       }
     }
-    static get_sprite(scene, tag, report = true) {
+    static getSprite(scene, tag, report = true) {
       let parts = tag.split(":");
       if (parts.length > 1) {
         scene = parts[0];
@@ -1387,7 +1438,7 @@
         if (Globals.scenes[i].name == scene) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
             if (Globals.scenes[i].sprites[j].tag == tag) {
-              Globals.scenes[i].sprites[j].pi_sprite.destroy();
+              Globals.scenes[i].sprites[j].piSprite.destroy();
               Globals.scenes[i].sprites.splice(j, 1);
               return true;
             }
@@ -1406,7 +1457,7 @@
     constructor() {
       ;
     }
-    static test_word(words, word, def) {
+    static testWord(words, word, def) {
       let retval = false;
       if (words.length > 0) {
         if (word instanceof Array) {
@@ -1426,7 +1477,7 @@
       }
       return retval;
     }
-    static get_int(words, def, min, max) {
+    static getInt(words, def, min, max) {
       if (words.length > 0) {
         let word = words.shift();
         if (!word.match(/^[0-9-\.]+$/)) {
@@ -1443,13 +1494,13 @@
       }
       return def;
     }
-    static get_float(words, def) {
+    static getFloat(words, def) {
       if (words.length > 0) {
         return parseFloat(words.shift());
       }
       return def;
     }
-    static get_word(words, def) {
+    static getWord(words, def) {
       if (words.length > 0) {
         return words.shift();
       }
@@ -1457,7 +1508,7 @@
     }
     static get_time_units(words, def) {
       let mult = 1;
-      let units = _Parser.get_word(words, def);
+      let units = _Parser.getWord(words, def);
       if (units.startsWith("s")) {
         ;
       } else if (units.startsWith("m")) {
@@ -1471,16 +1522,16 @@
       }
       return mult;
     }
-    static get_duration(words, def) {
-      let value2 = _Parser.get_float(words, def) * _Parser.get_time_units(words, "s");
+    static getDuration(words, def) {
+      let value2 = _Parser.getFloat(words, def) * _Parser.get_time_units(words, "s");
       return Math.round(value2);
     }
-    static get_rate(words, def, extra) {
-      let value2 = _Parser.get_float(words, def);
+    static getRate(words, def, extra) {
+      let value2 = _Parser.getFloat(words, def);
       if (arguments.length > 2) {
-        _Parser.test_word(words, extra);
+        _Parser.testWord(words, extra);
       }
-      _Parser.test_word(words, "per");
+      _Parser.testWord(words, "per");
       value2 *= _Parser.get_time_units(words, "s");
       return value2;
     }
@@ -1492,7 +1543,7 @@
       this.scene = scene;
       this.triggered = false;
       this.expired = false;
-      this.next_update = 0;
+      this.nextUpdate = 0;
       this.trigger_time = 0;
       this.create_time = timestamp;
       this.params = params;
@@ -1531,7 +1582,7 @@
       }
       if (this.expanded == null) {
         this.expanded = this.expand_all(this.params);
-        this.trigger_time = this.create_time + Parser.get_duration(this.expanded, 1) * 1e3;
+        this.trigger_time = this.create_time + Parser.getDuration(this.expanded, 1) * 1e3;
       }
       if (timestamp > this.trigger_time) {
         this.triggered = true;
@@ -1544,90 +1595,18 @@
   var Every = class extends Trigger {
     constructor(scene, timestamp, params) {
       super(scene, timestamp, params);
-      this.trigger_rate = null;
+      this.triggerRate = null;
       this.last_triggered = timestamp;
     }
     fired(timestamp) {
       if (this.expanded == null) {
         this.expanded = this.expand_all(this.params);
-        this.trigger_rate = Parser.get_duration(this.expanded, 1) * 1e3;
+        this.triggerRate = Parser.getDuration(this.expanded, 1) * 1e3;
       }
-      if (timestamp - this.last_triggered > this.trigger_rate) {
+      if (timestamp - this.last_triggered > this.triggerRate) {
         this.triggered = true;
         this.last_triggered = timestamp;
         return true;
-      }
-      this.triggered = false;
-      return false;
-    }
-  };
-  var IfWhile = class extends Trigger {
-    constructor(scene, timestamp, params, keyword) {
-      super(scene, timestamp, params);
-      this.keyword = keyword;
-    }
-    fired(timestamp) {
-      if (this.expired) {
-        return false;
-      }
-      let result = false;
-      let expanded = this.expand_all(this.params);
-      let inverted = false;
-      if (expanded[0] == "not") {
-        expanded.shift();
-        inverted = true;
-      }
-      if (expanded.length == 0) {
-        result = !inverted;
-      } else if (expanded.length == 1) {
-        if (expanded[0].match(/^[-0-9\.\+]+$/)) {
-          result = !(Math.abs(parseFloat(expanded[0])) < 1e-3);
-        } else if (["false", "no", "n", "none"].includes(expanded[0].toLowerCase())) {
-          result = false;
-        } else {
-          result = true;
-        }
-      } else if (expanded.length == 2) {
-        result = expanded[0].toLowerCase == expanded[1].toLowerCase;
-      } else if (expanded.length > 2) {
-        let lvalue = expanded[0].toLowerCase();
-        let rvalue = expanded[2].toLowerCase();
-        let comparison = expanded[1].toLowerCase();
-        switch (comparison) {
-          case "is":
-          case "equals":
-          case "=":
-          case "==":
-            value = lvalue == rvalue;
-            break;
-          case "not":
-          case "!=":
-          case "!==":
-            value = lvalue != rvalue;
-            break;
-          case ">":
-            value = lvalue > rvalue;
-            break;
-          case "<":
-            value = lvalue < rvalue;
-            break;
-          case ">=":
-            value = lvalue >= rvalue;
-            break;
-          case "<=":
-            value = lvalue <= rvalue;
-            break;
-          default:
-            Globals.log.error("Unknown comparison - " + comparison);
-            break;
-        }
-      }
-      if (result) {
-        this.triggered = true;
-        if (this.keyword == "if") {
-          this.expired = true;
-        }
-        return inverted ? !result : result;
       }
       this.triggered = false;
       return false;
@@ -1901,6 +1880,7 @@
       this.name = sceneName;
       this.state = defaults_default.SCENE_STOPPED;
       this.content = [];
+      this.interactive_index = 0;
       this.reset();
     }
     reset() {
@@ -1910,11 +1890,11 @@
       this.folder = "";
       this.varList = new VarList(this.name);
       this.timers = [];
-      this.completion_callback = null;
+      this.completionCallback = null;
       this.parameters = defaults_default.NOTFOUND;
-      this.graphic_fill = "black";
-      this.graphic_stroke = "black";
-      this.graphic_stroke_width = 1;
+      this.graphicFill = "black";
+      this.graphicStroke = "black";
+      this.graphicStrokeWidth = 1;
     }
     static find(scene_name, report = true) {
       for (let i = 0; i < Globals.scenes.length; i++) {
@@ -1973,18 +1953,18 @@
       this.parameters = defaults_default.NOTFOUND;
       this.actionGroups = [];
       for (let i = 0; i < this.sprites; i++) {
-        const sg_sprite = this.sprites[i];
-        if (sg_sprite.pi_sprite != null) {
-          sg_sprite.pi_sprite.destroy();
+        const sgSprite = this.sprites[i];
+        if (sgSprite.piSprite != null) {
+          sgSprite.piSprite.destroy();
         }
       }
       this.sprites = [];
       if (reset) {
         this.reset();
       }
-      if (this.completion_callback != null) {
-        this.completion_callback();
-        this.completion_callback = null;
+      if (this.completionCallback != null) {
+        this.completionCallback();
+        this.completionCallback = null;
       }
     }
     pause() {
@@ -2014,19 +1994,19 @@
       }
       this.actionGroups = [];
       this.parameters = parameters;
-      let action_group = new ActionGroup();
+      let actionGroup = new ActionGroup();
       let state = "T";
       let timestamp = Date.now();
       for (let i = 0; i < this.content.length; i++) {
         let trigger = null;
         let words = this.content[i].text.split(/\s+/);
-        let line_no = this.content[i].number;
+        let lineNo = this.content[i].number;
         let keyword = words.shift();
         words = words.join(" ");
         switch (keyword.toLowerCase()) {
           case "when":
             if (words.toLowerCase().startsWith("all")) {
-              action_group.any_trigger = false;
+              actionGroup.any_trigger = false;
             } else if (!words.toLowerCase().startsWith("any")) {
               Globals.log.error("Unknown when condition - " + words);
             }
@@ -2040,10 +2020,10 @@
           case "end":
             trigger = new Trigger("ATEND", "");
             break;
-          case "if":
-          case "while":
-            trigger = new IfWhile(this, timestamp, words, keyword);
-            break;
+          // case 'if':
+          // case 'while':
+          //     trigger = new Triggers.IfWhile(this, timestamp, words, keyword);
+          //     break;
           case "after":
             trigger = new After(this, timestamp, words);
             break;
@@ -2066,7 +2046,7 @@
                 trigger = new Trigger("MOUSECLICK", words);
                 break;
               default:
-                Globals.log.error("Unknown trigger type on " + on_word + " at line " + line_no);
+                Globals.log.error("Unknown trigger type on " + on_word + " at line " + lineNo);
                 break;
             }
             break;
@@ -2086,7 +2066,7 @@
             if (state == "T") {
               Globals.log.error("Then must be the only trigger in that group");
             } else {
-              trigger = new ThenClass(this, timestamp, words, action_group);
+              trigger = new ThenClass(this, timestamp, words, actionGroup);
             }
             break;
           case "every":
@@ -2097,22 +2077,22 @@
         }
         if (trigger !== null) {
           if (state == "T") {
-            action_group.addTrigger(trigger);
+            actionGroup.addTrigger(trigger);
           } else {
-            this.actionGroups.push(action_group);
-            action_group = new ActionGroup();
-            action_group.addTrigger(trigger);
+            this.actionGroups.push(actionGroup);
+            actionGroup = new ActionGroup();
+            actionGroup.addTrigger(trigger);
             state = "T";
           }
           continue;
         }
         state = "A";
-        if (action_group.triggers.length < 1) {
-          Globals.log.error("No trigger for action in scene " + this.name + " at line " + line_no);
+        if (actionGroup.triggers.length < 1) {
+          Globals.log.error("No trigger for action in scene " + this.name + " at line " + lineNo);
         }
-        action_group.addAction(this.content[i]);
+        actionGroup.addAction(this.content[i]);
       }
-      this.actionGroups.push(action_group);
+      this.actionGroups.push(actionGroup);
       this.state = defaults_default.SCENE_RUNNING;
     }
     /**************************************************************************************************
@@ -2127,13 +2107,13 @@
     
     **************************************************************************************************/
     runGroup(index, now) {
-      let action_group = this.actionGroups[index];
-      action_group.reset_count();
-      let actions = action_group.actions;
-      action_group.next_action = 0;
+      let actionGroup = this.actionGroups[index];
+      actionGroup.reset_count();
+      let actions = actionGroup.actions;
+      actionGroup.next_action = 0;
       do {
-        this.runAction(action_group.next_action, action_group, now);
-      } while (action_group.next_action < actions.length);
+        this.runAction(actionGroup.next_action, actionGroup, now);
+      } while (actionGroup.next_action < actions.length);
     }
     /**************************************************************************************************
     
@@ -2146,61 +2126,68 @@
        ##     ##  #######  ##    ## ##     ##  ######     ##    ####  #######  ##    ## 
     
     **************************************************************************************************/
-    runAction(action_index, action_group, now) {
-      const action = action_group.actions[action_index];
+    runAction(actionIndex, actionGroup, now) {
+      const action = actionGroup.actions[actionIndex];
       let words = this.varList.expand_vars(action.text);
       words = evaluate(words).split(/[\s,]+/);
       ;
-      let line_no = action.number;
-      action_group.next_action += 1;
+      actionGroup.next_action += 1;
       if (words[0].match(/^and$/i)) {
         words.shift();
       }
       let command = words.shift().toLowerCase();
+      if (actionGroup.failedIfCount > 0) {
+        if (command == "endif") {
+          actionGroup.failedIfCount -= 1;
+        } else if (command == "if") {
+          actionGroup.failedIfCount += 1;
+        }
+        return;
+      }
       if (command == "set" && words.length > 1) {
         switch (words[0]) {
           case "trans":
           case "transparency":
           case "fade":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "fade";
             break;
           case "speed":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "speed";
             break;
           case "position":
           case "pos":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "move";
             break;
           case "volume":
             words.shift();
-            Parser.test_word(words, "to");
+            Parser.testWord(words, "to");
             command = "volume";
             break;
           case "blur":
           case "fuzz":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "blur";
             break;
           case "darkness":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "darken";
             break;
           case "lightness":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "lighten";
             break;
           case "tint":
             words.shift();
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             command = "tint";
             break;
           default:
@@ -2244,7 +2231,7 @@
         case "echo":
         case "log":
           Globals.log.report(words.join(" "));
-          action_group.complete_action("echo");
+          actionGroup.complete_action("echo");
           break;
         /**************************************************************************************************
         
@@ -2261,11 +2248,11 @@
         case "upload":
           let tag = null;
           if (words.count < 1) {
-            Globals.log.error("Missing filename at line " + line_no);
+            Globals.log.error("Missing filename at line " + action.number);
             break;
           }
           let filename = words.shift();
-          Parser.test_word(words, ["named", "as"]);
+          Parser.testWord(words, ["named", "as"]);
           if (words.length > 0) {
             tag = words.shift();
           } else {
@@ -2273,7 +2260,7 @@
             let dot = filename.lastIndexOf(".");
             tag = filename.slice(slash, dot);
           }
-          action_group.complete_action("load");
+          actionGroup.complete_action("load");
           for (let j = 0; j < this.images.length; j++) {
             if (this.images[j].tag == tag) {
               continue;
@@ -2286,7 +2273,7 @@
           } else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
             AudioManager.create(tag, this.folder + filename);
           }
-          action_group.complete_action("load");
+          actionGroup.complete_action("load");
           break;
         /**************************************************************************************************
         
@@ -2305,9 +2292,9 @@
           if (words.length > 0) {
             this.folder = words[0] + "/";
           } else {
-            Globals.log.error("Expected folder name at " + line_no);
+            Globals.log.error("Expected folder name at " + action.number);
           }
-          action_group.complete_action("from");
+          actionGroup.complete_action("from");
           break;
         /**************************************************************************************************
         
@@ -2322,38 +2309,38 @@
         **************************************************************************************************/
         case "reset":
           {
-            action_group.complete_action("reset");
-            const reset_type = Parser.test_word(words, ["sprite", "scene"], "scene");
+            actionGroup.complete_action("reset");
+            const reset_type = Parser.testWord(words, ["sprite", "scene"], "scene");
             if (reset_type == "sprite") {
               if (words.length > 0) {
-                let sprite_tag2 = Parser.get_word(words);
-                let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-                if (!sg_sprite2) {
+                let spriteName2 = Parser.getWord(words);
+                let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+                if (!sgSprite2) {
                   break;
                 }
-                sg_sprite2.reset_size();
-                sg_sprite2.jiggle(0, 0, 0, 0);
+                sgSprite2.reset_size();
+                sgSprite2.jiggle(0, 0, 0, 0);
                 sg_spitre.flicker(0);
-                sg_sprite2.blink(0, 0);
-                sg_sprite2.pulse(0);
-                sg_sprite2.flip("r");
-                sg_sprite2.set_tint("stop");
-                sg_sprite2.set_blur(0);
+                sgSprite2.blink(0, 0);
+                sgSprite2.pulse(0);
+                sgSprite2.flip("r");
+                sgSprite2.set_tint("stop");
+                sgSprite2.set_blur(0);
                 sg_spriet.set_skew(0, 0);
-                sg_sprite2.rotate("to", 0, "in");
+                sgSprite2.rotate("to", 0, "in");
               } else {
-                Globals.log.error("Missing sprite name at line " + line_no);
+                Globals.log.error("Missing sprite name at line " + action.number);
               }
             } else if (reset_type == "scene") {
               let sceneName = this.name;
               if (words.length > 0) {
-                let sceneName2 = Parser.get_word(words);
+                let sceneName2 = Parser.getWord(words);
               }
               const scene = _Scene.find(sceneName);
               if (scene != false) {
                 scene.stop(true);
               } else {
-                Globals.log.error("Scene not found at line " + line_no);
+                Globals.log.error("Scene not found at line " + action.number);
               }
             }
           }
@@ -2371,43 +2358,43 @@
         **************************************************************************************************/
         case "sprite":
           if (words.length > 0) {
-            const sprite_command = Parser.get_word(words);
+            const sprite_command = Parser.getWord(words);
             switch (sprite_command) {
               // more to add here?
               case "create":
                 {
-                  let sprite_tag2 = false;
-                  if (Parser.test_word(words, "named") || !Parser.test_word(words, "from")) {
-                    sprite_tag2 = Parser.get_word(words);
+                  let spriteName2 = false;
+                  if (Parser.testWord(words, "named") || !Parser.testWord(words, "from")) {
+                    spriteName2 = Parser.getWord(words);
                   }
-                  Parser.test_word(words, "from");
-                  let image_tag = Parser.get_word(words);
-                  if (!sprite_tag2) {
-                    sprite_tag2 = image_tag;
+                  Parser.testWord(words, "from");
+                  let imageName = Parser.getWord(words);
+                  if (!spriteName2) {
+                    spriteName2 = imageName;
                   }
-                  let sg_sprite2 = new SG_sprite(image_tag, sprite_tag2);
-                  if (Parser.test_word(words, "area")) {
-                    const x = Parser.get_int(words, 0);
-                    const y = Parser.get_int(words, 0);
-                    const w = Parser.get_int(words, 0);
-                    const h = Parser.get_int(words, 0);
+                  let sgSprite2 = new SGSprite(imageName, spriteName2);
+                  if (Parser.testWord(words, "area")) {
+                    const x = Parser.getInt(words, 0);
+                    const y = Parser.getInt(words, 0);
+                    const w = Parser.getInt(words, 0);
+                    const h = Parser.getInt(words, 0);
                     if (w > 0 && h > 0) {
-                      sg_sprite2.image_portion = new PIXI.Rectangle(x, y, w, h);
-                      sq_sprite.size_x.set_target_value(w);
-                      sq_sprite.size_y.set_target_value(h);
+                      sgSprite2.image_portion = new PIXI.Rectangle(x, y, w, h);
+                      sq_sprite.size_x.setTargetValue(w);
+                      sq_sprite.size_y.setTargetValue(h);
                     }
                   }
-                  sg_sprite2.set_visibility(false);
-                  this.sprites.push(sg_sprite2);
+                  sgSprite2.setVisibility(false);
+                  this.sprites.push(sgSprite2);
                 }
                 break;
               default:
-                Globals.log.error("Unknown sprite command at line " + line_no);
+                Globals.log.error("Unknown sprite command at line " + action.number);
             }
           } else {
-            Globals.log.error("Missing sprite data at line " + line_no);
+            Globals.log.error("Missing sprite data at line " + action.number);
           }
-          action_group.complete_action("sprite");
+          actionGroup.complete_action("sprite");
           break;
         /**************************************************************************************************
         
@@ -2421,36 +2408,36 @@
         
         **************************************************************************************************/
         case "place":
-          action_group.complete_action("place");
+          actionGroup.complete_action("place");
           if (words.length > 0) {
-            let sprite_tag2 = Parser.get_word(words);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
+            let spriteName2 = Parser.getWord(words);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
               break;
             }
-            const hidden = Parser.test_word(words, "hidden");
-            Parser.test_word(words, "at");
-            if (Parser.test_word(words, ["center", "centre"])) {
-              sg_sprite2.loc_x.set_target_value(Globals.app.screen.width / 2);
-              sg_sprite2.loc_y.set_target_value(Globals.app.screen.height / 2);
+            const hidden = Parser.testWord(words, "hidden");
+            Parser.testWord(words, "at");
+            if (Parser.testWord(words, ["center", "centre"])) {
+              sgSprite2.loc_x.setTargetValue(Globals.app.screen.width / 2);
+              sgSprite2.loc_y.setTargetValue(Globals.app.screen.height / 2);
             } else {
-              sg_sprite2.loc_x.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_x);
-              sg_sprite2.loc_y.set_target_value(Parser.get_int(words, 0) * Globals.script_scale_y);
+              sgSprite2.loc_x.setTargetValue(Parser.getInt(words, 0) * Globals.scriptScaleX);
+              sgSprite2.loc_y.setTargetValue(Parser.getInt(words, 0) * Globals.scriptScaleY);
             }
-            Parser.test_word(words, "depth");
-            sg_sprite2.depth = Parser.get_int(words, 0);
-            Parser.test_word(words, ["size", "scale"]);
-            const width = Parser.get_int(words, 0);
-            const height = Parser.get_int(words, 0);
+            Parser.testWord(words, "depth");
+            sgSprite2.depth = Parser.getInt(words, 0);
+            Parser.testWord(words, ["size", "scale"]);
+            const width = Parser.getInt(words, 0);
+            const height = Parser.getInt(words, 0);
             if (width > 0 && height > 0) {
-              sg_sprite2.size_x.set_target_value(width * Globals.script_scale_x);
-              sg_sprite2.size_y.set_target_value(height * Globals.script_scale_y);
+              sgSprite2.size_x.setTargetValue(width * Globals.scriptScaleX);
+              sgSprite2.size_y.setTargetValue(height * Globals.scriptScaleY);
             }
             if (!hidden) {
-              sg_sprite2.set_visibility(true);
+              sgSprite2.setVisibility(true);
             }
           } else {
-            Globals.log.error("Missing place data at line " + line_no);
+            Globals.log.error("Missing place data at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -2465,23 +2452,23 @@
         
         **************************************************************************************************/
         case "replace":
-          action_group.complete_action("replace");
+          actionGroup.complete_action("replace");
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            Parser.test_word(words, "with");
-            let image_tag = words.shift();
-            let hidden = Parser.test_word(words, "hidden");
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
+            let spriteName2 = words.shift();
+            Parser.testWord(words, "with");
+            let imageName = words.shift();
+            let hidden = Parser.testWord(words, "hidden");
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
               break;
             }
             if (hidden) {
-              sg_sprite2.set_visibility(false);
+              sgSprite2.setVisibility(false);
             }
-            sg_sprite2.image_tag = image_tag;
-            sg_sprite2.pi_sprite.texture = PIXI.Texture.EMPTY;
+            sgSprite2.imageName = imageName;
+            sgSprite2.piSprite.texture = PIXI.Texture.EMPTY;
           } else {
-            Globals.log.error("Missing replace data at line " + line_no);
+            Globals.log.error("Missing replace data at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -2498,13 +2485,13 @@
         case "put":
         case "use":
           if (words.length > 0) {
-            let image_tag = words.shift();
-            let sprite_tag2 = null;
-            if (Parser.test_word(words, "named")) {
-              sprite_tag2 = Parser.get_word(words, image_tag);
+            let imageName = words.shift();
+            let spriteName2 = null;
+            if (Parser.testWord(words, "named")) {
+              spriteName2 = Parser.getWord(words, imageName);
             }
-            Parser.test_word(words, ["as", "at"]);
-            let role = Parser.test_word(words, [
+            Parser.testWord(words, ["as", "at"]);
+            let role = Parser.testWord(words, [
               "background",
               "backdrop",
               "top",
@@ -2517,25 +2504,25 @@
               "frame"
             ]);
             if (role == false) {
-              Globals.log.error("Unknown role " + role + " at line " + line_no);
+              Globals.log.error("Unknown role " + role + " at line " + action.number);
               break;
             }
-            if (sprite_tag2 == null) {
-              sprite_tag2 = role;
+            if (spriteName2 == null) {
+              spriteName2 = role;
             }
-            let sg_sprite2 = new SG_sprite(image_tag, sprite_tag2);
-            sg_sprite2.role = role;
-            Parser.test_word(words, ["as", "at"]);
-            if (Parser.test_word(words, "depth")) {
-              sg_sprite2.depth = Parser.get_int(words, 0);
+            let sgSprite2 = new SGSprite(imageName, spriteName2);
+            sgSprite2.role = role;
+            Parser.testWord(words, ["as", "at"]);
+            if (Parser.testWord(words, "depth")) {
+              sgSprite2.depth = Parser.getInt(words, 0);
             } else {
-              sg_sprite2.depth = null;
+              sgSprite2.depth = null;
             }
-            this.sprites.push(sg_sprite2);
+            this.sprites.push(sgSprite2);
           } else {
-            Globals.log.error("Missing put data at line " + line_no);
+            Globals.log.error("Missing put data at line " + action.number);
           }
-          action_group.complete_action("put");
+          actionGroup.complete_action("put");
           break;
         /**************************************************************************************************
         
@@ -2551,17 +2538,17 @@
         case "play":
           if (words.length > 0) {
             const tag2 = words.shift();
-            Parser.test_word(words, "fade");
-            Parser.test_word(words, "in");
-            const fadein = Parser.get_duration(words, 0);
-            Parser.test_word(words, "at");
-            Parser.test_word(words, "volume");
-            const volume = Parser.get_int(words, 50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
+            Parser.testWord(words, "fade");
+            Parser.testWord(words, "in");
+            const fadein = Parser.getDuration(words, 0);
+            Parser.testWord(words, "at");
+            Parser.testWord(words, "volume");
+            const volume = Parser.getInt(words, 50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
             AudioManager.play(tag2, { fadeInMs: fadein * 1e3, targetVolume: volume });
           } else {
-            Globals.log.error("Nothing to play at line " + line_no);
+            Globals.log.error("Nothing to play at line " + action.number);
           }
-          action_group.complete_action("play");
+          actionGroup.complete_action("play");
           break;
         /**************************************************************************************************
         
@@ -2576,17 +2563,17 @@
         **************************************************************************************************/
         case "volume":
           if (words.length > 0) {
-            Parser.test_word(words, "of");
+            Parser.testWord(words, "of");
             const tag2 = words.shift();
-            Parser.test_word(words, "to");
-            const volume = Parser.get_int(words, 0, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
-            Parser.test_word(words, "in");
-            const fadein = Parser.get_duration(words, 0);
+            Parser.testWord(words, "to");
+            const volume = Parser.getInt(words, 0, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
+            Parser.testWord(words, "in");
+            const fadein = Parser.getDuration(words, 0);
             AudioManager.setVolume(tag2, volume, { fadeMs: fadein * 1e3 });
           } else {
-            Globals.log.error("No volume change at line " + line_no);
+            Globals.log.error("No volume change at line " + action.number);
           }
-          action_group.complete_action("volume");
+          actionGroup.complete_action("volume");
           break;
         /**************************************************************************************************
         
@@ -2602,77 +2589,77 @@
         case "text":
           if (words.length > 2) {
             const text_command = words.shift();
-            const text_tag = words.shift();
+            const textName = words.shift();
             const text_args = words.join(" ");
-            let sg_sprite2 = null;
+            let sgSprite2 = null;
             if (text_command == "create") {
-              sg_sprite2 = new SG_sprite(null, text_tag, defaults_default.SPRITE_TEXT);
+              sgSprite2 = new SGSprite(null, textName, SPRITE_TEXT);
               const text_item = new PIXI.Text({
                 text: text_args,
                 style: {
-                  fontFamily: sg_sprite2.text_font,
-                  fontSize: sg_sprite2.text_size,
-                  fill: sg_sprite2.fill_colour,
-                  align: sg_sprite2.text_align
+                  fontFamily: sgSprite2.text_font,
+                  fontSize: sgSprite2.text_size,
+                  fill: sgSprite2.fill_colour,
+                  align: sgSprite2.text_align
                 }
               });
-              sg_sprite2.pi_sprite = text_item;
-              sg_sprite2.pi_sprite.anchor = 0.5;
-              sg_sprite2.set_visibility(false);
-              sg_sprite2.size_x.set_target_value(text_item.width);
-              sg_sprite2.size_y.set_target_value(text_item.height);
+              sgSprite2.piSprite = text_item;
+              sgSprite2.piSprite.anchor = 0.5;
+              sgSprite2.setVisibility(false);
+              sgSprite2.size_x.setTargetValue(text_item.width);
+              sgSprite2.size_y.setTargetValue(text_item.height);
               Globals.root.addChild(text_item);
-              this.sprites.push(sg_sprite2);
-              action_group.complete_action("text");
+              this.sprites.push(sgSprite2);
+              actionGroup.complete_action("text");
               break;
             }
-            sg_sprite2 = SG_sprite.get_sprite(this.name, text_tag);
-            if (sg_sprite2.type != defaults_default.SPRITE_TEXT) {
-              Globals.log.error("Sprite is not text at " + line_no);
-              action_group.complete_action("text");
+            sgSprite2 = SGSprite.getSprite(this.name, textName);
+            if (sgSprite2.type != SPRITE_TEXT) {
+              Globals.log.error("Sprite is not text at " + action.number);
+              actionGroup.complete_action("text");
               break;
             }
-            let do_update = true;
+            let doUpdate = true;
             switch (text_command) {
               case "font":
               case "fontfamily":
-                sg_sprite2.text_font = text_args;
+                sgSprite2.text_font = text_args;
                 break;
               case "fontsize":
               case "size":
-                sg_sprite2.text_size = text_args;
+                sgSprite2.text_size = text_args;
                 break;
               case "align":
-                sg_sprite2.text_align = text_args;
+                sgSprite2.text_align = text_args;
                 break;
               case "color":
               case "colour":
               case "fill":
-                sg_sprite2.fill_colour = text_args;
+                sgSprite2.fill_colour = text_args;
                 break;
               case "stroke":
-                sg_sprite2.stroke_colour = text_args;
+                sgSprite2.stroke_colour = text_args;
                 break;
               case "add":
-                sg_sprite2.pi_sprite.text += "\n" + text_args;
+                sgSprite2.piSprite.text += "\n" + text_args;
                 break;
               case "replace":
-                sg_sprite2.pi_sprite.text = text_args;
+                sgSprite2.piSprite.text = text_args;
                 break;
               default:
-                do_update = false;
-                Globals.log.error("Unknown text command at " + line_no);
+                doUpdate = false;
+                Globals.log.error("Unknown text command at " + action.number);
                 break;
             }
-            if (do_update) {
-              sg_sprite2.set_style();
-              sg_sprite2.size_x.set_target_value(sg_sprite2.pi_sprite.width);
-              sg_sprite2.size_y.set_target_value(sg_sprite2.pi_sprite.height);
+            if (doUpdate) {
+              sgSprite2.set_style();
+              sgSprite2.size_x.setTargetValue(sgSprite2.piSprite.width);
+              sgSprite2.size_y.setTargetValue(sgSprite2.piSprite.height);
             }
           } else {
-            Globals.log.error("Missing argument at line " + line_no);
+            Globals.log.error("Missing argument at line " + action.number);
           }
-          action_group.complete_action("text");
+          actionGroup.complete_action("text");
           break;
         /**************************************************************************************************
         
@@ -2688,20 +2675,20 @@
         case "graphic":
         case "shape":
           if (words.length > 1) {
-            const graphic_command = Parser.get_word(words);
-            switch (graphic_command) {
+            const graphicCommand = Parser.getWord(words);
+            switch (graphicCommand) {
               case "create":
-                const graphic_tag = Parser.get_word(words);
-                Parser.test_word(words, "as");
-                const graphic_type = Parser.get_word(words);
+                const graphicTag = Parser.getWord(words);
+                Parser.testWord(words, "as");
+                const graphicType = Parser.getWord(words);
                 let graphic = null;
-                switch (graphic_type) {
+                switch (graphicType) {
                   case "rectangle":
                   case "rect":
                     {
-                      const w = Parser.get_int(words, 0);
-                      const h = Parser.get_int(words, w);
-                      const r2 = Parser.get_int(words, 0);
+                      const w = Parser.getInt(words, 0);
+                      const h = Parser.getInt(words, w);
+                      const r2 = Parser.getInt(words, 0);
                       if (w > 0 && h > 0) {
                         if (r2 > 0) {
                           graphic = new PIXI.Graphics().roundRect(w / -2, h / -2, w, h, r2);
@@ -2713,7 +2700,7 @@
                     break;
                   case "circle":
                     {
-                      const r2 = Parser.get_int(words, 0);
+                      const r2 = Parser.getInt(words, 0);
                       if (r2 > 0) {
                         graphic = new PIXI.Graphics().circle(0, 0, r2);
                       }
@@ -2721,7 +2708,7 @@
                     break;
                   case "line":
                     {
-                      const l = Parser.get_int(words, 0);
+                      const l = Parser.getInt(words, 0);
                       if (r > 0) {
                         graphic = new PIXI.Graphics().moveTo(l / -2, 0).lineTo(l / 2, 0);
                       }
@@ -2729,8 +2716,8 @@
                     break;
                   case "ellipse":
                     {
-                      const w = Parser.get_int(words, 0);
-                      const h = Parser.get_int(words, w);
+                      const w = Parser.getInt(words, 0);
+                      const h = Parser.getInt(words, w);
                       if (w > 0 && h > 0) {
                         graphic = new PIXI.Graphics().ellipse(w / -2, h / -2, w, h);
                       }
@@ -2738,9 +2725,9 @@
                     break;
                   case "star":
                     {
-                      const p = Parser.get_int(words, 0);
-                      const ro = Parser.get_int(words, 0);
-                      let ri = Parser.get_int(words, 0);
+                      const p = Parser.getInt(words, 0);
+                      const ro = Parser.getInt(words, 0);
+                      let ri = Parser.getInt(words, 0);
                       if (ri > ro) {
                         ri = 0;
                       }
@@ -2755,8 +2742,8 @@
                     break;
                   case "grid":
                     {
-                      const x = Parser.get_int(words, 0);
-                      const y = Parser.get_int(words, x);
+                      const x = Parser.getInt(words, 0);
+                      const y = Parser.getInt(words, x);
                       graphic = new PIXI.Graphics();
                       const width = Globals.app.screen.width;
                       const height = Globals.app.screen.height;
@@ -2771,42 +2758,42 @@
                     }
                     break;
                   default:
-                    Globals.log.error("Unknown graphic type at " + line_no);
+                    Globals.log.error("Unknown graphic type at " + action.number);
                     break;
                 }
                 if (graphic != null) {
-                  graphic.fill(this.graphic_fill).stroke({ width: this.graphic_stroke_width, color: this.graphic_stroke });
+                  graphic.fill(this.graphicFill).stroke({ width: this.graphicStrokeWidth, color: this.graphicStroke });
                   Globals.root.addChild(graphic);
-                  const sg_sprite2 = new SG_sprite(null, graphic_tag, defaults_default.SPRITE_GRAPHIC);
-                  sg_sprite2.pi_sprite = graphic;
-                  sg_sprite2.set_visibility(false);
-                  sg_sprite2.size_x.set_target_value(graphic.width);
-                  sg_sprite2.size_y.set_target_value(graphic.height);
-                  this.sprites.push(sg_sprite2);
+                  const sgSprite2 = new SGSprite(null, graphicTag, SPRITE_GRAPHIC);
+                  sgSprite2.piSprite = graphic;
+                  sgSprite2.setVisibility(false);
+                  sgSprite2.size_x.setTargetValue(graphic.width);
+                  sgSprite2.size_y.setTargetValue(graphic.height);
+                  this.sprites.push(sgSprite2);
                 } else {
-                  Globals.log.error("Invalid graphic arguments at " + line_no);
+                  Globals.log.error("Invalid graphic arguments at " + action.number);
                 }
                 break;
               case "fill":
               case "color":
               case "colour":
-                this.graphic_fill = Parser.get_word(words, "black");
+                this.graphicFill = Parser.getWord(words, "black");
                 break;
               case "stroke":
-                if (Parser.test_word(words, "width")) {
-                  this.graphic_stroke_width = Parser.get_int(words, 1);
+                if (Parser.testWord(words, "width")) {
+                  this.graphicStrokeWidth = Parser.getInt(words, 1);
                 } else {
-                  this.graphic_stroke = Parser.get_word(words, "black");
+                  this.graphicStroke = Parser.getWord(words, "black");
                 }
                 break;
               default:
-                Globals.log.error("Unknown graphics command at " + line_no);
+                Globals.log.error("Unknown graphics command at " + action.number);
                 break;
             }
           } else {
-            Globals.log.error("Missing argument at line " + line_no);
+            Globals.log.error("Missing argument at line " + action.number);
           }
-          action_group.complete_action("graphic");
+          actionGroup.complete_action("graphic");
           break;
         /**************************************************************************************************
         
@@ -2821,25 +2808,25 @@
         **************************************************************************************************/
         case "move":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let by_or_to = Parser.get_word(words, ["by", "to"]);
-            if (by_or_to === false) {
-              Globals.log.error("Expected by or to on line " + line_no);
+            let spriteName2 = words.shift();
+            let byOrTo = Parser.getWord(words, ["by", "to"]);
+            if (byOrTo === false) {
+              Globals.log.error("Expected by or to on line " + action.number);
               break;
             }
-            let x = Parser.get_int(words, 0) * Globals.script_scale_x;
-            let y = Parser.get_int(words, 0) * Globals.script_scale_y;
-            let in_or_at = Parser.test_word(words, ["in", "at"], "in");
-            let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("moveX");
+            let x = Parser.getInt(words, 0) * Globals.scriptScaleX;
+            let y = Parser.getInt(words, 0) * Globals.scriptScaleY;
+            let inOrAt = Parser.testWord(words, ["in", "at"], "in");
+            let duration2 = Parser.getDuration(words, 0);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("moveX");
               break;
             }
-            sg_sprite2.move(x, y, by_or_to, in_or_at, duration2, now, makeCompletionCallback(action_group));
+            sgSprite2.move(x, y, byOrTo, inOrAt, duration2, now, makeCompletionCallback(actionGroup));
           } else {
-            Globals.log.error("Missing move data at line " + line_no);
-            action_group.complete_action("moveX");
+            Globals.log.error("Missing move data at line " + action.number);
+            actionGroup.complete_action("moveX");
           }
           break;
         /**************************************************************************************************
@@ -2854,12 +2841,12 @@
         
         **************************************************************************************************/
         case "speed":
-          let sprite_tag = words.shift();
-          Parser.test_word(words, "to");
-          let speed = Parser.get_int(words, 0) * Globals.script_scale_x;
-          let sg_sprite = SG_sprite.get_sprite(this.name, sprite_tag);
-          sg_sprite.set_speed(speed);
-          action_group.complete_action("speed");
+          let spriteName = words.shift();
+          Parser.testWord(words, "to");
+          let speed = Parser.getInt(words, 0) * Globals.scriptScaleX;
+          let sgSprite = SGSprite.getSprite(this.name, spriteName);
+          sgSprite.set_speed(speed);
+          actionGroup.complete_action("speed");
           break;
         /**************************************************************************************************
         
@@ -2875,24 +2862,24 @@
         case "raise":
         case "lower":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let depth_type = Parser.get_word(words, ["to", "by"]);
+            let spriteName2 = words.shift();
+            let depth_type = Parser.getWord(words, ["to", "by"]);
             if (depth_type === false) {
-              Globals.log.error("Expected to or by on line " + line_no);
+              Globals.log.error("Expected to or by on line " + action.number);
               break;
             }
-            let value2 = Parser.get_int(words, 0);
+            let value2 = Parser.getInt(words, 0);
             if (command == "lower") {
               value2 = -value2;
             }
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (sg_sprite2 != null) {
-              sg_sprite2.set_depth(depth_type, value2);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (sgSprite2 != null) {
+              sgSprite2.set_depth(depth_type, value2);
             }
           } else {
-            Globals.log.error("Missing raise/lower data at line " + line_no);
+            Globals.log.error("Missing raise/lower data at line " + action.number);
           }
-          action_group.complete_action("raise");
+          actionGroup.complete_action("raise");
           break;
         /**************************************************************************************************
         
@@ -2907,33 +2894,33 @@
         **************************************************************************************************/
         case "resize":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let to_or_by = Parser.get_word(words, ["to", "by"]);
-            if (to_or_by === false) {
-              Globals.log.error("Expected to or by on line " + line_no);
+            let spriteName2 = words.shift();
+            let toOrBy = Parser.getWord(words, ["to", "by"]);
+            if (toOrBy === false) {
+              Globals.log.error("Expected to or by on line " + action.number);
               break;
             }
-            let w = Parser.get_int(words, 0) * Globals.script_scale_x;
-            let h = Parser.get_int(words, 0) * Globals.script_scale_y;
-            let in_or_at = Parser.test_word(words, ["in", "at"]);
-            let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("resize");
+            let w = Parser.getInt(words, 0) * Globals.scriptScaleX;
+            let h = Parser.getInt(words, 0) * Globals.scriptScaleY;
+            let inOrAt = Parser.testWord(words, ["in", "at"]);
+            let duration2 = Parser.getDuration(words, 0);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("resize");
               break;
             }
-            sg_sprite2.resize(
+            sgSprite2.resize(
               w,
               h,
-              to_or_by,
-              in_or_at,
+              toOrBy,
+              inOrAt,
               duration2,
               now,
-              makeCompletionCallback(action_group)
+              makeCompletionCallback(actionGroup)
             );
           } else {
-            Globals.log.error("Missing resize data at line " + line_no);
-            action_group.complete_action("resize");
+            Globals.log.error("Missing resize data at line " + action.number);
+            actionGroup.complete_action("resize");
           }
           break;
         /**************************************************************************************************
@@ -2952,10 +2939,10 @@
         case "shrink":
         case "grow":
           if (words.length > 0) {
-            let sprite_tag2 = Parser.get_word(words);
-            const action2 = Parser.test_word(words, ["to", "by"]);
-            let w = Parser.get_int(words, 0);
-            let h = Parser.get_int(words, 0);
+            let spriteName2 = Parser.getWord(words);
+            const action2 = Parser.testWord(words, ["to", "by"]);
+            let w = Parser.getInt(words, 0);
+            let h = Parser.getInt(words, 0);
             if (command == "shrink") {
               if (w > 100) {
                 w = 99;
@@ -2977,31 +2964,31 @@
                 h += 100;
               }
             }
-            Parser.test_word(words, "in");
-            let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("scale");
+            Parser.testWord(words, "in");
+            let duration2 = Parser.getDuration(words, 0);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("scale");
               break;
             }
             if (action2 == "reset") {
-              sg_sprite2.reset_size();
-              action_group.complete_action("scale");
+              sgSprite2.reset_size();
+              actionGroup.complete_action("scale");
             } else if (w > 0 || h > 0) {
-              sg_sprite2.scale(
+              sgSprite2.scale(
                 w,
                 h,
                 duration2,
                 now,
-                makeCompletionCallback(action_group)
+                makeCompletionCallback(actionGroup)
               );
             } else {
-              Globals.log.error("Invalid scale data at line " + line_no);
-              action_group.complete_action("scale");
+              Globals.log.error("Invalid scale data at line " + action2.number);
+              actionGroup.complete_action("scale");
             }
           } else {
-            Globals.log.error("Missing scale data at line " + line_no);
-            action_group.complete_action("scale");
+            Globals.log.error("Missing scale data at line " + action.number);
+            actionGroup.complete_action("scale");
           }
           break;
         /**************************************************************************************************
@@ -3018,13 +3005,13 @@
         case "remove":
         case "erase":
         case "delete":
-          action_group.complete_action("remove");
+          actionGroup.complete_action("remove");
           if (words.length > 1) {
-            const type2 = Parser.test_word(words, ["sprite", "audio", "sound", "var", "variable"]);
-            const item = Parser.get_word(words);
+            const type2 = Parser.testWord(words, ["sprite", "audio", "sound", "var", "variable"]);
+            const item = Parser.getWord(words);
             switch (type2) {
               case "sprite":
-                SG_sprite.remove_sprite(this.name, item, false);
+                SGSprite.remove_sprite(this.name, item, false);
                 break;
               case "audio":
               case "sound":
@@ -3037,13 +3024,13 @@
                 this.varList.delete(item, false);
                 break;
               case "scene":
-                if (item == defaults_default.MAIN_NAME) {
-                  Globals.log.error("Cannot delete main scene on line " + line_no);
+                if (item == MAIN_NAME) {
+                  Globals.log.error("Cannot delete main scene on line " + action.number);
                 } else {
                   for (let i = 0; i < Globals.scenes.length; i++) {
                     if (Globals.scenes[i].name == item) {
                       if (Globals.scenes[i].state != defaults_default.SCENE_STOPPED) {
-                        Globals.log.error("Cannot delete running scene on line " + line_no);
+                        Globals.log.error("Cannot delete running scene on line " + action.number);
                       } else {
                         Globals.scenes.splice(i, 1);
                         break;
@@ -3053,11 +3040,11 @@
                 }
                 break;
               default:
-                Globals.log.error("Unknown deletion type on line " + line_no);
+                Globals.log.error("Unknown deletion type on line " + action.number);
                 break;
             }
           } else {
-            Globals.log.error("Nothing to remove at line " + line_no);
+            Globals.log.error("Nothing to remove at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3074,20 +3061,20 @@
         case "rotate":
         case "turn":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let turn_type = Parser.test_word(words, ["to", "by", "at"], "to");
-            let value2 = Parser.get_int(words, 0);
-            let dur_type = Parser.test_word(words, ["in", "per"], "in");
-            let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("rotate");
+            let spriteName2 = words.shift();
+            let turn_type = Parser.testWord(words, ["to", "by", "at"], "to");
+            let value2 = Parser.getInt(words, 0);
+            let dur_type = Parser.testWord(words, ["in", "per"], "in");
+            let duration2 = Parser.getDuration(words, 0);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("rotate");
               break;
             }
-            sg_sprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(action_group));
+            sgSprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(actionGroup));
           } else {
-            Globals.log.error("Missing rotate data at line " + line_no);
-            action_group.complete_action("rotateX");
+            Globals.log.error("Missing rotate data at line " + action.number);
+            actionGroup.complete_action("rotateX");
           }
           break;
         /**************************************************************************************************
@@ -3104,21 +3091,21 @@
         case "skew":
         case "twist":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let skew_type = Parser.test_word(words, ["to", "by", "at"], "to");
-            let skew_x = Parser.get_int(words, 0);
-            let skew_y = Parser.get_int(words, 0);
-            let dur_type = Parser.test_word(words, ["in", "per"], "in");
-            let duration2 = Parser.get_duration(words, 0);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("skew");
+            let spriteName2 = words.shift();
+            let skew_type = Parser.testWord(words, ["to", "by", "at"], "to");
+            let skew_x = Parser.getInt(words, 0);
+            let skew_y = Parser.getInt(words, 0);
+            let dur_type = Parser.testWord(words, ["in", "per"], "in");
+            let duration2 = Parser.getDuration(words, 0);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("skew");
               break;
             }
-            sg_sprite2.set_skew(skew_x, skew_y, skew_type, duration2, now, makeCompletionCallback(action_group));
+            sgSprite2.set_skew(skew_x, skew_y, skew_type, duration2, now, makeCompletionCallback(actionGroup));
           } else {
-            Globals.log.error("Missing skew data at line " + line_no);
-            action_group.complete_action("skew");
+            Globals.log.error("Missing skew data at line " + action.number);
+            actionGroup.complete_action("skew");
           }
           break;
         /**************************************************************************************************
@@ -3135,25 +3122,25 @@
         case "throw":
         case "launch":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            const stop_or_at = Parser.test_word(words, ["at", "stop"], "at");
-            let angle = Parser.get_int(words, 0);
-            Parser.test_word(words, ["deg", "degs", "degrees"]);
-            Parser.test_word(words, "with");
-            Parser.test_word(words, ["force", "velocity", "speed"]);
-            let initial_velocity = Parser.get_int(words, 10);
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("throw");
+            let spriteName2 = words.shift();
+            const stop_or_at = Parser.testWord(words, ["at", "stop"], "at");
+            let angle = Parser.getInt(words, 0);
+            Parser.testWord(words, ["deg", "degs", "degrees"]);
+            Parser.testWord(words, "with");
+            Parser.testWord(words, ["force", "velocity", "speed"]);
+            let initial_velocity = Parser.getInt(words, 10);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("throw");
               break;
             }
             if (stop_or_at == "stop") {
-              sg_sprite2.throw("stop");
+              sgSprite2.throw("stop");
             } else {
-              sg_sprite2.throw(angle, initial_velocity, now, makeCompletionCallback(action_group));
+              sgSprite2.throw(angle, initial_velocity, now, makeCompletionCallback(actionGroup));
             }
           } else {
-            Globals.log.error("Missing throw data at line " + line_no);
+            Globals.log.error("Missing throw data at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3169,19 +3156,19 @@
         **************************************************************************************************/
         case "drop":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("drop");
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("drop");
               break;
             }
-            if (Parser.test_word(words, "stop")) {
-              sg_sprite2.throw("stop");
+            if (Parser.testWord(words, "stop")) {
+              sgSprite2.throw("stop");
             } else {
-              sg_sprite2.throw(180, 0, now, makeCompletionCallback(action_group));
+              sgSprite2.throw(180, 0, now, makeCompletionCallback(actionGroup));
             }
           } else {
-            Globals.log.error("Missing drop data at line " + line_no);
+            Globals.log.error("Missing drop data at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3196,17 +3183,17 @@
         
         **************************************************************************************************/
         case "flip":
-          action_group.complete_action();
+          actionGroup.complete_action();
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
               break;
             }
-            let axis = Parser.get_word(words, "h");
-            sg_sprite2.flip(axis.charAt(0));
+            let axis = Parser.getWord(words, "h");
+            sgSprite2.flip(axis.charAt(0));
           } else {
-            Globals.log.error("Missing sprite tag at line " + line_no);
+            Globals.log.error("Missing sprite tag at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3223,22 +3210,22 @@
         case "show":
         case "hide":
         case "toggle":
-          action_group.complete_action();
+          actionGroup.complete_action();
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
               break;
             }
             if (command == "show") {
-              sg_sprite2.set_visibility(true);
+              sgSprite2.setVisibility(true);
             } else if (command == "hide") {
-              sg_sprite2.set_visibility(false);
+              sgSprite2.setVisibility(false);
             } else if (command == "toggle") {
-              sg_sprite2.set_visibility("toggle");
+              sgSprite2.setVisibility("toggle");
             }
           } else {
-            Globals.log.error("Missing sprite tag at line " + line_no);
+            Globals.log.error("Missing sprite tag at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3254,16 +3241,16 @@
         **************************************************************************************************/
         case "start":
           if (words.length > 0) {
-            const scene_name = Parser.get_word(words);
+            const scene_name = Parser.getWord(words);
             const scene = _Scene.find(scene_name);
             if (scene !== false) {
-              this.completion_callback = makeCompletionCallback(action_group);
+              this.completionCallback = makeCompletionCallback(actionGroup);
               scene.start(words.join(" "));
             }
           } else {
-            Globals.log.error("Missing scene name at line " + line_no);
+            Globals.log.error("Missing scene name at line " + action.number);
           }
-          action_group.complete_action("start");
+          actionGroup.complete_action("start");
           break;
         /**************************************************************************************************
         
@@ -3278,29 +3265,29 @@
         **************************************************************************************************/
         case "copy":
         case "clone":
-          action_group.complete_action("clone");
+          actionGroup.complete_action("clone");
           if (words.length > 0) {
-            const scene_name = Parser.get_word(words);
-            if (scene_name == defaults_default.MAIN_NAME) {
-              Globals.log.error("Cannot duplicate main scene at line " + line_no);
+            const scene_name = Parser.getWord(words);
+            if (scene_name == MAIN_NAME) {
+              Globals.log.error("Cannot duplicate main scene at line " + action.number);
               break;
             }
-            Parser.test_word(words, "as");
-            const new_name = Parser.get_word(words);
+            Parser.testWord(words, "as");
+            const new_name = Parser.getWord(words);
             const scene = _Scene.find(scene_name, false);
             if (scene === false) {
-              Globals.log.error("Scene not found at line " + line_no);
+              Globals.log.error("Scene not found at line " + action.number);
               break;
             }
             if (_Scene.find(new_name, false)) {
-              Globals.log.error("Scene with that name already exists " + line_no);
+              Globals.log.error("Scene with that name already exists " + action.number);
               break;
             }
             const new_scene = new _Scene(new_name);
             new_scene.content = scene.content;
             Globals.scenes.push(new_scene);
           } else {
-            Globals.log.error("Missing scene name at line " + line_no);
+            Globals.log.error("Missing scene name at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3316,11 +3303,11 @@
         **************************************************************************************************/
         case "stop":
         case "halt":
-          action_group.complete_action("stop");
-          this.completion_callback = makeCompletionCallback(action_group);
+          actionGroup.complete_action("stop");
+          this.completionCallback = makeCompletionCallback(actionGroup);
           if (words.length > 0) {
             while (words.length > 0) {
-              const stop_type = Parser.test_word(words, ["scene", "audio", "sound", "track", "sprite"]);
+              const stop_type = Parser.testWord(words, ["scene", "audio", "sound", "track", "sprite"]);
               const item = words.shift();
               if (item == null) {
                 if (stop_type == "scene") {
@@ -3338,9 +3325,9 @@
                   scene.stop(false);
                 }
               } else if (stop_type == "sprite") {
-                let sg_sprite2 = SG_sprite.get_sprite(this.name, item, false);
-                if (sg_sprite2 != null) {
-                  sg_sprite2.stop();
+                let sgSprite2 = SGSprite.getSprite(this.name, item, false);
+                if (sgSprite2 != null) {
+                  sgSprite2.stop();
                 }
               } else if (AudioManager.exists(item)) {
                 AudioManager.delete(item);
@@ -3349,15 +3336,15 @@
                 if (scene !== false) {
                   scene.stop(false);
                 } else {
-                  let sg_sprite2 = SG_sprite.get_sprite(this.name, item, false);
-                  if (sg_sprite2 != null) {
-                    sg_sprite2.stop();
+                  let sgSprite2 = SGSprite.getSprite(this.name, item, false);
+                  if (sgSprite2 != null) {
+                    sgSprite2.stop();
                   }
                 }
               }
             }
           } else {
-            Globals.log.error("Nothing to stop on line " + line_no);
+            Globals.log.error("Nothing to stop on line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3375,18 +3362,18 @@
         case "make":
           if (words.length > 0) {
             let varName = words.shift();
-            Parser.test_word(words, ["be", "to"]);
-            this.varList.set_value(varName, words.join(" "));
+            Parser.testWord(words, ["be", "to"]);
+            this.varList.setValue(varName, words.join(" "));
           } else {
-            Globals.log.error("Missing variable name at line " + line_no);
+            Globals.log.error("Missing variable name at line " + action.number);
           }
-          action_group.complete_action("let");
+          actionGroup.complete_action("let");
           break;
         case "assign":
           if (words.length > 0) {
             const assignIndex = words.indexOf("as");
             if (assignIndex < 1) {
-              Globals.log.error("Missing assign separator 'as' at line " + line_no);
+              Globals.log.error("Missing assign separator 'as' at line " + action.number);
             } else {
               const varNames = words.slice(0, assignIndex);
               const values = words.slice(assignIndex + 1);
@@ -3399,13 +3386,13 @@
                     value2 = values[i];
                   }
                 }
-                this.varList.set_value(varNames[i], value2);
+                this.varList.setValue(varNames[i], value2);
               }
             }
           } else {
-            Globals.log.error("Missing variable name at line " + line_no);
+            Globals.log.error("Missing variable name at line " + action.number);
           }
-          action_group.complete_action("assign");
+          actionGroup.complete_action("assign");
           break;
         case "increment":
         case "decrement":
@@ -3414,41 +3401,41 @@
             if (this.varList.find(varName) === false) {
               Globals.log.error("Variable not found " + varName);
             } else {
-              const currentValue = this.varList.get_value(varName);
+              const currentValue = this.varList.getValue(varName);
               if (`${currentValue}`.match(/^-?[0-9]+(\.[0-9]+)?$/)) {
                 const delta = command == "increment" ? 1 : -1;
-                this.varList.set_value(varName, parseFloat(currentValue) + delta);
+                this.varList.setValue(varName, parseFloat(currentValue) + delta);
               }
             }
           } else {
-            Globals.log.error("Missing variable name at line " + line_no);
+            Globals.log.error("Missing variable name at line " + action.number);
           }
-          action_group.complete_action(command);
+          actionGroup.complete_action(command);
           break;
         case "choose":
           if (words.length > 2) {
             let varName = words.shift();
-            Parser.test_word(words, "from");
-            this.varList.set_value(varName, words[Math.floor(Math.random() * words.length)]);
+            Parser.testWord(words, "from");
+            this.varList.setValue(varName, words[Math.floor(Math.random() * words.length)]);
           } else {
-            Globals.log.error("Missing variable name at line " + line_no);
+            Globals.log.error("Missing variable name at line " + action.number);
           }
-          action_group.complete_action("choose");
+          actionGroup.complete_action("choose");
           break;
         case "match":
           if (words.length > 4) {
             const varName = words.shift();
-            if (!Parser.test_word(words, "to")) {
-              Globals.log.error("Missing match separator 'to' at line " + line_no);
+            if (!Parser.testWord(words, "to")) {
+              Globals.log.error("Missing match separator 'to' at line " + action.number);
             } else {
               const searchWord = words.shift();
               if (searchWord == null) {
-                Globals.log.error("Missing search word at line " + line_no);
+                Globals.log.error("Missing search word at line " + action.number);
               } else {
-                Parser.test_word(words, "at");
-                const anchor = Parser.test_word(words, ["start", "end"]);
-                if (!Parser.test_word(words, "from")) {
-                  Globals.log.error("Missing match separator 'from' at line " + line_no);
+                Parser.testWord(words, "at");
+                const anchor = Parser.testWord(words, ["start", "end"]);
+                if (!Parser.testWord(words, "from")) {
+                  Globals.log.error("Missing match separator 'from' at line " + action.number);
                 } else {
                   let matches = [];
                   if (anchor == "start") {
@@ -3458,14 +3445,14 @@
                   } else {
                     matches = words.filter((word) => word.includes(searchWord));
                   }
-                  this.varList.set_value(varName, matches.length > 0 ? matches.join(" ") : defaults_default.NOTFOUND);
+                  this.varList.setValue(varName, matches.length > 0 ? matches.join(" ") : defaults_default.NOTFOUND);
                 }
               }
             }
           } else {
-            Globals.log.error("Missing values for match at line " + line_no);
+            Globals.log.error("Missing values for match at line " + action.number);
           }
-          action_group.complete_action("match");
+          actionGroup.complete_action("match");
           break;
         /**************************************************************************************************
         
@@ -3479,25 +3466,25 @@
         
         **************************************************************************************************/
         case "flicker":
-          action_group.complete_action("flicker");
+          actionGroup.complete_action("flicker");
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
               break;
             }
-            let on_off = Parser.test_word(words, ["by", "stop"]);
+            let on_off = Parser.testWord(words, ["by", "stop"]);
             if (on_off == "stop") {
-              sg_sprite2.flicker(0, 0);
+              sgSprite2.flicker(0, 0);
             } else {
-              let flicker_size = Parser.get_int(words, 0, 0, 50) * Globals.script_scale_x;
-              Parser.test_word(words, "with");
-              Parser.test_word(words, "chance");
-              let flicker_chance = Parser.get_int(words, 50);
-              sg_sprite2.flicker(flicker_size, flicker_chance);
+              let flicker_size = Parser.getInt(words, 0, 0, 50) * Globals.scriptScaleX;
+              Parser.testWord(words, "with");
+              Parser.testWord(words, "chance");
+              let flickerChance = Parser.getInt(words, 50);
+              sgSprite2.flicker(flicker_size, flickerChance);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals.log.error("Missing values at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3513,27 +3500,27 @@
         **************************************************************************************************/
         case "jiggle":
         case "jitter":
-          action_group.complete_action("jiggle");
+          actionGroup.complete_action("jiggle");
           if (words.length > 0) {
-            let sg_sprite_tag = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite2) {
+            let sgSpriteName = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
+            if (!sgSprite2) {
               break;
             }
-            let on_off = Parser.test_word(words, ["by", "stop"]);
+            let on_off = Parser.testWord(words, ["by", "stop"]);
             if (on_off == "stop") {
-              sg_sprite2.jiggle(0, 0, 0);
+              sgSprite2.jiggle(0, 0, 0);
             } else {
-              let jiggle_x = Parser.get_int(words, 0) * Globals.script_scale_x;
-              let jiggle_y = Parser.get_int(words, 0) * Globals.script_scale_y;
-              let jiggle_r = Parser.get_int(words, 0);
-              Parser.test_word(words, "with");
-              Parser.test_word(words, "chance");
-              let jiggle_chance = Parser.get_int(words, 50);
-              sg_sprite2.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggle_chance);
+              let jiggle_x = Parser.getInt(words, 0) * Globals.scriptScaleX;
+              let jiggle_y = Parser.getInt(words, 0) * Globals.scriptScaleY;
+              let jiggle_r = Parser.getInt(words, 0);
+              Parser.testWord(words, "with");
+              Parser.testWord(words, "chance");
+              let jiggleChance = Parser.getInt(words, 50);
+              sgSprite2.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggleChance);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals.log.error("Missing values at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3548,17 +3535,17 @@
         
         **************************************************************************************************/
         case "flash":
-          action_group.complete_action("flash");
+          actionGroup.complete_action("flash");
           if (words.length > 0) {
-            let sg_sprite_tag = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite2) {
+            let sgSpriteName = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
+            if (!sgSprite2) {
               break;
             }
-            let flash_count = Parser.get_int(words, 0, 1, 10);
-            sg_sprite2.flash(flash_count, now);
+            let flash_count = Parser.getInt(words, 0, 1, 10);
+            sgSprite2.flash(flash_count, now);
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals.log.error("Missing values at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3573,27 +3560,27 @@
         
         **************************************************************************************************/
         case "blink":
-          action_group.complete_action("blink");
+          actionGroup.complete_action("blink");
           if (words.length > 0) {
-            let sg_sprite_tag = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite2) {
+            let sgSpriteName = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
+            if (!sgSprite2) {
               break;
             }
-            let on_off = Parser.test_word(words, ["at", "stop"]);
+            let on_off = Parser.testWord(words, ["at", "stop"]);
             if (on_off == "stop") {
-              sg_sprite2.blink(0, 0, now);
+              sgSprite2.blink(0, 0, now);
             } else {
-              let blink_rate = Parser.get_int(words, 0, 1, 10);
-              Parser.test_word(words, "per");
-              Parser.test_word(words, "second");
-              Parser.test_word(words, "with");
-              Parser.test_word(words, "chance");
-              let blink_chance = Parser.get_int(words, 100, 0, 100);
-              sg_sprite2.blink(blink_rate, blink_chance, now);
+              let blinkRate = Parser.getInt(words, 0, 1, 10);
+              Parser.testWord(words, "per");
+              Parser.testWord(words, "second");
+              Parser.testWord(words, "with");
+              Parser.testWord(words, "chance");
+              let blinkChance = Parser.getInt(words, 100, 0, 100);
+              sgSprite2.blink(blinkRate, blinkChance, now);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals.log.error("Missing values at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3609,29 +3596,29 @@
         **************************************************************************************************/
         case "pulse":
         case "pulsate":
-          action_group.complete_action("pulse");
+          actionGroup.complete_action("pulse");
           if (words.length > 0) {
-            let sg_sprite_tag = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite2) {
+            let sgSpriteName = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
+            if (!sgSprite2) {
               break;
             }
-            let on_off = Parser.test_word(words, "stop");
+            let on_off = Parser.testWord(words, "stop");
             if (on_off == "stop") {
-              sg_sprite2.pulse(0, 0, 100, now);
+              sgSprite2.pulse(0, 0, 100, now);
             } else {
-              Parser.test_word(words, "at");
-              let pulse_rate = Parser.get_int(words, 0, 1, 10);
-              Parser.test_word(words, "per");
-              Parser.test_word(words, "second");
-              Parser.test_word(words, "from");
-              let pulse_min = Parser.get_int(words, 0, 0, 100);
-              Parser.test_word(words, "to");
-              let pulse_max = Parser.get_int(words, 100, 0, 100);
-              sg_sprite2.pulse(pulse_rate, pulse_min, pulse_max, now);
+              Parser.testWord(words, "at");
+              let pulseRate = Parser.getInt(words, 0, 1, 10);
+              Parser.testWord(words, "per");
+              Parser.testWord(words, "second");
+              Parser.testWord(words, "from");
+              let pulse_min = Parser.getInt(words, 0, 0, 100);
+              Parser.testWord(words, "to");
+              let pulse_max = Parser.getInt(words, 100, 0, 100);
+              sgSprite2.pulse(pulseRate, pulse_min, pulse_max, now);
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals.log.error("Missing values at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3648,22 +3635,22 @@
         case "fade":
         case "trans":
           if (words.length > 0) {
-            let sg_sprite_tag = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sg_sprite_tag);
-            if (!sg_sprite2) {
-              action_group.complete_action("fade");
+            let sgSpriteName = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
+            if (!sgSprite2) {
+              actionGroup.complete_action("fade");
               break;
             }
-            let fade_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
-            let value2 = Parser.get_int(words, 100);
-            Parser.test_word(words, "in");
-            let duration2 = Parser.get_duration(words, 0);
-            if (sg_sprite2 != null) {
-              sg_sprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(action_group));
+            let fade_type = Parser.testWord(words, ["to", "by", "up", "down"], "to");
+            let value2 = Parser.getInt(words, 100);
+            Parser.testWord(words, "in");
+            let duration2 = Parser.getDuration(words, 0);
+            if (sgSprite2 != null) {
+              sgSprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(actionGroup));
             }
           } else {
             Globals.log.error("Missing fade parameters");
-            action_group.complete_action("fade");
+            actionGroup.complete_action("fade");
           }
           break;
         /**************************************************************************************************
@@ -3679,35 +3666,35 @@
         **************************************************************************************************/
         case "wave":
         case "sway":
-          action_group.complete_action("wave");
+          actionGroup.complete_action("wave");
           if (words.length > 0) {
-            let sg_sprite_tag = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag);
-            if (!sg_sprite2) {
+            let sgSpriteName = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName);
+            if (!sgSprite2) {
               break;
             }
-            let on_off = Parser.test_word(words, ["to", "stop"]);
+            let on_off = Parser.testWord(words, ["to", "stop"]);
             if (on_off == "stop") {
               if (command == "wave") {
-                sg_sprite2.wave(0, 0, 0);
+                sgSprite2.wave(0, 0, 0);
               } else {
-                sg_sprite2.sway(0, 0, 0);
+                sgSprite2.sway(0, 0, 0);
               }
             } else {
-              let wave_max = Parser.get_int(words, 0, 1, 10);
-              Parser.test_word(words, "in");
-              let wave_rate = Parser.get_duration(words, 1);
-              Parser.test_word(words, "with");
-              Parser.test_word(words, "chance");
-              let wave_chance = Parser.get_int(words, 100, 0, 100);
+              let wave_max = Parser.getInt(words, 0, 1, 10);
+              Parser.testWord(words, "in");
+              let waveRate = Parser.getDuration(words, 1);
+              Parser.testWord(words, "with");
+              Parser.testWord(words, "chance");
+              let waveChance = Parser.getInt(words, 100, 0, 100);
               if (command == "wave") {
-                sg_sprite2.wave(wave_max, wave_rate, wave_chance);
+                sgSprite2.wave(wave_max, waveRate, waveChance);
               } else {
-                sg_sprite2.sway(wave_max, wave_rate, wave_chance);
+                sgSprite2.sway(wave_max, waveRate, waveChance);
               }
             }
           } else {
-            Globals.log.error("Missing values at line " + line_no);
+            Globals.log.error("Missing values at line " + action.number);
           }
           break;
         /**************************************************************************************************
@@ -3724,22 +3711,22 @@
         case "blur":
         case "fuzz":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action("blur");
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action("blur");
               break;
             }
-            let blur_type = Parser.test_word(words, ["to", "by", "up", "down"], "to");
-            let value2 = Parser.get_int(words, 100);
-            Parser.test_word(words, "in");
-            let duration2 = Parser.get_duration(words, 0);
-            if (sg_sprite2 != null) {
-              sg_sprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(action_group));
+            let blur_type = Parser.testWord(words, ["to", "by", "up", "down"], "to");
+            let value2 = Parser.getInt(words, 100);
+            Parser.testWord(words, "in");
+            let duration2 = Parser.getDuration(words, 0);
+            if (sgSprite2 != null) {
+              sgSprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(actionGroup));
             }
           } else {
             Globals.log.error("Missing fade parameters");
-            action_group.complete_action("blur");
+            actionGroup.complete_action("blur");
           }
           break;
         /**************************************************************************************************
@@ -3754,16 +3741,16 @@
         
         **************************************************************************************************/
         case "tint":
-          action_group.complete_action("tint");
+          actionGroup.complete_action("tint");
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
               break;
             }
-            Parser.test_word(words, ["to", "by", "at"]);
-            const value2 = Parser.get_word(words, "red");
-            sg_sprite2.set_tint(value2);
+            Parser.testWord(words, ["to", "by", "at"]);
+            const value2 = Parser.getWord(words, "red");
+            sgSprite2.set_tint(value2);
           } else {
             Globals.log.error("Missing tint colour");
           }
@@ -3771,23 +3758,23 @@
         case "darken":
         case "lighten":
           if (words.length > 0) {
-            let sprite_tag2 = words.shift();
-            let sg_sprite2 = SG_sprite.get_sprite(this.name, sprite_tag2);
-            if (!sg_sprite2) {
-              action_group.complete_action(command);
+            let spriteName2 = words.shift();
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              actionGroup.complete_action(command);
               break;
             }
-            Parser.test_word(words, ["to", "by", "at"]);
-            let value2 = Parser.get_int(words, 0, 0, 100);
+            Parser.testWord(words, ["to", "by", "at"]);
+            let value2 = Parser.getInt(words, 0, 0, 100);
             if (command == "lighten") {
               value2 = 100 - value2;
             }
-            Parser.test_word(words, "in");
-            let duration2 = Parser.get_duration(words, 0);
-            sg_sprite2.set_tint(value2, duration2, now, makeCompletionCallback(action_group));
+            Parser.testWord(words, "in");
+            let duration2 = Parser.getDuration(words, 0);
+            sgSprite2.set_tint(value2, duration2, now, makeCompletionCallback(actionGroup));
           } else {
             Globals.log.error("Missing " + command + " parameters");
-            action_group.complete_action(command);
+            actionGroup.complete_action(command);
           }
           break;
         /**************************************************************************************************
@@ -3802,13 +3789,13 @@
         
         **************************************************************************************************/
         case "for":
-          action_group.complete_action("for");
+          actionGroup.complete_action("for");
           if (words.length > 0) {
-            let var_name = words.shift();
-            Parser.test_word(words, "in");
-            this.varList.set_value(var_name, Parser.get_word(words, defaults_default.NOTFOUND));
-            const stackFrame = new StackFrame(action_index + 1, words, var_name);
-            action_group.stack.push(stackFrame);
+            let varName = words.shift();
+            Parser.testWord(words, "in");
+            this.varList.setValue(varName, Parser.getWord(words, defaults_default.NOTFOUND));
+            const stackFrame = new StackFrame(actionIndex + 1, words, varName);
+            actionGroup.stack.push(stackFrame);
           } else {
             Globals.log.error("Missing for loop");
           }
@@ -3816,20 +3803,48 @@
         case "next":
         case "endfor":
           {
-            action_group.complete_action("next");
-            const stack_size = action_group.stack.length;
-            if (stack_size < 1) {
-              Globals.log.error("No for loop for next at " + line_no);
+            actionGroup.complete_action("next");
+            const stackSize = actionGroup.stack.length;
+            if (stackSize < 1) {
+              Globals.log.error("No for loop for next at " + action.number);
               break;
             }
-            const stackFrame = action_group.stack[stack_size - 1];
-            if (stackFrame.for_values.length < 1) {
-              action_group.stack.pop();
+            const stackFrame = actionGroup.stack[stackSize - 1];
+            if (stackFrame.forValues.length < 1) {
+              actionGroup.stack.pop();
             } else {
-              this.varList.set_value(stackFrame.var_name, stackFrame.for_values.shift());
-              action_group.next_action = stackFrame.jump_line;
+              this.varList.setValue(stackFrame.varName, stackFrame.forValues.shift());
+              actionGroup.next_action = stackFrame.jump_line;
             }
           }
+          break;
+        /**************************************************************************************************
+        
+           #### ######## 
+            ##  ##       
+            ##  ##       
+            ##  ######   
+            ##  ##       
+            ##  ##       
+           #### ##       
+        
+        **************************************************************************************************/
+        case "if":
+          actionGroup.complete_action("if");
+          if (words.length > 0) {
+            if (actionGroup.failedIfCount > 0) {
+              actionGroup.failedIfCount += 1;
+            } else {
+              const result = logical(words);
+              if (!result) {
+                actionGroup.failedIfCount += 1;
+              }
+            }
+          } else {
+            Globals.log.error("Missing if condition at line " + action.number);
+          }
+          break;
+        case "endif":
           break;
         /**************************************************************************************************
         
@@ -3843,8 +3858,8 @@
         
         **************************************************************************************************/
         case "wait":
-          let duration = Parser.get_duration(words, 5);
-          this.timers.push(new Timer(now, duration, makeCompletionCallback(action_group)));
+          let duration = Parser.getDuration(words, 5);
+          this.timers.push(new Timer(now, duration, makeCompletionCallback(actionGroup)));
           break;
         /**************************************************************************************************
         
@@ -3873,8 +3888,8 @@
         **************************************************************************************************/
         case "dump":
         case "list":
-          const type = Parser.get_word(words, "scene");
-          const arg = Parser.get_word(words);
+          const type = Parser.getWord(words, "scene");
+          const arg = Parser.getWord(words);
           switch (type) {
             case "scenes":
             case "all":
@@ -3884,9 +3899,9 @@
               break;
             case "scene":
               if (arg) {
-                const list_scene = _Scene.find(arg);
-                if (list_scene) {
-                  Globals.log.report(list_scene.scene_data());
+                const listScene = _Scene.find(arg);
+                if (listScene) {
+                  Globals.log.report(listScene.scene_data());
                 }
               } else {
                 Globals.log.report(this.scene_data());
@@ -3894,9 +3909,9 @@
               break;
             case "sprites":
               if (arg) {
-                const list_scene = _Scene.find(arg);
-                if (list_scene) {
-                  Globals.log.report(list_scene.list_sprites());
+                const listScene = _Scene.find(arg);
+                if (listScene) {
+                  Globals.log.report(listScene.list_sprites());
                 }
               } else {
                 Globals.log.report(this.list_sprites());
@@ -3904,9 +3919,9 @@
               break;
             case "images":
               if (arg) {
-                const list_scene = _Scene.find(arg);
-                if (list_scene) {
-                  Globals.log.report(list_scene.list_images());
+                const listScene = _Scene.find(arg);
+                if (listScene) {
+                  Globals.log.report(listScene.list_images());
                 }
               } else {
                 Globals.log.report(this.list_images());
@@ -3932,7 +3947,7 @@
   // src/main.js
   var SlowGlass = class _SlowGlass {
     static next_action_run = 0;
-    static next_sprite_update = 0;
+    static next_spriteUpdate = 0;
     static sg_id = "body";
     static clean = true;
     constructor() {
@@ -3951,7 +3966,7 @@
     readFromText(text) {
       const script = text.split(/\r?\n/);
       const count = script.length;
-      const top = new Scene2(defaults_default.MAIN_NAME);
+      const top = new Scene2(MAIN_NAME);
       let holding = null;
       let in_comment = false;
       for (let i = 0; i < script.length; i++) {
@@ -4017,39 +4032,50 @@
           }
         } else if (command == "display") {
           if (argument == "width") {
-            let display_width = parseInt(argument2);
-            if (display_width < 50 || display_width > 5e3) {
+            let displayWidth = parseInt(argument2);
+            if (displayWidth < 50 || displayWidth > 5e3) {
               Globals.log.error("silly display width");
-              display_width = defaults_default.DISPLAY_WIDTH;
+              displayWidth = defaults_default.DISPLAY_WIDTH;
             }
-            Globals.display_width = display_width;
+            Globals.displayWidth = displayWidth;
           } else if (argument == "height") {
-            let display_height = parseInt(argument2);
-            if (display_height < 50 || display_height > 5e3) {
+            let displayHeight = parseInt(argument2);
+            if (displayHeight < 50 || displayHeight > 5e3) {
               Globals.log.error("silly display height");
-              display_height = defaults_default.DISPLAY_HEIGHT;
+              displayHeight = defaults_default.DISPLAY_HEIGHT;
             }
-            Globals.display_height = display_height;
+            Globals.displayHeight = displayHeight;
           }
         } else if (command == "include") {
           Globals.log.error("Include not supported yet");
         } else if (command == "script") {
           if (argument == "width") {
-            let script_width = parseInt(argument2);
-            if (script_width < 50 || script_width > 5e3) {
+            let scriptWidth = parseInt(argument2);
+            if (scriptWidth < 50 || scriptWidth > 5e3) {
               Globals.log.error("silly script width");
-              script_width = defaults_default.DISPLAY_WIDTH;
+              scriptWidth = defaults_default.DISPLAY_WIDTH;
             }
-            Globals.script_width = script_width;
+            Globals.scriptWidth = scriptWidth;
           } else if (argument == "height") {
-            let script_height = parseInt(argument2);
-            if (script_height < 50 || script_height > 5e3) {
+            let scriptHeight = parseInt(argument2);
+            if (scriptHeight < 50 || scriptHeight > 5e3) {
               Globals.log.error("silly script height");
-              script_height = defaults_default.DISPLAY_HEIGHT;
+              scriptHeight = defaults_default.DISPLAY_HEIGHT;
             }
-            Globals.script_height = script_height;
+            Globals.scriptHeight = scriptHeight;
           } else if (argument == "scale") {
-            Globals.script_scale_type = argument2;
+            switch (argument2) {
+              case "fit":
+                Globals.scriptScaleType = SCALE_FIT;
+                break;
+              case "stretch":
+                Globals.scriptScaleType = SCALE_STRETCH;
+                break;
+              case "none":
+              default:
+                Globals.scriptScaleType = SCALE_STRETCH;
+                break;
+            }
           }
         } else if (command == "gravity") {
           let gravity = parseFloat(argument);
@@ -4079,20 +4105,20 @@
         Globals.log.error("No top level actions, nothing will happen!");
         return false;
       } else {
-        switch (Globals.script_scale_type) {
-          case defaults_default.SCALE_STRETCH:
-            Globals.script_scale_x = Globals.display_width / Globals.script_width;
-            Globals.script_scale_y = Globals.display_height / Globals.script_height;
+        switch (Globals.scriptScaleType) {
+          case SCALE_STRETCH:
+            Globals.scriptScaleX = Globals.displayWidth / Globals.scriptWidth;
+            Globals.scriptScaleY = Globals.displayHeight / Globals.scriptHeight;
             break;
-          case defaults_default.SCALE_FIT:
+          case SCALE_FIT:
           // todo
-          case defaults_default.SCALE_NONE:
+          case SCALE_NONE:
           default:
             break;
         }
         top.start();
-        const dummyActionGroup = new ActionGroup();
-        top.actionGroups.push(dummyActionGroup);
+        top.interactive_index = top.actionGroups.length;
+        top.actionGroups.push(new ActionGroup());
         Globals.scenes.push(top);
       }
       return true;
@@ -4102,8 +4128,8 @@
       await Globals.app.init({
         // resizeTo: window,
         background: "#dfdfdf",
-        width: Globals.display_width,
-        height: Globals.display_height
+        width: Globals.displayWidth,
+        height: Globals.displayHeight
       });
       document.onkeydown = function(e) {
         Globals.event("onkeydown", e.key);
@@ -4121,11 +4147,11 @@
     update(ticker) {
       let current_millis = Date.now();
       if (_SlowGlass.next_action_run < current_millis) {
-        if (Globals.app.screen.width != Globals.display_width) {
-          Globals.app.screen.width = Globals.display_width;
+        if (Globals.app.screen.width != Globals.displayWidth) {
+          Globals.app.screen.width = Globals.displayWidth;
         }
-        if (Globals.app.screen.height != Globals.display_height) {
-          Globals.app.screen.height = Globals.display_height;
+        if (Globals.app.screen.height != Globals.displayHeight) {
+          Globals.app.screen.height = Globals.displayHeight;
         }
         for (let i = 0; i < Globals.scenes.length; i++) {
           let current = Globals.scenes[i];
@@ -4161,7 +4187,7 @@
         }
         _SlowGlass.next_action_run = current_millis + defaults_default.TRIGGER_RATE;
       }
-      if (_SlowGlass.next_sprite_update < current_millis) {
+      if (_SlowGlass.next_spriteUpdate < current_millis) {
         for (let i = 0; i < Globals.scenes.length; i++) {
           let current = Globals.scenes[i];
           if (current.state != defaults_default.SCENE_RUNNING) {
@@ -4171,7 +4197,7 @@
             current.sprites[j].update(current.name, current_millis);
           }
         }
-        _SlowGlass.next_sprite_update = current_millis + defaults_default.SPRITE_RATE;
+        _SlowGlass.next_spriteUpdate = current_millis + defaults_default.SPRITE_RATE;
       }
     }
     async scriptFromURL(url) {
@@ -4187,18 +4213,21 @@
       }
     }
     interactiveAction(text) {
-      const topScene = Scene2.find(defaults_default.MAIN_NAME);
-      const dummyActionGroupIndex = topScene.actionGroups.length - 1;
-      const actionGroup = topScene.actionGroups[dummyActionGroupIndex];
-      const lines = text.split(/\r?\n/);
+      const topScene = Scene2.find(MAIN_NAME);
+      const interactiveGroup = topScene.actionGroups[topScene.interactive_index];
+      interactiveGroup.actions = [];
+      const lines = text.split(";");
       for (let i = 0; i < lines.length; i++) {
         const lineText = lines[i].trim();
         if (lineText.length < 1) {
           continue;
         }
-        const dummyLine = new Line(i + 1, lineText);
-        topScene.runAction(dummyLine, actionGroup, Date.now());
+        interactiveGroup.actions.push(new Line(i + 1, lineText));
       }
+      interactiveGroup.next_action = 0;
+      do {
+        topScene.runAction(interactiveGroup.next_action, interactiveGroup, Date.now());
+      } while (interactiveGroup.next_action < interactiveGroup.actions.length);
     }
     setDrawingParent(elementID) {
       _SlowGlass.sg_id = elementID;

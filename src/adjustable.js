@@ -1,82 +1,82 @@
 
 
 export class Adjustable {
-    constructor(in_value, min_value, max_value, wrap) {
+    constructor(inValue, minValue, maxValue, wrap) {
         if (arguments.length < 4) {
             wrap = false;
         }
         // values and limits
-        this.current_value = in_value;
-        this.target_value = in_value;
-        this.delta_value = 0;
+        this.currentValue = inValue;
+        this.targetValue = inValue;
+        this.deltaValue = 0;
         if (arguments.length >= 3) {
-            this.lower_limit = min_value;
-            this.upper_limit = max_value;
+            this.lowerLimit = minValue;
+            this.upperLimit = maxValue;
         } else {
-            this.lower_limit = Number.MIN_SAFE_INTEGER;
-            this.upper_limit = Number.MAX_SAFE_INTEGER;
+            this.lowerLimit = Number.MIN_SAFE_INTEGER;
+            this.upperLimit = Number.MAX_SAFE_INTEGER;
         }
         // status
-        this.last_adjustment = 0;
+        this.lastAdjustment = 0;
         this.changing = false;
         this.wrap = wrap;
         // Jiggling
-        this.jig_step = 0;
-        this.jig_limit = 0;
-        this.jig_chance = 0;
+        this.jigStep = 0;
+        this.jigLimit = 0;
+        this.jigChance = 0;
         // Accelerating
-        this.acceleration_rate = 0;
+        this.accelerationRate = 0;
         this.acceleration_time = 0;
         // Callbacks
-        this.position_callback = null;
-        this.accelerate_callback = null;
+        this.positionCallback = null;
+        this.accelerateCallback = null;
         // Swaying
-        this.sway_limit = 0;
-        this.sway_step = 0;
-        this.sway_rate = 0;
-        this.sway_up = false;
-        this.sway_chance = 0;
-        this.last_sway = 0;
+        this.swayLimit = 0;
+        this.swayStep = 0;
+        this.swayRate = 0;
+        this.swayUp = false;
+        this.swayChance = 0;
+        this.lastSway = 0;
     }
 
     value() {
-        return this.current_value + this.jig_step + this.sway_step;
+        return this.currentValue + this.jigStep + this.swayStep;
     }
 
     speed() {
-        return this.delta_value;
+        return this.deltaValue;
     }
 
     sway_stop() {
-        this.sway_limit = 0;
-        this.sway_step = 0;
-        this.sway_rate = 0;
-        this.sway_chance = 0;
+        this.swayLimit = 0;
+        this.swayStep = 0;
+        this.swayRate = 0;
+        this.swayChance = 0;
     }
 
     sway_start(limit, rate, chance) {
-        this.sway_limit = limit;
-        this.sway_rate = rate * 1000; // convert to milliseconds
-        this.sway_chance = chance;
-        this.sway_step = 0;
-        this.sway_up = true;
-        this.last_sway = Date.now();
+        this.swayLimit = limit;
+        this.swayRate = rate * 1000; // convert to milliseconds
+        this.swayChance = chance;
+        this.swayStep = 0;
+        this.swayUp = true;
+        this.lastSway = Date.now();
     }
 
     stop() {
-        if (typeof this.position_callback === "function") {
-            this.position_callback("stop");
+        if (typeof this.positionCallback === "function") {
+            this.positionCallback("stop");
         }
-        if (typeof this.acceleration_callback === "function") {
-            this.acceleration_callback("stop");
+        if (typeof this.accelerationCallback === "function") {
+            this.accelerationCallback("stop");
         }
-        this.delta_value = 0;
+        this.deltaValue = 0;
         this.changing = false;
     }
 
     set_speed(delta) {
         if (Math.abs(delta) > 0) {
-            this.delta_value = delta;
+            this.deltaValue = delta;
             this.changing = true;
         }
     }
@@ -89,31 +89,31 @@ export class Adjustable {
             timestamp = Date.now();
         }
         if (arguments.length > 3) {
-            this.acceleration_callback = callback;
+            this.accelerationCallback = callback;
         }
-        this.acceleration_rate = rate;
+        this.accelerationRate = rate;
     }
 
     // adjust(delta) {
-    //     let new_value = this.value + delta;
+    //     let newValue = this.value + delta;
     //     // but check limits
-    //     if ( new_value < this.lower_limit ) {
-    //         new_value = this.wrap ? this.upper_limit : this.lower_limit;
-    //     } else if ( new_value > this.upper_limit ) {
-    //         new_value = this.wrap ? this.lower_limit : this.upper_limit;
+    //     if ( newValue < this.lowerLimit ) {
+    //         newValue = this.wrap ? this.upperLimit : this.lowerLimit;
+    //     } else if ( newValue > this.upperLimit ) {
+    //         newValue = this.wrap ? this.lowerLimit : this.upperLimit;
     //     }
-    //     this.value = this.new_value;
+    //     this.value = this.newValue;
     // }
 
     // Some things need to be kept in step (e.g. size and scale) without triggering
     // an update, so do it here.
-    force_value(value) {
+    forceValue(value) {
         this.value = value;
-        this.delta_value = 0;
+        this.deltaValue = 0;
         this.changing = false;
     }
 
-    set_target_value(target, seconds, timestamp, callback) {
+    setTargetValue(target, seconds, timestamp, callback) {
         if (arguments.length == 1) {
             seconds = 0;
         }
@@ -121,61 +121,61 @@ export class Adjustable {
             timestamp = Date.now();
         }
         if (arguments.length > 3) {
-            this.position_callback = callback;
+            this.positionCallback = callback;
         }
-        if (target < this.lower_limit) {
-            target = this.lower_limit;
-        } else if (target > this.upper_limit) {
-            target = this.upper_limit;
+        if (target < this.lowerLimit) {
+            target = this.lowerLimit;
+        } else if (target > this.upperLimit) {
+            target = this.upperLimit;
         }
-        this.target_value = target;
+        this.targetValue = target;
         if (seconds == 0) {
-            this.current_value = target;
-            this.delta_value = 0;
+            this.currentValue = target;
+            this.deltaValue = 0;
             if ( this.callback != null ) {
-                this.position_callback("adjustable");
+                this.positionCallback("adjustable");
             }
         } else {
-            this.delta_value = (this.target_value - this.current_value) / (seconds * 1000);
-            this.last_adjustment = timestamp;
+            this.deltaValue = (this.targetValue - this.currentValue) / (seconds * 1000);
+            this.lastAdjustment = timestamp;
         }
         this.changing = true;
     }
 
-    update_value() {
+    updateValue() {
         let updated = false;
-        let this_adjustment = Date.now();
+        let thisAdjustment = Date.now();
         // Are we jiggly?
-        if (this.jig_limit > 0 && this.jig_chance > 0) {
-            if (Math.random() * 100 < this.jig_chance ) { // lets jiggle
+        if (this.jigLimit > 0 && this.jigChance > 0) {
+            if (Math.random() * 100 < this.jigChance ) { // lets jiggle
                 updated = true;
-                this.jig_step += (this.jig_limit / 4) - (Math.random() * (this.jig_limit / 2));
-                if (this.jig_step > this.jig_limit) {
-                    this.jig_step = this.jig_limit;
-                } else if (this.jig_step < (this.jig_limit * -1)) {
-                    this.jig_step = this.jig_limit * -1;
+                this.jigStep += (this.jigLimit / 4) - (Math.random() * (this.jigLimit / 2));
+                if (this.jigStep > this.jigLimit) {
+                    this.jigStep = this.jigLimit;
+                } else if (this.jigStep < (this.jigLimit * -1)) {
+                    this.jigStep = this.jigLimit * -1;
                 }
             }
         }
         // Are we swaying?
-        if (this.sway_limit > 0) {
-            if (Math.random() * 100 < this.sway_chance ) { // lets sway
+        if (this.swayLimit > 0) {
+            if (Math.random() * 100 < this.swayChance ) { // lets sway
                 // this should probably be sine wave rather than a sawtooth...?
-                let step = (this.sway_limit / this.sway_rate) * (this_adjustment - this.last_sway);
-                if (this.sway_up) {
-                    this.sway_step += step;
-                    if (this.sway_step > this.sway_limit) {
-                        this.sway_step = this.sway_limit;
-                        this.sway_up = false;
+                let step = (this.swayLimit / this.swayRate) * (thisAdjustment - this.lastSway);
+                if (this.swayUp) {
+                    this.swayStep += step;
+                    if (this.swayStep > this.swayLimit) {
+                        this.swayStep = this.swayLimit;
+                        this.swayUp = false;
                     }
                 } else { // swaying down
-                    this.sway_step -= step;
-                    if (this.sway_step < this.sway_limit * -1) {
-                        this.sway_step = this.sway_limit * -1;
-                        this.sway_up = true;
+                    this.swayStep -= step;
+                    if (this.swayStep < this.swayLimit * -1) {
+                        this.swayStep = this.swayLimit * -1;
+                        this.swayUp = true;
                     }
                 }
-                this.last_sway = this_adjustment;
+                this.lastSway = thisAdjustment;
                 updated = true;
             }
         }
@@ -184,31 +184,31 @@ export class Adjustable {
             return updated;
         }
         // Are we there yet?
-        if (((this.delta_value < 0) && (this.current_value < this.target_value)) // undershot
-            || ((this.delta_value > 0) && (this.current_value > this.target_value)) // overshot
-            || (Math.abs(this.current_value - this.target_value) < this.delta_value)) { // almost there
-            this.current_value = this.target_value;
-            this.delta_value = 0;
+        if (((this.deltaValue < 0) && (this.currentValue < this.targetValue)) // undershot
+            || ((this.deltaValue > 0) && (this.currentValue > this.targetValue)) // overshot
+            || (Math.abs(this.currentValue - this.targetValue) < this.deltaValue)) { // almost there
+            this.currentValue = this.targetValue;
+            this.deltaValue = 0;
             this.changing = false;
             if (this.callback != null) {
-                this.position_callback("adjustable");
+                this.positionCallback("adjustable");
             }
         } else {
-            this.current_value += this.delta_value * (this_adjustment - this.last_adjustment);
-            this.last_adjustment = this_adjustment;
+            this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);
+            this.lastAdjustment = thisAdjustment;
         }
         return true;
     }
 
     jiggle_stop() {
-        this.jig_step = 0;
-        this.jig_limit = 0;
-        this.jig_chance = 0;
+        this.jigStep = 0;
+        this.jigLimit = 0;
+        this.jigChance = 0;
     }
 
     jiggle_start(limit, chance) {
-        this.jig_limit = limit;
-        this.jig_chance = chance;
+        this.jigLimit = limit;
+        this.jigChance = chance;
     }
 
 }

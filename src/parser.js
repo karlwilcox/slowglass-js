@@ -1,12 +1,13 @@
 
 import { Globals } from "./globals.js";
+import * as constants from './constants.js';
 
 export class Parser {
     constructor() {
         ; // set any options here
     }
 
-    static test_word(words, word, def) {
+    static testWord(words, word, def) {
         let retval = false;
         if (words.length > 0) {
             if (word instanceof Array) {
@@ -27,7 +28,7 @@ export class Parser {
         return(retval);
     }
 
-    static get_int(words, def, min, max) {
+    static getInt(words, def, min, max) {
         if (words.length > 0) {
             let word = words.shift();
             if (!word.match(/^[0-9-\.]+$/)) {
@@ -45,14 +46,14 @@ export class Parser {
         return(def);
     }
 
-    static get_float(words, def) {
+    static getFloat(words, def) {
         if (words.length > 0) {
             return(parseFloat(words.shift()));
         }
         return(def);
     }
 
-    static get_word(words, def) {
+    static getWord(words, def) {
         if (words.length > 0) {
             return(words.shift());
         }
@@ -62,7 +63,7 @@ export class Parser {
     static get_time_units(words, def) {
         // return a multiplier that gives seconds
         let mult = 1;
-        let units = Parser.get_word(words, def);
+        let units = Parser.getWord(words, def);
         if (units.startsWith("s")) {
                 // no need to change anything
                 ;
@@ -78,18 +79,18 @@ export class Parser {
         return mult;
     }
 
-    static get_duration(words, def) {
+    static getDuration(words, def) {
         // by default duration is in seconds
-        let value = Parser.get_float(words, def) * Parser.get_time_units(words, "s");
+        let value = Parser.getFloat(words, def) * Parser.get_time_units(words, "s");
         return(Math.round(value));
     }
 
-    static get_rate(words, def, extra) {
-        let value = Parser.get_float(words, def);
+    static getRate(words, def, extra) {
+        let value = Parser.getFloat(words, def);
         if (arguments.length > 2) {
-            Parser.test_word(words, extra);
+            Parser.testWord(words, extra);
         }
-        Parser.test_word(words,"per");
+        Parser.testWord(words,"per");
         value *= Parser.get_time_units(words,"s");
         return value;
     }

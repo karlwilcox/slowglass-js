@@ -2,6 +2,7 @@
 
 import { Globals } from "./globals.js";
 import { VarList } from "./vars.js";
+import * as constants from './constants.js';
 
 /**************************************************************************************************
 #                     
@@ -91,12 +92,12 @@ export class Line {
 **************************************************************************************************/
 
 export class StackFrame {
-    constructor(line_no, values, var_name) {
+    constructor(line_no, values, varName) {
         this.type = "";
         // Looping constructs
-        this.var_name = var_name;
+        this.varName = varName;
         this.jump_line = line_no;
-        this.for_values = values;
+        this.forValues = values;
     }
 }
 
@@ -121,6 +122,7 @@ export class ActionGroup {
         this.completed_actions = 0;
         this.stack = [];
         this.next_action = 0; // for looping
+        this.failedIfCount = 0; // for nesting if statements
     }
 
 
@@ -228,59 +230,72 @@ export function evaluate(input) {
     return str;
 }
 
-    // const trigFunctions = {
-    //     sin: Math.sin,
-    //     cos: Math.cos,
-    //     tan: Math.tan,
-    //     int: Math.floor,
-    // };
+/**************************************************************************************************
 
-    // // Evaluate a single expression safely
-    // function safeEval(expr) {
-    //     try {
-    //         // Only allow numbers, operators, decimal points, and whitespace
-    //         if (!/^[0-9+\-*/%.()\s]+$/.test(expr)) {
-    //             return "(" + expr + ")";
-    //         }
-    //         return Function('"use strict"; return (' + expr + ')')();
-    //     } catch {
-    //         return "(" + expr + ")";
-    //     }
-    // }
+   ##        #######   ######   ####  ######     ###    ##       
+   ##       ##     ## ##    ##   ##  ##    ##   ## ##   ##       
+   ##       ##     ## ##         ##  ##        ##   ##  ##       
+   ##       ##     ## ##   ####  ##  ##       ##     ## ##       
+   ##       ##     ## ##    ##   ##  ##       ######### ##       
+   ##       ##     ## ##    ##   ##  ##    ## ##     ## ##       
+   ########  #######   ######   ####  ######  ##     ## ######## 
 
-    // function safeTrigEval(name, expr) {
-    //     const value = safeEval(expr);
-    //     if (typeof value !== "number" || Number.isNaN(value)) {
-    //         return name + "(" + expr + ")";
-    //     }
+**************************************************************************************************/
 
-    //     const radians = value * Math.PI / 180;
-    //     return trigFunctions[name](radians);
-    // }
-
-    // let str = input;
-    // if (!input.match(/\)/)) {
-    //     return str;
-    // }
-
-    // // Handle nested parentheses by resolving innermost first
-    // const regex = /\(([^()]+)\)/g;
-    // const trigRegex = /\b(sin|cos|tan|int)\(([^()]+)\)/gi;
-
-    // let previous;
-    // do {
-    //     previous = str;
-    //     str = str.replace(trigRegex, (_, name, expr) => {
-    //         return safeTrigEval(name.toLowerCase(), expr);
-    //     });
-    //     str = str.replace(regex, (_, expr) => {
-    //         return safeEval(expr);
-    //     });
-    // } while (str !== previous);
-
-    // return str;
-// }
-
+export function logical(words) {
+    let result = false;
+    let inverted = false;
+    if (words[0] == "not") {
+        words.shift();
+        inverted = true;
+    }
+    if (words.length == 0) { // no arguments, just return something
+        result = !inverted;
+    } else if (words.length == 1) { // check it for truthiness / falseiness
+        if (words[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
+            result = !(Math.abs(parseFloat(words[0])) < 0.001); // zero is false, all else true
+        } else if ( ["false","no","n","none"].includes(words[0].toLowerCase())) {
+            result = false;
+        } else {
+            result = true;
+        }
+    } else if (words.length == 2) { // string compare the two things
+        result = words[0].toLowerCase == words[1].toLowerCase;
+    } else if (words.length > 2) { // middle thing is a logical comparison
+        let lvalue = words[0].toLowerCase();
+        let rvalue = words[2].toLowerCase();
+        let comparison = words[1].toLowerCase();
+        switch(comparison) {
+            case "is":
+            case "equals":
+            case "=":
+            case "==":
+                result = lvalue == rvalue;
+                break;
+            case "not":
+            case "!=":
+            case "!==":
+                result = lvalue != rvalue;
+                break;
+            case ">":
+                result = lvalue > rvalue;
+                break;
+            case "<":
+                result = lvalue < rvalue;
+                break;
+            case ">=":
+                result = lvalue >= rvalue;
+                break;
+            case "<=":
+                result = lvalue <= rvalue;
+                break;
+            default:
+                Globals.log.error("Unknown comparison - " + comparison);
+                break;
+        }
+    }
+    return inverted ? !result : result;
+}
 
 /**************************************************************************************************
 
@@ -295,8 +310,8 @@ export function evaluate(input) {
 **************************************************************************************************/
 
 export class Timer {
-    constructor(start_time, duration, callback) {
-        this.endtime = start_time + (1000 * duration);
+    constructor(startTime, duration, callback) {
+        this.endtime = startTime + (1000 * duration);
         this.callback = callback;
     }
 
@@ -340,7 +355,7 @@ export function getHemisphere(callback) {
 }
 
 export function t_or_f(value) {
-    return value ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+    return value ? constants.TRUE_VALUE : defaults.FALSEVALUE;
 }
 
 

@@ -7,7 +7,7 @@ export class Trigger {
         this.scene = scene;
         this.triggered = false; // don't think this is ever used...
         this.expired = false;
-        this.next_update = 0;
+        this.nextUpdate = 0;
         this.trigger_time = 0;
         this.create_time = timestamp;
         this.params = params;
@@ -76,7 +76,7 @@ export class After extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expand_all(this.params);
-            this.trigger_time = this.create_time + Parser.get_duration(this.expanded,1) * 1000;
+            this.trigger_time = this.create_time + Parser.getDuration(this.expanded,1) * 1000;
         }
         if (timestamp > this.trigger_time) {
             this.triggered = true;
@@ -103,7 +103,7 @@ export class After extends Trigger {
 export class Every extends Trigger {
     constructor(scene, timestamp, params) {
         super(scene, timestamp, params);
-        this.trigger_rate = null;
+        this.triggerRate = null;
         this.last_triggered = timestamp;
     }
 
@@ -111,9 +111,9 @@ export class Every extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expand_all(this.params);
-            this.trigger_rate = Parser.get_duration(this.expanded,1) * 1000;
+            this.triggerRate = Parser.getDuration(this.expanded,1) * 1000;
         }
-        if (timestamp - this.last_triggered > this.trigger_rate) {
+        if (timestamp - this.last_triggered > this.triggerRate) {
             this.triggered = true;
             this.last_triggered = timestamp;
             return true;

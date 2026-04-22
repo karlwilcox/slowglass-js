@@ -2,8 +2,9 @@
 import { Globals } from "./globals.js";
 import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
-import { SG_sprite } from "./sg_sprite";
+import { SGSprite } from "./sgsprite";
 import { Scene } from "./scene.js";
+import * as constants from './constants.js';
 
 class Variable {
     constructor(name, value) {
@@ -33,7 +34,7 @@ export class VarList {
         Utils.getHemisphere();
     }
 
-    set_value(name, value) {
+    setValue(name, value) {
         if (this.built_in(name)) {
             Globals.log.error("Cannot create built-in variable " + name);
         } else if (name.match(/[\.:]/)) {
@@ -107,16 +108,16 @@ export class VarList {
                 break;
             case "WINTER":
                 return ((this.hemisphere == "northern" && (month >= 12 || month <= 2)) ||
-                            (this.hemisphere == "southern" && (month >= 6 && month <= 8))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 6 && month <= 8))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "SPRING":
                 return ((this.hemisphere == "northern" && (month >= 3 && month <= 5)) ||
-                            (this.hemisphere == "southern" && (month >= 9 && month <= 11))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 9 && month <= 11))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "SUMMER":
                 return ((this.hemisphere == "northern" && (month >= 6 && month <= 8)) ||
-                            (this.hemisphere == "southern" && (month >= 12 || month <= 2))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 12 || month <= 2))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "AUTUMN":
                 return ((this.hemisphere == "northern" && (month >= 9 && month <= 11)) ||
-                            (this.hemisphere == "southern" && (month >= 3 && month <= 5))) ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                            (this.hemisphere == "southern" && (month >= 3 && month <= 5))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "WIDTH":
                 return Globals.app.screen.width;
             case "HEIGHT":
@@ -139,15 +140,15 @@ export class VarList {
             case "TRIGGER":
                 return this.trigger;
             case "WEEKDAY":
-                return date.getDay() > 0 && date.getDay() < 6 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                return date.getDay() > 0 && date.getDay() < 6 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "WEEKEND":
-                return date.getDay() == 0 || date.getDay() == 6 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                return date.getDay() == 0 || date.getDay() == 6 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "MORNING":
-                return date.getHours() > 6 && date.getHour() < 13 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                return date.getHours() > 6 && date.getHour() < 13 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "AFTERNOON":
-                return date.getHours() > 11 && date.getHour() < 18 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                return date.getHours() > 11 && date.getHour() < 18 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "EVENING":
-                return date.getHours() > 18 && date.getHour() < 22 ? defaults.TRUEVALUE : defaults.FALSEVALUE;
+                return date.getHours() > 18 && date.getHour() < 22 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "NIGHT":
                 return Utils.t_or_f(date.getHours() > 22 || date.getHour() < 6);
             case "KEY":
@@ -155,9 +156,9 @@ export class VarList {
             case "LASTKEY":
                 return Globals.lastKey == null ? defaults.NOTFOUND : Globals.lastKey;
             case "SCALEX":
-                return Globals.script_scale_x;
+                return Globals.scriptScaleX;
             case "SCALEY":
-                return Globals.script_scale_y;
+                return Globals.scriptScaleY;
             case "SCENENAME":
                 return this.sceneName;
             case "PARAMS":
@@ -165,10 +166,10 @@ export class VarList {
                 const scene = Scene.find(this.sceneName);
                 return scene.parameters;
             case "ELAPSED":
-                return Math.floor((Date.now() - Globals.start_time) / 1000);
+                return Math.floor((Date.now() - Globals.startTime) / 1000);
             case "MILLIS":
             case "MS":
-                return (Date.now() - Globals.start_time);
+                return (Date.now() - Globals.startTime);
             default:
                 return false;
         }
@@ -179,7 +180,7 @@ export class VarList {
         const parts = varName.split(/:/);
         const scene = Scene.find(parts[0]);
         if (scene !== false) {
-            value = scene.varList.get_value(parts[1]);
+            value = scene.varList.getValue(parts[1]);
         }
         return value;
     }
@@ -194,7 +195,7 @@ export class VarList {
         return false;
     }
 
-    get_value(varName) {
+    getValue(varName) {
         let value = false;
         let sceneName = this.sceneName; // assume we are local
         if (varName.match(/:/)) { // this is a different scene
@@ -217,7 +218,7 @@ export class VarList {
                 value = scene.list_images(false);
                 break;
             case 'SCENES':
-                value = Globals.list_scenes(false);
+                value = Globals.listScenes(false);
                 break;
             default:
                 break;
@@ -225,7 +226,7 @@ export class VarList {
         // Or is this is a sprite name?
         if (value === false && varName.match(/\./)) { // should be a sprite name/property pair
             const parts = varName.split(/\./, 2);
-            const sprite = SG_sprite.get_sprite(sceneName, parts[0], false);
+            const sprite = SGSprite.getSprite(sceneName, parts[0], false);
             if (sprite != null) {
                 switch(parts[1]) {
                     case 'x':
@@ -280,7 +281,7 @@ export class VarList {
         if (value === false) {
             // then look for user defined 
             if (sceneName != this.sceneName) { // look in a different scene
-                    value = scene.varList.get_value(varName);
+                    value = scene.varList.getValue(varName);
             } else {
                 let index = this.find(varName);
                 if (index !== false) {
@@ -350,7 +351,7 @@ export class VarList {
                     varName = input.slice(start, j);
                 }
 
-                let replacement = this.get_value(varName);
+                let replacement = this.getValue(varName);
 
                 output += replacement;
                 i = j;

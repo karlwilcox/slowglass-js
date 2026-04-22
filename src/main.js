@@ -5,10 +5,11 @@ import { Globals } from "./globals.js";
 import { AudioManager } from "./audio.js";
 import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
+import * as constants from './constants.js';
 
 class SlowGlass {
     static next_action_run = 0;
-    static next_sprite_update = 0;
+    static next_spriteUpdate = 0;
     static sg_id = "body";
     static clean = true;
 
@@ -29,7 +30,7 @@ class SlowGlass {
     readFromText(text) {
         const script = text.split(/\r?\n/);
         const count = script.length;
-        const top = new Scene(defaults.MAIN_NAME);
+        const top = new Scene(constants.MAIN_NAME);
         let holding = null;
         let in_comment = false;
         for(let i = 0; i < script.length; i++ ) {
@@ -107,39 +108,50 @@ class SlowGlass {
             // end processing (ignore rest of file)
             } else if (command == "display") {
                 if (argument == 'width') {
-                    let display_width = parseInt(argument2);
-                    if (display_width < 50 || display_width > 5000) {
+                    let displayWidth = parseInt(argument2);
+                    if (displayWidth < 50 || displayWidth > 5000) {
                         Globals.log.error("silly display width");
-                        display_width = defaults.DISPLAY_WIDTH;
+                        displayWidth = defaults.DISPLAY_WIDTH;
                     }
-                    Globals.display_width = display_width;
+                    Globals.displayWidth = displayWidth;
                 } else if (argument == 'height') {
-                    let display_height = parseInt(argument2);
-                    if (display_height < 50 || display_height > 5000) {
+                    let displayHeight = parseInt(argument2);
+                    if (displayHeight < 50 || displayHeight > 5000) {
                         Globals.log.error("silly display height");
-                        display_height = defaults.DISPLAY_HEIGHT;
+                        displayHeight = defaults.DISPLAY_HEIGHT;
                     }
-                    Globals.display_height = display_height;
+                    Globals.displayHeight = displayHeight;
                 } // else look for fullscreen
             } else if (command == 'include') {
                 Globals.log.error('Include not supported yet');
             } else if (command == 'script') {
                 if (argument == 'width') {
-                    let script_width = parseInt(argument2);
-                    if (script_width < 50 || script_width > 5000) {
+                    let scriptWidth = parseInt(argument2);
+                    if (scriptWidth < 50 || scriptWidth > 5000) {
                         Globals.log.error("silly script width");
-                        script_width = defaults.DISPLAY_WIDTH;
+                        scriptWidth = defaults.DISPLAY_WIDTH;
                     }
-                    Globals.script_width = script_width;
+                    Globals.scriptWidth = scriptWidth;
                 } else if (argument == 'height') {
-                    let script_height = parseInt(argument2);
-                    if (script_height < 50 || script_height > 5000) {
+                    let scriptHeight = parseInt(argument2);
+                    if (scriptHeight < 50 || scriptHeight > 5000) {
                         Globals.log.error("silly script height");
-                        script_height = defaults.DISPLAY_HEIGHT;
+                        scriptHeight = defaults.DISPLAY_HEIGHT;
                     }
-                    Globals.script_height = script_height;
+                    Globals.scriptHeight = scriptHeight;
                 } else if (argument == "scale") {
-                    Globals.script_scale_type = argument2;
+                    switch (argument2) {
+                        case "fit":
+                            Globals.scriptScaleType = constants.SCALE_FIT;
+                            break;
+                        case "stretch":
+                            Globals.scriptScaleType = constants.SCALE_STRETCH;
+                            break;
+                        case "none":
+                        default:
+                            Globals.scriptScaleType = constants.SCALE_STRETCH;
+                            break;
+                    }
                 }
             } else if (command == 'gravity') {
                 let gravity = parseFloat(argument);
@@ -172,21 +184,21 @@ class SlowGlass {
             return false;
         } else {
             // calculate overall scaling
-            switch (Globals.script_scale_type) {
-                case defaults.SCALE_STRETCH:
-                    Globals.script_scale_x = Globals.display_width / Globals.script_width;
-                    Globals.script_scale_y = Globals.display_height / Globals.script_height;
+            switch (Globals.scriptScaleType) {
+                case constants.SCALE_STRETCH:
+                    Globals.scriptScaleX = Globals.displayWidth / Globals.scriptWidth;
+                    Globals.scriptScaleY = Globals.displayHeight / Globals.scriptHeight;
                     break;
-                case defaults.SCALE_FIT:
+                case constants.SCALE_FIT:
                     // todo
-                case defaults.SCALE_NONE:
+                case constants.SCALE_NONE:
                 default:
                     break;
             }
             top.start();
             // Add an empty action group to the top level for interactive actions
-            const dummyActionGroup = new Utils.ActionGroup();
-            top.actionGroups.push(dummyActionGroup);
+            top.interactive_index = top.actionGroups.length;
+            top.actionGroups.push(new Utils.ActionGroup());
             Globals.scenes.push(top);
         }
         return true;
@@ -198,8 +210,8 @@ class SlowGlass {
         await Globals.app.init({
             // resizeTo: window,
             background: "#dfdfdf",
-            width: Globals.display_width,
-            height: Globals.display_height,
+            width: Globals.displayWidth,
+            height: Globals.displayHeight,
         });
 
         // Add canvas to page
@@ -227,11 +239,11 @@ class SlowGlass {
         // Could adjust this if needed in defaults
         let current_millis = Date.now();
         if (SlowGlass.next_action_run < current_millis) {
-            if (Globals.app.screen.width != Globals.display_width) {
-                Globals.app.screen.width = Globals.display_width;
+            if (Globals.app.screen.width != Globals.displayWidth) {
+                Globals.app.screen.width = Globals.displayWidth;
             }
-            if (Globals.app.screen.height != Globals.display_height) {
-                Globals.app.screen.height = Globals.display_height;
+            if (Globals.app.screen.height != Globals.displayHeight) {
+                Globals.app.screen.height = Globals.displayHeight;
             }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
@@ -277,7 +289,7 @@ class SlowGlass {
             SlowGlass.next_action_run = current_millis + Defaults.TRIGGER_RATE;
         }
         // But sprites can be updated up to every frame if we want...
-        if (SlowGlass.next_sprite_update < current_millis) {
+        if (SlowGlass.next_spriteUpdate < current_millis) {
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
                 if (current.state != defaults.SCENE_RUNNING) {
@@ -288,7 +300,7 @@ class SlowGlass {
                     current.sprites[j].update(current.name, current_millis);
                 }
             }
-            SlowGlass.next_sprite_update = current_millis + Defaults.SPRITE_RATE;
+            SlowGlass.next_spriteUpdate = current_millis + Defaults.SPRITE_RATE;
         }
     }
 
@@ -306,19 +318,22 @@ class SlowGlass {
     }
 
     interactiveAction(text) {
-        const topScene = Scene.find(defaults.MAIN_NAME);
-        const dummyActionGroupIndex = topScene.actionGroups.length - 1;
-        const actionGroup = topScene.actionGroups[dummyActionGroupIndex];
-        const lines = text.split(/\r?\n/);
+        const topScene = Scene.find(constants.MAIN_NAME);
+        const interactiveGroup = topScene.actionGroups[topScene.interactive_index];
+        interactiveGroup.actions = [];
+        const lines = text.split(";");
 
         for (let i = 0; i < lines.length; i++) {
             const lineText = lines[i].trim();
             if (lineText.length < 1) {
                 continue;
             }
-            const dummyLine = new Utils.Line(i + 1, lineText);
-            topScene.runAction(dummyLine, actionGroup, Date.now());
+            interactiveGroup.actions.push(new Utils.Line(i + 1, lineText));
         }
+        interactiveGroup.next_action = 0;
+        do {
+            topScene.runAction(interactiveGroup.next_action, interactiveGroup, Date.now());
+        } while (interactiveGroup.next_action < interactiveGroup.actions.length);
     }
 
     setDrawingParent(elementID) {
