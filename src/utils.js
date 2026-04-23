@@ -118,16 +118,16 @@ export class ActionGroup {
     constructor() {
         this.triggers = [];
         this.actions = [];
-        this.any_trigger = true;
-        this.completed_actions = 0;
+        this.anyTrigger = true;
+        this.unfinishedCount = 0;
         this.stack = [];
-        this.next_action = 0; // for looping
+        this.nextAction = 0; // for looping
         this.failedIfCount = 0; // for nesting if statements
     }
 
 
     complete_action(action) {
-        this.completed_actions += 1;
+        this.unfinishedCount -= 1;
     }
 
     addAction(action) {
@@ -138,24 +138,16 @@ export class ActionGroup {
         this.triggers.push(trigger);
     }
 
-    actionCount() {
-        return this.actions.length;
+    isFinished() {
+        return (this.unfinishedCount < 1);
     }
 
-    all_done() {
-        return (this.completed_actions >= this.actionCount());
-    }
-
-    reset_count() {
-        this.completed_actions = 0;
-    }
-
-    add_count(new_actions) {
-        this.complete_action_actions -= new_actions; // more to do
+    resetUnfinishedt() {
+        this.unfinishedCount = 0;
     }
 
     list() {
-        let text = this.any_trigger ? "Any trigger\n" : "All triggers\n";
+        let text = this.anyTrigger ? "Any trigger\n" : "All triggers\n";
         for(let i = 0; i < this.triggers.length; i++) {
             text += this.triggers[i].constructor.name + " ";
             text += this.triggers[i].params + "\n";
@@ -168,8 +160,9 @@ export class ActionGroup {
 }
 
 export function makeCompletionCallback(object) {
+    object.unfinishedCount += 1; // Mark an action unfinished
     return function(action) {
-        object.completed_actions += 1;
+        object.unfinishedCount -= 1; // clear it when done
     }
 }
 
@@ -354,7 +347,7 @@ export function getHemisphere(callback) {
     );
 }
 
-export function t_or_f(value) {
+export function boolAsString(value) {
     return value ? constants.TRUE_VALUE : defaults.FALSEVALUE;
 }
 

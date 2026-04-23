@@ -150,7 +150,7 @@ export class VarList {
             case "EVENING":
                 return date.getHours() > 18 && date.getHour() < 22 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
             case "NIGHT":
-                return Utils.t_or_f(date.getHours() > 22 || date.getHour() < 6);
+                return Utils.boolAsString(date.getHours() > 22 || date.getHour() < 6);
             case "KEY":
                 return Globals.key == null ? defaults.NOTFOUND : Globals.key;
             case "LASTKEY":
@@ -175,7 +175,7 @@ export class VarList {
         }
     }
 
-    scene_var(varName) {
+    sceneVar(varName) {
         let value = "NONE";
         const parts = varName.split(/:/);
         const scene = Scene.find(parts[0]);
@@ -211,11 +211,11 @@ export class VarList {
         // Is this a list request?
         switch(varName) {
             case 'SPRITES':
-                value = scene.list_sprites(false);
+                value = scene.listSprites(false);
                 break;
             case 'IMAGES':
             case 'IMGS':
-                value = scene.list_images(false);
+                value = scene.listImages(false);
                 break;
             case 'SCENES':
                 value = Globals.listScenes(false);
@@ -226,48 +226,52 @@ export class VarList {
         // Or is this is a sprite name?
         if (value === false && varName.match(/\./)) { // should be a sprite name/property pair
             const parts = varName.split(/\./, 2);
-            const sprite = SGSprite.getSprite(sceneName, parts[0], false);
-            if (sprite != null) {
+            const sgSprite = SGSprite.getSprite(sceneName, parts[0], false);
+            if (sgSprite != null) {
                 switch(parts[1]) {
                     case 'x':
                     case 'loc.x':
                     case 'location.x':
                     case 'pos.x':
                     case 'position.x':
-                        value = sprite.loc_x.value();
+                        value = sgSprite.locX.value();
                         break;
                     case 'y':
                     case 'loc.y':
                     case 'location.y':
                     case 'pos.y':
                     case 'position.y':
-                        value = sprite.loc_y.value();
+                        value = sgSprite.locY.value();
                         break;
                     case 'z':
                     case 'depth':
-                        value = sprite.depth;
+                        value = sgSprite.depth;
                         break;
                     case 'sx':
                     case 'size.x':
-                        value = sprite.size_x.value();
+                        value = sgSprite.sizeX.value();
                         break;
                     case 'sy':
                     case 'size.y':
-                        value = sprite.size_y.value();
+                        value = sgSprite.sizeY.value();
                         break;
                     case 'angle':
                     case 'rotation':
-                        value = sprite.angle.value();
+                        value = sgSprite.angle.value();
                         break;
                     case 'visible':
-                        value = Utils.t_or_f(sprite.visible);
+                        value = Utils.boolAsString(sgSprite.visible);
                         break;
                     case 'role':
-                        if (sprite.role == null) {
+                        if (sgSprite.role == null) {
                             value = defaults.NOTFOUND;
                         } else {
-                            value = sprite.role;
+                            value = sgSprite.role;
                         }
+                        break;
+                    case 'bounds':
+                        const bounds = sgSprite.piSprite.getBounds();
+                        value = `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;
                         break;
                         // More still to do
                     default:
@@ -306,7 +310,7 @@ export class VarList {
         return true;
     }
 
-    expand_vars(input) {
+    expandVars(input) {
         let output = '';
         let i = 0;
 

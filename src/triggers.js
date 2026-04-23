@@ -8,8 +8,8 @@ export class Trigger {
         this.triggered = false; // don't think this is ever used...
         this.expired = false;
         this.nextUpdate = 0;
-        this.trigger_time = 0;
-        this.create_time = timestamp;
+        this.triggerTime = 0;
+        this.createTime = timestamp;
         this.params = params;
         this.expanded = null;
     }
@@ -18,10 +18,10 @@ export class Trigger {
         return false;
     }
 
-    expand_all(input) {
-        let expanded = this.scene.varList.expand_vars(input);
+    expandAll(input) {
+        let expanded = this.scene.varList.expandVars(input);
         expanded = Utils.evaluate(expanded);
-        return expanded.split(/[,\s]+/);
+        return Parser.splitWords(expanded);
     }
 }
 
@@ -66,7 +66,7 @@ export class Begin extends Trigger {
 export class After extends Trigger {
     constructor(scene, timestamp, params) {
         super(scene, timestamp, params);
-        this.trigger_time = null;
+        this.triggerTime = null;
     }
 
     fired(timestamp) {
@@ -75,10 +75,10 @@ export class After extends Trigger {
         }
         // expand on first use
         if (this.expanded == null) {
-            this.expanded = this.expand_all(this.params);
-            this.trigger_time = this.create_time + Parser.getDuration(this.expanded,1) * 1000;
+            this.expanded = this.expandAll(this.params);
+            this.triggerTime = this.createTime + Parser.getDuration(this.expanded,1) * 1000;
         }
-        if (timestamp > this.trigger_time) {
+        if (timestamp > this.triggerTime) {
             this.triggered = true;
             this.expired = true;
             return true;
@@ -110,7 +110,7 @@ export class Every extends Trigger {
     fired(timestamp) {
         // expand on first use
         if (this.expanded == null) {
-            this.expanded = this.expand_all(this.params);
+            this.expanded = this.expandAll(this.params);
             this.triggerRate = Parser.getDuration(this.expanded,1) * 1000;
         }
         if (timestamp - this.last_triggered > this.triggerRate) {
@@ -147,7 +147,7 @@ export class IfWhile extends Trigger {
         }
         let result = false;
         // use the raw parameters and expand on *every* use
-        let expanded = this.expand_all(this.params);
+        let expanded = this.expandAll(this.params);
         let inverted = false;
         if (expanded[0] == "not") {
             expanded.shift();
@@ -230,7 +230,7 @@ export class AtClass extends Trigger {
         this.minutes = null;
         this.hours = null;
         this.seconds = 0;
-        this.next_check = 0;
+        this.nextCheck = 0;
         this.valid = true;
     }
 
@@ -240,7 +240,7 @@ export class AtClass extends Trigger {
         }
         // expand on first use
         if (this.expanded == null) {
-            this.expanded = this.expand_all(this.params);
+            this.expanded = this.expandAll(this.params);
             if (this.expanded.length > 0) {
                 const timeofDay = this.expanded[0];
                 if (timeofDay.match(/^[0-9]+:[0-9]+(:[0-9]+)?$/)) { // HH:MM:SS
@@ -259,7 +259,7 @@ export class AtClass extends Trigger {
                     this.valid = false;
             }
         }
-        if (this.next_check > timestamp) {
+        if (this.nextCheck > timestamp) {
             // try again later
             return false;
         }
@@ -276,7 +276,7 @@ export class AtClass extends Trigger {
             matched = false;
         }
         if (matched) { // If triggered, leave it for a while, as we can only trigger once per day at most
-            this.next_check = timestamp + (60 * 60 * 1000); // wait an hour
+            this.nextCheck = timestamp + (60 * 60 * 1000); // wait an hour
         }
         return matched;
     }
@@ -295,17 +295,17 @@ export class AtClass extends Trigger {
 **************************************************************************************************/
 
 export class ThenClass extends Trigger {
-    constructor(scene, timestamp, params, linked_action_group) {
+    constructor(scene, timestamp, params, actionGroup) {
         super(scene, timestamp, params);
-        this.linked_action_group = linked_action_group;
+        this.actionGroup = actionGroup;
     }
 
     fired(timestamp) {
         if (this.expired) {
             return false;
         }
-        // triggered when ALL actions in the linked_action_group have completed
-        if (this.linked_action_group.all_done()) {
+        // triggered when ALL actions in the actionGroup have completed
+        if (this.actionGroup.isFinished()) {
             this.expired = true;
             return true;
         } // else
@@ -336,7 +336,7 @@ export class Each extends Trigger {
     fired(timestamp) {
         // expand on first use
         if (this.expanded == null) {
-            this.expanded = this.expand_all(this.params);
+            this.expanded = this.expandAll(this.params);
             if (this.expanded.length > 0) {
                 const timeofDay = this.expanded[0];
                 if (timeofDay.match(/^([0-9]+|\*):([0-9]+|\*)(:([0-9]+|\*))?$/)) { // HH:MM:SS

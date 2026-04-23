@@ -11,6 +11,7 @@ export const MAIN_NAME = "_MAIN_";
 export const SPRITE_IMAGE = "_IMAGE_";
 export const SPRITE_TEXT = "_TEXT_";
 export const SPRITE_GRAPHIC = "_GRAPHIC_";
+export const SPRITE_GROUP = "_GROUP_";
 
 // Scene states
 

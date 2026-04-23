@@ -22,7 +22,7 @@
       this.jigLimit = 0;
       this.jigChance = 0;
       this.accelerationRate = 0;
-      this.acceleration_time = 0;
+      this.accelerationTime = 0;
       this.positionCallback = null;
       this.accelerateCallback = null;
       this.swayLimit = 0;
@@ -221,6 +221,10 @@
   var SPRITE_IMAGE = "_IMAGE_";
   var SPRITE_TEXT = "_TEXT_";
   var SPRITE_GRAPHIC = "_GRAPHIC_";
+  var SPRITE_GROUP = "_GROUP_";
+  var SCENE_STOPPED = "_STOPPED_";
+  var SCENE_RUNNING = "_RUNNING_";
+  var SCENE_PAUSED = "_PAUSED_";
   var SCALE_FIT = "_FIT_";
   var SCALE_STRETCH = "_STRETCH_";
   var SCALE_NONE = "_NONE_";
@@ -360,7 +364,7 @@
         case "EVENING":
           return date.getHours() > 18 && date.getHour() < 22 ? TRUE_VALUE : defaults_default.FALSEVALUE;
         case "NIGHT":
-          return t_or_f(date.getHours() > 22 || date.getHour() < 6);
+          return boolAsString(date.getHours() > 22 || date.getHour() < 6);
         case "KEY":
           return Globals.key == null ? defaults_default.NOTFOUND : Globals.key;
         case "LASTKEY":
@@ -384,7 +388,7 @@
           return false;
       }
     }
-    scene_var(varName) {
+    sceneVar(varName) {
       let value2 = "NONE";
       const parts = varName.split(/:/);
       const scene = Scene2.find(parts[0]);
@@ -416,11 +420,11 @@
       }
       switch (varName) {
         case "SPRITES":
-          value2 = scene.list_sprites(false);
+          value2 = scene.listSprites(false);
           break;
         case "IMAGES":
         case "IMGS":
-          value2 = scene.list_images(false);
+          value2 = scene.listImages(false);
           break;
         case "SCENES":
           value2 = Globals.listScenes(false);
@@ -430,48 +434,52 @@
       }
       if (value2 === false && varName.match(/\./)) {
         const parts = varName.split(/\./, 2);
-        const sprite = SGSprite.getSprite(sceneName, parts[0], false);
-        if (sprite != null) {
+        const sgSprite = SGSprite.getSprite(sceneName, parts[0], false);
+        if (sgSprite != null) {
           switch (parts[1]) {
             case "x":
             case "loc.x":
             case "location.x":
             case "pos.x":
             case "position.x":
-              value2 = sprite.loc_x.value();
+              value2 = sgSprite.locX.value();
               break;
             case "y":
             case "loc.y":
             case "location.y":
             case "pos.y":
             case "position.y":
-              value2 = sprite.loc_y.value();
+              value2 = sgSprite.locY.value();
               break;
             case "z":
             case "depth":
-              value2 = sprite.depth;
+              value2 = sgSprite.depth;
               break;
             case "sx":
             case "size.x":
-              value2 = sprite.size_x.value();
+              value2 = sgSprite.sizeX.value();
               break;
             case "sy":
             case "size.y":
-              value2 = sprite.size_y.value();
+              value2 = sgSprite.sizeY.value();
               break;
             case "angle":
             case "rotation":
-              value2 = sprite.angle.value();
+              value2 = sgSprite.angle.value();
               break;
             case "visible":
-              value2 = t_or_f(sprite.visible);
+              value2 = boolAsString(sgSprite.visible);
               break;
             case "role":
-              if (sprite.role == null) {
+              if (sgSprite.role == null) {
                 value2 = defaults_default.NOTFOUND;
               } else {
-                value2 = sprite.role;
+                value2 = sgSprite.role;
               }
+              break;
+            case "bounds":
+              const bounds = sgSprite.piSprite.getBounds();
+              value2 = `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;
               break;
             // More still to do
             default:
@@ -506,7 +514,7 @@
       this.variables.splice(index, 1);
       return true;
     }
-    expand_vars(input) {
+    expandVars(input) {
       let output = "";
       let i = 0;
       while (i < input.length) {
@@ -607,14 +615,14 @@
     constructor() {
       this.triggers = [];
       this.actions = [];
-      this.any_trigger = true;
-      this.completed_actions = 0;
+      this.anyTrigger = true;
+      this.unfinishedCount = 0;
       this.stack = [];
-      this.next_action = 0;
+      this.nextAction = 0;
       this.failedIfCount = 0;
     }
     complete_action(action) {
-      this.completed_actions += 1;
+      this.unfinishedCount -= 1;
     }
     addAction(action) {
       this.actions.push(action);
@@ -622,20 +630,14 @@
     addTrigger(trigger) {
       this.triggers.push(trigger);
     }
-    actionCount() {
-      return this.actions.length;
+    isFinished() {
+      return this.unfinishedCount < 1;
     }
-    all_done() {
-      return this.completed_actions >= this.actionCount();
-    }
-    reset_count() {
-      this.completed_actions = 0;
-    }
-    add_count(new_actions) {
-      this.complete_action_actions -= new_actions;
+    resetUnfinishedt() {
+      this.unfinishedCount = 0;
     }
     list() {
-      let text = this.any_trigger ? "Any trigger\n" : "All triggers\n";
+      let text = this.anyTrigger ? "Any trigger\n" : "All triggers\n";
       for (let i = 0; i < this.triggers.length; i++) {
         text += this.triggers[i].constructor.name + " ";
         text += this.triggers[i].params + "\n";
@@ -647,8 +649,9 @@
     }
   };
   function makeCompletionCallback(object) {
+    object.unfinishedCount += 1;
     return function(action) {
-      object.completed_actions += 1;
+      object.unfinishedCount -= 1;
     };
   }
   function evaluate(input) {
@@ -783,7 +786,7 @@
       }
     );
   }
-  function t_or_f(value2) {
+  function boolAsString(value2) {
     return value2 ? TRUE_VALUE : defaults_default.FALSEVALUE;
   }
   var Reporter = class {
@@ -875,7 +878,7 @@
   };
 
   // src/sgsprite.js
-  function get_image(scene, tag) {
+  function getImage(scene, tag) {
     let parts = tag.split(":");
     if (parts.length > 1) {
       scene = parts[0];
@@ -897,7 +900,7 @@
     Globals.log.error("No image found- " + scene + ":" + tag);
     return null;
   }
-  var SG_image = class {
+  var SGImage = class {
     constructor(data, tag) {
       this.name = tag;
       if (typeof data === "string") {
@@ -921,54 +924,55 @@
       this.imageName = imageName;
       this.name = spriteName;
       this.image_portion = null;
+      this.sgParent = null;
       this.piSprite = null;
       this.enabled = true;
-      this.loc_x = new Adjustable(0);
-      this.loc_y = new Adjustable(0);
+      this.locX = new Adjustable(0);
+      this.locY = new Adjustable(0);
       this.angle = new Adjustable(0, 0, 360);
       this.depth = 0;
-      this.size_x = new Adjustable(0);
-      this.size_y = new Adjustable(0);
-      this.scale_x = new Adjustable(0);
-      this.scale_y = new Adjustable(0);
-      this.flip_h = false;
-      this.flip_v = false;
+      this.sizeX = new Adjustable(0);
+      this.sizeY = new Adjustable(0);
+      this.scaleX = new Adjustable(0);
+      this.scaleY = new Adjustable(0);
+      this.flipH = false;
+      this.flipV = false;
       this.visible = true;
       this.transparency = new Adjustable(100, 0, 100);
       this.tintValue = new Adjustable(0, 0, 100);
-      this.tint_colour = null;
-      this.new_tint = false;
+      this.tintColour = null;
+      this.newTint = false;
       this.role = null;
       this.next_blink = 0;
       this.blinkRate = 0;
       this.blinkChance = 0;
       this.pulseRate = 0;
-      this.pulse_min = 0;
-      this.pulse_max = 0;
+      this.pulseMin = 0;
+      this.pulseMax = 0;
       this.pulseUp = true;
-      this.flash_count = 0;
-      this.next_flash = 0;
-      this.throw_vx = 0;
-      this.throw_vy = 0;
-      this.throw_time = 0;
+      this.flashCount = 0;
+      this.nextFlash = 0;
+      this.throwVx = 0;
+      this.throwVy = 0;
+      this.throwTime = 0;
       this.falling = false;
       this.throwCallback = null;
       this.bluriness = new Adjustable(0, 0, 100);
-      this.blur_filter = null;
-      this.text_font = "arial";
-      this.text_size = 24;
-      this.text_align = "center";
-      this.fill_colour = "black";
-      this.stroke_colour = "black";
-      this.skew_x = new Adjustable(0);
-      this.skew_y = new Adjustable(0);
+      this.blurFilter = null;
+      this.textFont = "arial";
+      this.textFont = 24;
+      this.textAlign = "center";
+      this.fillColour = "black";
+      this.strokeColour = "black";
+      this.skewX = new Adjustable(0);
+      this.skewY = new Adjustable(0);
     }
-    set_pos(x, y, depth = 0) {
-      this.loc_x.setTargetValue(x);
-      this.loc_y.setTargetValue(y);
-      this.set_depth("to", depth);
+    setPosition(x, y, depth = 0) {
+      this.locX.setTargetValue(x);
+      this.locY.setTargetValue(y);
+      this.setDepth("to", depth);
     }
-    set_depth(depth_type, value2) {
+    setDepth(depth_type, value2) {
       if (depth_type == "by") {
         this.depth += value2;
       } else {
@@ -981,34 +985,34 @@
         this.piSprite.zIndex = this.depth;
       }
     }
-    set_skew(new_x, new_y, to_or_by, duration, now, callback) {
+    setSkew(newX, newY, to_or_by, duration, now, callback) {
       if (to_or_by == "by") {
-        new_x += this.skew_x.value();
-        new_y += this.skew_y.value();
+        newX += this.skewX.value();
+        newY += this.skewY.value();
       }
-      this.skew_x.setTargetValue(new_x, duration, now, callback);
-      this.skew_y.setTargetValue(new_y, duration, now);
+      this.skewX.setTargetValue(newX, duration, now, callback);
+      this.skewY.setTargetValue(newY, duration, now);
     }
-    set_style() {
+    setStyle() {
       if (this.imageName == defaults_default.TEXT_NAME) {
         this.piSprite.style = {
-          fontFamily: this.text_font,
-          fontSize: this.text_size,
-          fill: this.fill_colour,
-          stroke: this.stroke_colour,
-          align: this.text_align
+          fontFamily: this.textFont,
+          fontSize: this.textFont,
+          fill: this.fillColour,
+          stroke: this.strokeColour,
+          align: this.textAlign
         };
       }
     }
-    move(new_x, new_y, to_or_by, in_or_at, duration, now, callback) {
+    move(newX, newY, to_or_by, in_or_at, duration, now, callback) {
       if (to_or_by == "by") {
-        new_x += this.loc_x.value();
-        new_y += this.loc_y.value();
+        newX += this.locX.value();
+        newY += this.locY.value();
       }
       if (in_or_at == "at") {
       }
-      this.loc_x.setTargetValue(new_x, duration, now, callback);
-      this.loc_y.setTargetValue(new_y, duration, now);
+      this.locX.setTargetValue(newX, duration, now, callback);
+      this.locY.setTargetValue(newY, duration, now);
       this.enabled = true;
     }
     rotate(turn_type, value2, dur_type, duration, now, callback) {
@@ -1022,7 +1026,7 @@
         this.angle.setTargetValue(newValue, duration, now, callback);
       }
     }
-    set_trans(target, duration, fade_type, now, callback) {
+    setTransparency(target, duration, fade_type, now, callback) {
       switch (fade_type) {
         case "by":
         case "down":
@@ -1037,7 +1041,7 @@
       }
       this.transparency.setTargetValue(target, duration, now, callback);
     }
-    set_blur(target, duration, blur_type, now, callback) {
+    setBlur(target, duration, blur_type, now, callback) {
       switch (blur_type) {
         case "by":
         case "down":
@@ -1051,74 +1055,74 @@
           break;
       }
       if (target > 0) {
-        if (this.blur_filter == null) {
-          this.blur_filter = new PIXI.BlurFilter();
+        if (this.blurFilter == null) {
+          this.blurFilter = new PIXI.BlurFilter();
         }
       } else {
-        this.blur_filter = null;
+        this.blurFilter = null;
       }
       this.bluriness.setTargetValue(target, duration, now, callback);
     }
-    set_tint(target, duration, now, callback) {
+    setTint(target, duration, now, callback) {
       if (arguments.length == 1) {
         if (target == "stop") {
-          this.tint_colour = null;
+          this.tintColour = null;
           this.tintValue.setTargetValue(100, 0, now, callback);
         } else {
-          this.tint_colour = target;
+          this.tintColour = target;
         }
-        this.new_tint = true;
+        this.newTint = true;
       } else {
         this.tintValue.setTargetValue(target, duration, now, callback);
       }
     }
     flip(axis) {
       if (axis == "h") {
-        this.scale_x.setTargetValue(this.flip_h ? 1 : -1);
-        this.scale_y.setTargetValue(1);
-        this.flip_h = !this.flip_h;
+        this.scaleX.setTargetValue(this.flipH ? 1 : -1);
+        this.scaleY.setTargetValue(1);
+        this.flipH = !this.flipH;
       } else if (axis == "v") {
-        this.scale_x.setTargetValue(1);
-        this.scale_y.setTargetValue(this.flip_v ? 1 : -1);
-        this.flip_v = !this.flip_v;
+        this.scaleX.setTargetValue(1);
+        this.scaleY.setTargetValue(this.flipV ? 1 : -1);
+        this.flipV = !this.flipV;
       } else if (axis == "r") {
-        this.scale_x.setTargetValue(this.flip_h ? 1 : -1);
-        this.scale_y.setTargetValue(this.flip_v ? 1 : -1);
-        this.flip_v = false;
-        this.flip_h = false;
+        this.scaleX.setTargetValue(this.flipH ? 1 : -1);
+        this.scaleY.setTargetValue(this.flipV ? 1 : -1);
+        this.flipV = false;
+        this.flipH = false;
       }
     }
-    current_tint() {
+    currentTint() {
       const shade = Math.round(255 * (100 - this.tintValue.value()) / 100);
       return shade << 16 | shade << 8 | shade;
     }
-    flash(flash_count, now) {
-      this.flash_count = flash_count;
-      this.next_flash = now + 100;
+    flash(flashCount, now) {
+      this.flashCount = flashCount;
+      this.nextFlash = now + 100;
     }
     jiggle(x, y, rot, chance) {
       if (chance > 0) {
-        this.loc_x.jiggle_start(x, chance);
-        this.loc_y.jiggle_start(y, chance);
+        this.locX.jiggle_start(x, chance);
+        this.locY.jiggle_start(y, chance);
         this.angle.jiggle_start(rot, chance);
       } else {
-        this.loc_x.jiggle_stop();
-        this.loc_y.jiggle_stop();
+        this.locX.jiggle_stop();
+        this.locY.jiggle_stop();
         this.angle.jiggle_stop();
       }
     }
     wave(max, rate, chance) {
       if (chance < 1 || max < 1) {
-        this.skew_y.sway_stop();
+        this.skewY.sway_stop();
       } else {
-        this.skew_y.sway_start(max, chance);
+        this.skewY.sway_start(max, chance);
       }
     }
     sway(max, rate, chance) {
       if (chance < 1 || max < 1) {
-        this.skew_x.sway_stop();
+        this.skewX.sway_stop();
       } else {
-        this.skew_x.sway_start(max, rate, chance);
+        this.skewX.sway_start(max, rate, chance);
       }
     }
     flicker(d, chance) {
@@ -1128,7 +1132,7 @@
         this.transparency.jiggle_stop();
       }
     }
-    throw(angle, initial_velocity, now, callback) {
+    throw(angle, initialVelocity, now, callback) {
       if (arguments.length > 3) {
         this.throwCallback = callback;
       }
@@ -1140,9 +1144,9 @@
       } else {
         this.falling = true;
         const radians = angle * Math.PI / 180;
-        this.thrown_vx = initial_velocity * Math.sin(radians);
-        this.thrown_vy = initial_velocity * Math.cos(radians) * -1;
-        this.throw_time = now;
+        this.thrownVx = initialVelocity * Math.sin(radians);
+        this.thrownVy = initialVelocity * Math.cos(radians) * -1;
+        this.throwTime = now;
       }
     }
     blink(rate, chance, now) {
@@ -1153,16 +1157,16 @@
       }
       this.next_blink = now + 1e3 / this.blinkRate;
     }
-    pulse(rate, pulse_min, pulse_max, now) {
+    pulse(rate, pulseMin, pulseMax, now) {
       if (rate == 0) {
         this.pulseRate = 0;
         this.transparency.setTargetValue(100);
       } else {
         this.pulseRate = 1 / rate;
-        this.pulse_min = pulse_min;
-        this.pulse_max = pulse_max;
-        this.transparency.setTargetValue(this.pulse_min);
-        this.transparency.setTargetValue(this.pulse_max, this.pulseRate, now);
+        this.pulseMin = pulseMin;
+        this.pulseMax = pulseMax;
+        this.transparency.setTargetValue(this.pulseMin);
+        this.transparency.setTargetValue(this.pulseMax, this.pulseRate, now);
       }
     }
     setVisibility(visible) {
@@ -1177,90 +1181,90 @@
         this.piSprite.visible = this.visible;
       }
     }
-    resize(new_w, new_h, to_or_by, in_or_at, duration, now, callback) {
+    resize(new_w, newH, to_or_by, in_or_at, duration, now, callback) {
       if (to_or_by == "by") {
-        new_w += this.size_x.value();
-        new_h += this.size_y.value();
+        new_w += this.sizeX.value();
+        newH += this.sizeY.value();
       }
       if (in_or_at == "at") {
       }
-      this.size_x.setTargetValue(new_w, duration, now, callback);
-      this.size_y.setTargetValue(new_h, duration, now);
+      this.sizeX.setTargetValue(new_w, duration, now, callback);
+      this.sizeY.setTargetValue(newH, duration, now);
     }
-    reset_size() {
-      this.size_x.setTargetValue(this.pi_image.orig.width);
-      this.size_y.setTargetValue(this.pi_image.orig.height);
+    resetFont() {
+      this.sizeX.setTargetValue(this.pi_image.orig.width);
+      this.sizeY.setTargetValue(this.pi_image.orig.height);
     }
-    scale(new_w, new_h, duration, now, callback) {
-      const old_w = this.size_x.value();
-      const old_h = this.size_y.value();
+    scale(new_w, newH, duration, now, callback) {
+      const old_w = this.sizeX.value();
+      const oldH = this.sizeY.value();
       if (new_w < 1) {
-        new_w = new_h;
+        new_w = newH;
       }
-      if (new_h < 1) {
-        new_h = new_w;
+      if (newH < 1) {
+        newH = new_w;
       }
-      this.size_x.setTargetValue(old_w * new_w / 100, duration, now, callback);
-      this.size_y.setTargetValue(old_h * new_h / 100);
+      this.sizeX.setTargetValue(old_w * new_w / 100, duration, now, callback);
+      this.sizeY.setTargetValue(oldH * newH / 100);
     }
     update(scene, now) {
       if (!this.enabled) {
         return;
       }
       if (this.type == SPRITE_IMAGE && (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) {
-        let image = get_image(scene, this.imageName);
+        let image = getImage(scene, this.imageName);
         if (image === null) {
           this.enabled = false;
           return;
         }
         if (image != "loading") {
           const img_width = image.pi_image.width;
-          const img_height = image.pi_image.height;
+          const imgHeight = image.pi_image.height;
           if (this.role != null) {
             const wdw_width = Globals.app.screen.width;
-            const wdw_height = Globals.app.screen.height;
-            const scale_y = img_height / wdw_height;
-            const scale_x = img_width / wdw_width;
+            const wdwHeight = Globals.app.screen.height;
+            const scaleY = imgHeight / wdwHeight;
+            const scaleX = img_width / wdw_width;
             let depth = null;
             switch (this.role) {
               case "background":
               // centre, and scale to window size
               case "backdrop":
-                this.loc_x.setTargetValue(wdw_width / 2);
-                this.loc_y.setTargetValue(wdw_height / 2);
-                this.size_x.setTargetValue(wdw_width);
-                this.size_y.setTargetValue(wdw_height);
+                this.locX.setTargetValue(wdw_width / 2);
+                this.locY.setTargetValue(wdwHeight / 2);
+                this.sizeX.setTargetValue(wdw_width);
+                this.sizeY.setTargetValue(wdwHeight);
                 depth = defaults_default.DEPTH_BACKGROUND;
                 break;
               case "left":
-                this.loc_x.setTargetValue(img_width / 2);
-                this.loc_y.setTargetValue(wdw_height / 2);
-                this.size_x.setTargetValue(scale_y * img_width);
-                this.size_y.setTargetValue(scale_y * img_height);
+                this.locX.setTargetValue(img_width / 2);
+                this.locY.setTargetValue(wdwHeight / 2);
+                this.sizeX.setTargetValue(scaleY * img_width);
+                this.sizeY.setTargetValue(scaleY * imgHeight);
                 depth = defaults_default.DEPTH_LEFT;
                 break;
               case "right":
-                this.loc_x.setTargetValue(wdw_width - img_width / 2);
-                this.loc_y.setTargetValue(wdw_height / 2);
-                this.size_x.setTargetValue(scale_y * img_width);
-                this.size_y.setTargetValue(scale_y * img_height);
+                this.locX.setTargetValue(wdw_width - img_width / 2);
+                this.locY.setTargetValue(wdwHeight / 2);
+                this.sizeX.setTargetValue(scaleY * img_width);
+                this.sizeY.setTargetValue(scaleY * imgHeight);
                 depth = defaults_default.DEPTH_RIGHT;
                 break;
               case "top":
               case "sky":
-                this.loc_x.setTargetValue(wdw_width / 2);
-                this.loc_y.setTargetValue(img_height / 2);
-                this.size_x.setTargetValue(scale_x * img_width);
-                this.size_y.setTargetValue(scale_x * img_height);
+                this.locX.setTargetValue(wdw_width / 2);
+                this.locY.setTargetValue(imgHeight / 2);
+                this.sizeX.setTargetValue(scaleX * img_width);
+                this.sizeY.setTargetValue(scaleX * imgHeight);
                 depth = defaults_default.DEPTH_SKY;
                 break;
               case "bottom":
               case "ground":
               case "foreground":
-                this.loc_x.setTargetValue(wdw_width / 2);
-                this.loc_y.setTargetValue(wdw_height - img_height / 2);
-                this.size_x.setTargetValue(scale_x * img_width);
-                this.size_y.setTargetValue(scale_x * img_height);
+                this.locX.setTargetValue(wdw_width / 2);
+                this.locY.setTargetValue(wdwHeight - imgHeight / 2);
+                this.sizeX.setTargetValue(scaleX * img_width);
+                this.sizeY.setTargetValue(scaleX * imgHeight);
                 depth = this.role == "ground" ? defaults_default.DEPTH_GROUND : defaults_default.DEPTH_FOREGROUND;
                 break;
             }
@@ -1268,11 +1272,11 @@
               this.depth = depth;
             }
           } else {
-            if (this.size_x.value() == 0) {
-              this.size_x.setTargetValue(img_width);
+            if (this.sizeX.value() == 0) {
+              this.sizeX.setTargetValue(img_width);
             }
-            if (this.size_y.value() == 0) {
-              this.size_y.setTargetValue(img_height);
+            if (this.sizeY.value() == 0) {
+              this.sizeY.setTargetValue(imgHeight);
             }
           }
           const fullTexture = new PIXI.Texture(image.pi_image);
@@ -1289,34 +1293,34 @@
             texture,
             anchor: 0.5,
             position: {
-              x: this.loc_x.value(),
-              y: this.loc_y.value()
+              x: this.locX.value(),
+              y: this.locY.value()
             },
             visible: this.visible
           });
           this.depth = Globals.nextZ(this.depth);
           this.piSprite.zIndex = this.depth;
-          this.piSprite.tint = this.current_tint();
-          this.piSprite.setSize(this.size_x.value(), this.size_y.value());
+          this.piSprite.tint = this.currentTint();
+          this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
           Globals.root.addChild(this.piSprite);
         }
       }
-      let change_x = this.loc_x.updateValue();
-      let change_y = this.loc_y.updateValue();
-      if (change_x || change_y) {
+      let changeX = this.locX.updateValue();
+      let changeY = this.locY.updateValue();
+      if (changeX || changeY) {
         if (this.piSprite !== null) {
-          this.piSprite.position.set(this.loc_x.value(), this.loc_y.value());
+          this.piSprite.position.set(this.locX.value(), this.locY.value());
         }
       }
-      if (Math.abs(this.loc_x.value()) > Globals.width * defaults_default.BOUNDS_X || Math.abs(this.loc_y.value()) > Globals.width * defaults_default.BOUNDS_Y) {
+      if (Math.abs(this.locX.value()) > Globals.width * defaults_default.BOUNDS_X || Math.abs(this.locY.value()) > Globals.width * defaults_default.BOUNDS_Y) {
         this.enabled = false;
         return;
       }
       if (this.falling) {
-        const falling_time = (now - this.throw_time) / 1e3;
-        const delta_x = this.thrown_vx * falling_time * Globals.scriptScaleX;
-        const delta_y = (this.thrown_vy * falling_time - 0.5 * Globals.gravity * -1 * falling_time * falling_time) * Globals.scriptScaleY;
-        if (Math.abs(delta_x) > Globals.app.screen.width * 2 || Math.abs(delta_y) > Globals.app.screen.height * 2 || Globals.ground_level > 0 && this.loc_y.value + delta_y > Globals.ground_level) {
+        const fallingTime = (now - this.throwTime) / 1e3;
+        const deltaX = this.thrownVx * fallingTime * Globals.scriptScaleX;
+        const deltaY = (this.thrownVy * fallingTime - 0.5 * Globals.gravity * -1 * fallingTime * fallingTime) * Globals.scriptScaleY;
+        if (Math.abs(deltaX) > Globals.app.screen.width * 2 || Math.abs(deltaY) > Globals.app.screen.height * 2 || Globals.ground_level > 0 && this.locY.value + deltaY > Globals.ground_level) {
           this.falling = false;
           this.visible = false;
           this.enabled = false;
@@ -1325,7 +1329,7 @@
           }
         }
         if (this.piSprite !== null) {
-          this.piSprite.position.set(this.loc_x.value() + delta_x, this.loc_y.value() + delta_y);
+          this.piSprite.position.set(this.locX.value() + deltaX, this.locY.value() + deltaY);
         }
       }
       if (this.angle.updateValue()) {
@@ -1340,38 +1344,38 @@
       } else {
         if (this.pulseRate > 0) {
           if (this.pulseUp) {
-            this.transparency.setTargetValue(this.pulse_min, this.pulseRate, now);
+            this.transparency.setTargetValue(this.pulseMin, this.pulseRate, now);
             this.pulseUp = false;
           } else {
-            this.transparency.setTargetValue(this.pulse_max, this.pulseRate, now);
+            this.transparency.setTargetValue(this.pulseMax, this.pulseRate, now);
             this.pulseUp = true;
           }
         }
       }
-      if (this.new_tint) {
+      if (this.newTint) {
         if (this.piSprite !== null) {
-          this.piSprite.tint = this.tint_colour;
-          this.new_tint = false;
+          this.piSprite.tint = this.tintColour;
+          this.newTint = false;
         }
       }
       if (this.tintValue.updateValue()) {
         if (this.piSprite !== null) {
-          this.piSprite.tint = this.current_tint();
+          this.piSprite.tint = this.currentTint();
         }
       }
-      change_x = this.size_x.updateValue();
-      change_y = this.size_y.updateValue();
-      if (change_x || change_y) {
+      changeX = this.sizeX.updateValue();
+      changeY = this.sizeY.updateValue();
+      if (changeX || changeY) {
         if (this.piSprite !== null) {
-          this.piSprite.setSize(this.size_x.value(), this.size_y.value());
+          this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
         }
       }
-      change_x = this.scale_x.updateValue();
-      change_y = this.scale_y.updateValue();
-      if (change_x || change_y) {
+      changeX = this.scaleX.updateValue();
+      changeY = this.scaleY.updateValue();
+      if (changeX || changeY) {
         if (this.piSprite !== null) {
-          this.piSprite.scale.set(this.scale_x.value(), this.scale_y.value());
-          this.piSprite.setSize(this.size_x.value(), this.size_y.value());
+          this.piSprite.scale.set(this.scaleX.value(), this.scaleY.value());
+          this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
         }
       }
       if (this.blinkRate > 0 && this.next_blink < now) {
@@ -1383,29 +1387,29 @@
           }
         }
       }
-      if (this.flash_count > 0 && this.next_flash < now) {
+      if (this.flashCount > 0 && this.nextFlash < now) {
         if (this.visible) {
           this.visible = false;
-          this.flash_count -= 1;
+          this.flashCount -= 1;
         } else {
           this.visible = true;
         }
-        this.next_flash = now + 100;
+        this.nextFlash = now + 100;
         this.piSprite.visible = this.visible;
       }
       if (this.bluriness.updateValue()) {
         if (this.piSprite !== null) {
           if (this.piSprite.filters == null) {
-            this.piSprite.filters = [this.blur_filter];
+            this.piSprite.filters = [this.blurFilter];
           }
-          this.blur_filter.strength = this.bluriness.value() / 10;
+          this.blurFilter.strength = this.bluriness.value() / 10;
         }
       }
-      const change_skew_x = this.skew_x.updateValue();
-      const change_skew_y = this.skew_y.updateValue();
-      if (change_skew_x || change_skew_y) {
-        this.piSprite.skew.x = this.skew_x.value() * (Math.PI / 180);
-        this.piSprite.skew.y = this.skew_y.value() * (Math.PI / 180);
+      const change_skewX = this.skewX.updateValue();
+      const change_skewY = this.skewY.updateValue();
+      if (change_skewX || change_skewY) {
+        this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
+        this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
       }
     }
     static getSprite(scene, tag, report = true) {
@@ -1417,7 +1421,7 @@
       for (let i = 0; i < Globals.scenes.length; i++) {
         if (Globals.scenes[i].name == scene) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
-            if (!(Globals.scenes[i].state == defaults_default.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
+            if (!(Globals.scenes[i].state == SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
               return Globals.scenes[i].sprites[j];
             }
           }
@@ -1456,6 +1460,57 @@
   var Parser = class _Parser {
     constructor() {
       ;
+    }
+    static joinWords(words) {
+      let result = "";
+      let isFirst = true;
+      for (let i = 0; i < words.length; i++) {
+        if (isFirst) {
+          isFirst = false;
+        } else {
+          result += " ";
+        }
+        if (words[i].includes(" ")) {
+          result += `"${words[i]}"`;
+        } else {
+          result += words[i];
+        }
+      }
+      return result;
+    }
+    static splitWords(input) {
+      const result = [];
+      let current = "";
+      let inQuotes = false;
+      let escape = false;
+      for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+        if (escape) {
+          current += char;
+          escape = false;
+          continue;
+        }
+        if (char === "\\") {
+          escape = true;
+          continue;
+        }
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (char === " " && !inQuotes) {
+          if (current.length > 0) {
+            result.push(current);
+            current = "";
+          }
+          continue;
+        }
+        current += char;
+      }
+      if (current.length > 0) {
+        result.push(current);
+      }
+      return result;
     }
     static testWord(words, word, def) {
       let retval = false;
@@ -1506,7 +1561,7 @@
       }
       return def;
     }
-    static get_time_units(words, def) {
+    static getTime_units(words, def) {
       let mult = 1;
       let units = _Parser.getWord(words, def);
       if (units.startsWith("s")) {
@@ -1523,7 +1578,7 @@
       return mult;
     }
     static getDuration(words, def) {
-      let value2 = _Parser.getFloat(words, def) * _Parser.get_time_units(words, "s");
+      let value2 = _Parser.getFloat(words, def) * _Parser.getTime_units(words, "s");
       return Math.round(value2);
     }
     static getRate(words, def, extra) {
@@ -1532,7 +1587,7 @@
         _Parser.testWord(words, extra);
       }
       _Parser.testWord(words, "per");
-      value2 *= _Parser.get_time_units(words, "s");
+      value2 *= _Parser.getTime_units(words, "s");
       return value2;
     }
   };
@@ -1544,18 +1599,18 @@
       this.triggered = false;
       this.expired = false;
       this.nextUpdate = 0;
-      this.trigger_time = 0;
-      this.create_time = timestamp;
+      this.triggerTime = 0;
+      this.createTime = timestamp;
       this.params = params;
       this.expanded = null;
     }
     fired(timestamp) {
       return false;
     }
-    expand_all(input) {
-      let expanded = this.scene.varList.expand_vars(input);
+    expandAll(input) {
+      let expanded = this.scene.varList.expandVars(input);
       expanded = evaluate(expanded);
-      return expanded.split(/[,\s]+/);
+      return Parser.splitWords(expanded);
     }
   };
   var Begin = class extends Trigger {
@@ -1574,17 +1629,17 @@
   var After = class extends Trigger {
     constructor(scene, timestamp, params) {
       super(scene, timestamp, params);
-      this.trigger_time = null;
+      this.triggerTime = null;
     }
     fired(timestamp) {
       if (this.expired) {
         return false;
       }
       if (this.expanded == null) {
-        this.expanded = this.expand_all(this.params);
-        this.trigger_time = this.create_time + Parser.getDuration(this.expanded, 1) * 1e3;
+        this.expanded = this.expandAll(this.params);
+        this.triggerTime = this.createTime + Parser.getDuration(this.expanded, 1) * 1e3;
       }
-      if (timestamp > this.trigger_time) {
+      if (timestamp > this.triggerTime) {
         this.triggered = true;
         this.expired = true;
         return true;
@@ -1600,7 +1655,7 @@
     }
     fired(timestamp) {
       if (this.expanded == null) {
-        this.expanded = this.expand_all(this.params);
+        this.expanded = this.expandAll(this.params);
         this.triggerRate = Parser.getDuration(this.expanded, 1) * 1e3;
       }
       if (timestamp - this.last_triggered > this.triggerRate) {
@@ -1618,7 +1673,7 @@
       this.minutes = null;
       this.hours = null;
       this.seconds = 0;
-      this.next_check = 0;
+      this.nextCheck = 0;
       this.valid = true;
     }
     fired(timestamp) {
@@ -1626,7 +1681,7 @@
         return false;
       }
       if (this.expanded == null) {
-        this.expanded = this.expand_all(this.params);
+        this.expanded = this.expandAll(this.params);
         if (this.expanded.length > 0) {
           const timeofDay = this.expanded[0];
           if (timeofDay.match(/^[0-9]+:[0-9]+(:[0-9]+)?$/)) {
@@ -1645,7 +1700,7 @@
           this.valid = false;
         }
       }
-      if (this.next_check > timestamp) {
+      if (this.nextCheck > timestamp) {
         return false;
       }
       const d = /* @__PURE__ */ new Date();
@@ -1661,21 +1716,21 @@
         matched = false;
       }
       if (matched) {
-        this.next_check = timestamp + 60 * 60 * 1e3;
+        this.nextCheck = timestamp + 60 * 60 * 1e3;
       }
       return matched;
     }
   };
   var ThenClass = class extends Trigger {
-    constructor(scene, timestamp, params, linked_action_group) {
+    constructor(scene, timestamp, params, actionGroup) {
       super(scene, timestamp, params);
-      this.linked_action_group = linked_action_group;
+      this.actionGroup = actionGroup;
     }
     fired(timestamp) {
       if (this.expired) {
         return false;
       }
-      if (this.linked_action_group.all_done()) {
+      if (this.actionGroup.isFinished()) {
         this.expired = true;
         return true;
       }
@@ -1691,7 +1746,7 @@
     }
     fired(timestamp) {
       if (this.expanded == null) {
-        this.expanded = this.expand_all(this.params);
+        this.expanded = this.expandAll(this.params);
         if (this.expanded.length > 0) {
           const timeofDay = this.expanded[0];
           if (timeofDay.match(/^([0-9]+|\*):([0-9]+|\*)(:([0-9]+|\*))?$/)) {
@@ -1878,7 +1933,7 @@
   var Scene2 = class _Scene {
     constructor(sceneName) {
       this.name = sceneName;
-      this.state = defaults_default.SCENE_STOPPED;
+      this.state = SCENE_STOPPED;
       this.content = [];
       this.interactive_index = 0;
       this.reset();
@@ -1907,7 +1962,7 @@
       }
       return false;
     }
-    scene_data() {
+    showSceneData() {
       let text = "Scene: " + this.name + "\n";
       text += "State: " + this.state + "\n";
       text += "Contains " + this.actionGroups.length + " action groups\n";
@@ -1915,25 +1970,32 @@
       text += this.sprites.length + " sprites\n";
       return text;
     }
-    list_sprites(verbose = true) {
+    listSprites(verbose = true) {
       let text = verbose ? "Sprites in Scene " + this.name + "\n" : "";
       for (let i = 0; i < this.sprites.length; i++) {
         const sprite = this.sprites[i];
         if (verbose) {
-          const x = sprite.loc_x.value();
-          const y = sprite.loc_y.value();
+          const x = sprite.locX.value();
+          const y = sprite.locY.value();
           const z = sprite.depth;
           text += `${sprite.name} (${sprite.type}) `;
           text += sprite.visible ? "visible" : "hidden";
           text += ` at ${x} ${y} ${z}
 `;
+          const sx = sprite.sizeX.value();
+          const sy = sprite.sizeY.value();
+          text += `size ${sx} x ${sy} `;
+          if (sprite.sgParent) {
+            text += `child of ${sprite.sgParent}`;
+          }
+          text += "\n";
         } else {
           text += `${sprite.name} `;
         }
       }
       return text;
     }
-    list_images(verbose = true) {
+    listImages(verbose = true) {
       let text = verbose ? "Images in Scene " + this.name + "\n" : "";
       for (let i = 0; i < this.images.length; i++) {
         const image = this.images[i];
@@ -1949,7 +2011,7 @@
       return text;
     }
     stop(reset = false) {
-      this.state = defaults_default.SCENE_STOPPED;
+      this.state = SCENE_STOPPED;
       this.parameters = defaults_default.NOTFOUND;
       this.actionGroups = [];
       for (let i = 0; i < this.sprites; i++) {
@@ -1968,13 +2030,13 @@
       }
     }
     pause() {
-      if (this.state == defaults_default.SCENE_RUNNING) {
-        this.state = defaults_default.SCENE_PAUSED;
+      if (this.state == SCENE_RUNNING) {
+        this.state = SCENE_PAUSED;
       }
     }
     resume() {
-      if (this.state == defaults_default.SCENE_PAUSED) {
-        this.state = defaults_default.SCENE_RUNNING;
+      if (this.state == SCENE_PAUSED) {
+        this.state = SCENE_RUNNING;
       }
     }
     /**************************************************************************************************
@@ -1989,7 +2051,7 @@
     
     **************************************************************************************************/
     start(parameters) {
-      if (this.state != defaults_default.SCENE_STOPPED) {
+      if (this.state != SCENE_STOPPED) {
         return;
       }
       this.actionGroups = [];
@@ -1999,16 +2061,15 @@
       let timestamp = Date.now();
       for (let i = 0; i < this.content.length; i++) {
         let trigger = null;
-        let words = this.content[i].text.split(/\s+/);
-        let lineNo = this.content[i].number;
-        let keyword = words.shift();
-        words = words.join(" ");
+        const lineNo = this.content[i].number;
+        const words = Parser.splitWords(this.content[i].text);
+        const keyword = words.shift();
         switch (keyword.toLowerCase()) {
           case "when":
-            if (words.toLowerCase().startsWith("all")) {
+            if (args.toLowerCase().startsWith("all")) {
               actionGroup.any_trigger = false;
-            } else if (!words.toLowerCase().startsWith("any")) {
-              Globals.log.error("Unknown when condition - " + words);
+            } else if (!words[0].toLowerCase().startsWith("any")) {
+              Globals.log.error("Unknown when condition - " + words[0]);
             }
             continue;
           // go to the next line
@@ -2020,12 +2081,8 @@
           case "end":
             trigger = new Trigger("ATEND", "");
             break;
-          // case 'if':
-          // case 'while':
-          //     trigger = new Triggers.IfWhile(this, timestamp, words, keyword);
-          //     break;
           case "after":
-            trigger = new After(this, timestamp, words);
+            trigger = new After(this, timestamp, Parser.joinWords(words));
             break;
           case "on":
             let on_word = words.shift();
@@ -2034,16 +2091,16 @@
                 if (words[0] == "press") {
                   words.shift();
                 }
-                trigger = new Trigger("ONKEY", words);
+                trigger = new Trigger("ONKEY", Parser.joinWords(words));
                 break;
               case "keypress":
-                trigger = new Trigger("ONKEY", words);
+                trigger = new Trigger("ONKEY", Parser.joinWords(words));
                 break;
               case "mouse":
                 if (words[0] == "click") {
                   words.shift();
                 }
-                trigger = new Trigger("MOUSECLICK", words);
+                trigger = new Trigger("MOUSECLICK", Parser.joinWords(words));
                 break;
               default:
                 Globals.log.error("Unknown trigger type on " + on_word + " at line " + lineNo);
@@ -2054,24 +2111,30 @@
             if (words[0] == "time") {
               words.shift();
             }
-            trigger = new AtClass(this, timestamp, words);
+            trigger = new AtClass(this, timestamp, Parser.joinWords(words));
             break;
           case "each":
             if (words[0] == "time") {
               words.shift();
             }
-            trigger = new Each(this, timestamp, words);
+            trigger = new Each(this, timestamp, Parser.joinWords(words));
             break;
           case "then":
             if (state == "T") {
               Globals.log.error("Then must be the only trigger in that group");
             } else {
-              trigger = new ThenClass(this, timestamp, words, actionGroup);
+              trigger = new ThenClass(this, timestamp, Parser.joinWords(words), actionGroup);
             }
             break;
           case "every":
-            trigger = new Every(this, timestamp, words);
+            trigger = new Every(this, timestamp, Parser.joinWords(words));
             break;
+          case "triggers":
+          case "trigger":
+            continue;
+          case "action":
+          case "actions":
+            continue;
           default:
             break;
         }
@@ -2093,7 +2156,7 @@
         actionGroup.addAction(this.content[i]);
       }
       this.actionGroups.push(actionGroup);
-      this.state = defaults_default.SCENE_RUNNING;
+      this.state = SCENE_RUNNING;
     }
     /**************************************************************************************************
     
@@ -2108,12 +2171,12 @@
     **************************************************************************************************/
     runGroup(index, now) {
       let actionGroup = this.actionGroups[index];
-      actionGroup.reset_count();
+      actionGroup.resetUnfinishedt();
       let actions = actionGroup.actions;
-      actionGroup.next_action = 0;
+      actionGroup.nextAction = 0;
       do {
-        this.runAction(actionGroup.next_action, actionGroup, now);
-      } while (actionGroup.next_action < actions.length);
+        this.runAction(actionGroup.nextAction, actionGroup, now);
+      } while (actionGroup.nextAction < actions.length);
     }
     /**************************************************************************************************
     
@@ -2128,10 +2191,10 @@
     **************************************************************************************************/
     runAction(actionIndex, actionGroup, now) {
       const action = actionGroup.actions[actionIndex];
-      let words = this.varList.expand_vars(action.text);
-      words = evaluate(words).split(/[\s,]+/);
-      ;
-      actionGroup.next_action += 1;
+      const expandedText = this.varList.expandVars(action.text);
+      const evaluatedText = evaluate(expandedText);
+      const words = Parser.splitWords(evaluatedText);
+      actionGroup.nextAction += 1;
       if (words[0].match(/^and$/i)) {
         words.shift();
       }
@@ -2206,6 +2269,11 @@
             command = "sprite";
             words[0] = "create";
             break;
+          case "group":
+            words.shift();
+            command = "group";
+            words[0] = "create";
+            break;
           case "graphic":
           case "shape":
             words.shift();
@@ -2231,7 +2299,6 @@
         case "echo":
         case "log":
           Globals.log.report(words.join(" "));
-          actionGroup.complete_action("echo");
           break;
         /**************************************************************************************************
         
@@ -2260,20 +2327,18 @@
             let dot = filename.lastIndexOf(".");
             tag = filename.slice(slash, dot);
           }
-          actionGroup.complete_action("load");
           for (let j = 0; j < this.images.length; j++) {
             if (this.images[j].tag == tag) {
               continue;
             }
           }
           if (filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".png")) {
-            const sg_image = new SG_image(this.folder + filename, tag);
+            const sg_image = new SGImage(this.folder + filename, tag);
             this.images.push(sg_image);
             sg_image.load_image();
           } else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
             AudioManager.create(tag, this.folder + filename);
           }
-          actionGroup.complete_action("load");
           break;
         /**************************************************************************************************
         
@@ -2294,7 +2359,6 @@
           } else {
             Globals.log.error("Expected folder name at " + action.number);
           }
-          actionGroup.complete_action("from");
           break;
         /**************************************************************************************************
         
@@ -2309,7 +2373,6 @@
         **************************************************************************************************/
         case "reset":
           {
-            actionGroup.complete_action("reset");
             const reset_type = Parser.testWord(words, ["sprite", "scene"], "scene");
             if (reset_type == "sprite") {
               if (words.length > 0) {
@@ -2318,15 +2381,15 @@
                 if (!sgSprite2) {
                   break;
                 }
-                sgSprite2.reset_size();
+                sgSprite2.resetFont();
                 sgSprite2.jiggle(0, 0, 0, 0);
                 sg_spitre.flicker(0);
                 sgSprite2.blink(0, 0);
                 sgSprite2.pulse(0);
                 sgSprite2.flip("r");
-                sgSprite2.set_tint("stop");
-                sgSprite2.set_blur(0);
-                sg_spriet.set_skew(0, 0);
+                sgSprite2.setTint("stop");
+                sgSprite2.setBlur(0);
+                sg_spriet.setSkew(0, 0);
                 sgSprite2.rotate("to", 0, "in");
               } else {
                 Globals.log.error("Missing sprite name at line " + action.number);
@@ -2380,8 +2443,8 @@
                     const h = Parser.getInt(words, 0);
                     if (w > 0 && h > 0) {
                       sgSprite2.image_portion = new PIXI.Rectangle(x, y, w, h);
-                      sq_sprite.size_x.setTargetValue(w);
-                      sq_sprite.size_y.setTargetValue(h);
+                      sq_sprite.sizeX.setTargetValue(w);
+                      sq_sprite.sizeY.setTargetValue(h);
                     }
                   }
                   sgSprite2.setVisibility(false);
@@ -2394,7 +2457,6 @@
           } else {
             Globals.log.error("Missing sprite data at line " + action.number);
           }
-          actionGroup.complete_action("sprite");
           break;
         /**************************************************************************************************
         
@@ -2408,7 +2470,6 @@
         
         **************************************************************************************************/
         case "place":
-          actionGroup.complete_action("place");
           if (words.length > 0) {
             let spriteName2 = Parser.getWord(words);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
@@ -2418,11 +2479,11 @@
             const hidden = Parser.testWord(words, "hidden");
             Parser.testWord(words, "at");
             if (Parser.testWord(words, ["center", "centre"])) {
-              sgSprite2.loc_x.setTargetValue(Globals.app.screen.width / 2);
-              sgSprite2.loc_y.setTargetValue(Globals.app.screen.height / 2);
+              sgSprite2.locX.setTargetValue(Globals.app.screen.width / 2);
+              sgSprite2.locY.setTargetValue(Globals.app.screen.height / 2);
             } else {
-              sgSprite2.loc_x.setTargetValue(Parser.getInt(words, 0) * Globals.scriptScaleX);
-              sgSprite2.loc_y.setTargetValue(Parser.getInt(words, 0) * Globals.scriptScaleY);
+              sgSprite2.locX.setTargetValue(Parser.getInt(words, 0) * Globals.scriptScaleX);
+              sgSprite2.locY.setTargetValue(Parser.getInt(words, 0) * Globals.scriptScaleY);
             }
             Parser.testWord(words, "depth");
             sgSprite2.depth = Parser.getInt(words, 0);
@@ -2430,8 +2491,8 @@
             const width = Parser.getInt(words, 0);
             const height = Parser.getInt(words, 0);
             if (width > 0 && height > 0) {
-              sgSprite2.size_x.setTargetValue(width * Globals.scriptScaleX);
-              sgSprite2.size_y.setTargetValue(height * Globals.scriptScaleY);
+              sgSprite2.sizeX.setTargetValue(width * Globals.scriptScaleX);
+              sgSprite2.sizeY.setTargetValue(height * Globals.scriptScaleY);
             }
             if (!hidden) {
               sgSprite2.setVisibility(true);
@@ -2452,7 +2513,6 @@
         
         **************************************************************************************************/
         case "replace":
-          actionGroup.complete_action("replace");
           if (words.length > 0) {
             let spriteName2 = words.shift();
             Parser.testWord(words, "with");
@@ -2522,7 +2582,73 @@
           } else {
             Globals.log.error("Missing put data at line " + action.number);
           }
-          actionGroup.complete_action("put");
+          break;
+        /**************************************************************************************************
+        
+            ######   ########   #######  ##     ## ########  
+           ##    ##  ##     ## ##     ## ##     ## ##     ## 
+           ##        ##     ## ##     ## ##     ## ##     ## 
+           ##   #### ########  ##     ## ##     ## ########  
+           ##    ##  ##   ##   ##     ## ##     ## ##        
+           ##    ##  ##    ##  ##     ## ##     ## ##        
+            ######   ##     ##  #######   #######  ##        
+        
+        **************************************************************************************************/
+        case "group":
+          if (words.length > 0) {
+            switch (Parser.getWord(words)) {
+              // more to add here?
+              case "create":
+                {
+                  Parser.testWord(words, "named");
+                  const groupName = Parser.getWord(words);
+                  if (SGSprite.getSprite(this.name, groupName, false)) {
+                    break;
+                  }
+                  const sgSprite2 = new SGSprite(null, groupName, SPRITE_GROUP);
+                  const group = new PIXI.Container();
+                  const blank = new PIXI.Graphics().rect(0, 0, Globals.displayWidth, Globals.displayHeight).fill({ color: 0, alpha: 0 });
+                  group.addChild(blank);
+                  group.pivot.set(Globals.displayWidth / 2, Globals.displayHeight / 2);
+                  sgSprite2.depth = Globals.nextZ(0);
+                  group.zIndex = sgSprite2.depth;
+                  Globals.root.addChild(group);
+                  sgSprite2.piSprite = group;
+                  sgSprite2.setVisibility(false);
+                  sgSprite2.setVisibility(false);
+                  sgSprite2.locX.setTargetValue(Globals.displayWidth / 2);
+                  sgSprite2.locY.setTargetValue(Globals.displayHeight / 2);
+                  sgSprite2.sizeX.setTargetValue(Globals.displayWidth);
+                  sgSprite2.sizeY.setTargetValue(Globals.displayHeight);
+                  this.sprites.push(sgSprite2);
+                }
+                break;
+              case "add": {
+                const spriteName2 = Parser.getWord(words);
+                const sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+                if (!sgSprite2) {
+                  break;
+                }
+                Parser.testWord(words, "to");
+                const groupName = Parser.getWord(words);
+                const groupSprite = SGSprite.getSprite(this.name, groupName);
+                if (!groupSprite) {
+                  break;
+                }
+                if (groupSprite.type != SPRITE_GROUP) {
+                  Globals.log.error("Not a group at line " + action.number);
+                  break;
+                }
+                sgSprite2.sgParent = groupName;
+                groupSprite.piSprite.reparentChild(sgSprite2.piSprite);
+                break;
+              }
+              default:
+                Globals.log.error("Unknown group command at line " + action.number);
+            }
+          } else {
+            Globals.log.error("Missing group data at line " + action.number);
+          }
           break;
         /**************************************************************************************************
         
@@ -2548,7 +2674,6 @@
           } else {
             Globals.log.error("Nothing to play at line " + action.number);
           }
-          actionGroup.complete_action("play");
           break;
         /**************************************************************************************************
         
@@ -2573,7 +2698,6 @@
           } else {
             Globals.log.error("No volume change at line " + action.number);
           }
-          actionGroup.complete_action("volume");
           break;
         /**************************************************************************************************
         
@@ -2588,57 +2712,55 @@
         **************************************************************************************************/
         case "text":
           if (words.length > 2) {
-            const text_command = words.shift();
+            const textCommand = words.shift();
             const textName = words.shift();
-            const text_args = words.join(" ");
+            const text_args = Parser.joinWords(words);
             let sgSprite2 = null;
-            if (text_command == "create") {
+            if (textCommand == "create") {
               sgSprite2 = new SGSprite(null, textName, SPRITE_TEXT);
-              const text_item = new PIXI.Text({
+              const textSprite = new PIXI.Text({
                 text: text_args,
                 style: {
-                  fontFamily: sgSprite2.text_font,
-                  fontSize: sgSprite2.text_size,
-                  fill: sgSprite2.fill_colour,
-                  align: sgSprite2.text_align
+                  fontFamily: sgSprite2.textFont,
+                  fontSize: sgSprite2.textFont,
+                  fill: sgSprite2.fillColour,
+                  align: sgSprite2.textAlign
                 }
               });
-              sgSprite2.piSprite = text_item;
+              sgSprite2.piSprite = textSprite;
               sgSprite2.piSprite.anchor = 0.5;
               sgSprite2.setVisibility(false);
-              sgSprite2.size_x.setTargetValue(text_item.width);
-              sgSprite2.size_y.setTargetValue(text_item.height);
-              Globals.root.addChild(text_item);
+              sgSprite2.sizeX.setTargetValue(textSprite.width);
+              sgSprite2.sizeY.setTargetValue(textSprite.height);
+              Globals.root.addChild(textSprite);
               this.sprites.push(sgSprite2);
-              actionGroup.complete_action("text");
               break;
             }
             sgSprite2 = SGSprite.getSprite(this.name, textName);
             if (sgSprite2.type != SPRITE_TEXT) {
               Globals.log.error("Sprite is not text at " + action.number);
-              actionGroup.complete_action("text");
               break;
             }
             let doUpdate = true;
-            switch (text_command) {
+            switch (textCommand) {
               case "font":
               case "fontfamily":
-                sgSprite2.text_font = text_args;
+                sgSprite2.textFont = text_args;
                 break;
               case "fontsize":
               case "size":
-                sgSprite2.text_size = text_args;
+                sgSprite2.textFont = text_args;
                 break;
               case "align":
-                sgSprite2.text_align = text_args;
+                sgSprite2.textAlign = text_args;
                 break;
               case "color":
               case "colour":
               case "fill":
-                sgSprite2.fill_colour = text_args;
+                sgSprite2.fillColour = text_args;
                 break;
               case "stroke":
-                sgSprite2.stroke_colour = text_args;
+                sgSprite2.strokeColour = text_args;
                 break;
               case "add":
                 sgSprite2.piSprite.text += "\n" + text_args;
@@ -2652,14 +2774,13 @@
                 break;
             }
             if (doUpdate) {
-              sgSprite2.set_style();
-              sgSprite2.size_x.setTargetValue(sgSprite2.piSprite.width);
-              sgSprite2.size_y.setTargetValue(sgSprite2.piSprite.height);
+              sgSprite2.setStyle();
+              sgSprite2.sizeX.setTargetValue(sgSprite2.piSprite.width);
+              sgSprite2.sizeY.setTargetValue(sgSprite2.piSprite.height);
             }
           } else {
             Globals.log.error("Missing argument at line " + action.number);
           }
-          actionGroup.complete_action("text");
           break;
         /**************************************************************************************************
         
@@ -2742,7 +2863,7 @@
                     break;
                   case "grid":
                     {
-                      const x = Parser.getInt(words, 0);
+                      const x = Parser.getInt(words, 100);
                       const y = Parser.getInt(words, x);
                       graphic = new PIXI.Graphics();
                       const width = Globals.app.screen.width;
@@ -2767,8 +2888,8 @@
                   const sgSprite2 = new SGSprite(null, graphicTag, SPRITE_GRAPHIC);
                   sgSprite2.piSprite = graphic;
                   sgSprite2.setVisibility(false);
-                  sgSprite2.size_x.setTargetValue(graphic.width);
-                  sgSprite2.size_y.setTargetValue(graphic.height);
+                  sgSprite2.sizeX.setTargetValue(graphic.width);
+                  sgSprite2.sizeY.setTargetValue(graphic.height);
                   this.sprites.push(sgSprite2);
                 } else {
                   Globals.log.error("Invalid graphic arguments at " + action.number);
@@ -2793,7 +2914,6 @@
           } else {
             Globals.log.error("Missing argument at line " + action.number);
           }
-          actionGroup.complete_action("graphic");
           break;
         /**************************************************************************************************
         
@@ -2820,13 +2940,11 @@
             let duration2 = Parser.getDuration(words, 0);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("moveX");
               break;
             }
             sgSprite2.move(x, y, byOrTo, inOrAt, duration2, now, makeCompletionCallback(actionGroup));
           } else {
             Globals.log.error("Missing move data at line " + action.number);
-            actionGroup.complete_action("moveX");
           }
           break;
         /**************************************************************************************************
@@ -2846,7 +2964,6 @@
           let speed = Parser.getInt(words, 0) * Globals.scriptScaleX;
           let sgSprite = SGSprite.getSprite(this.name, spriteName);
           sgSprite.set_speed(speed);
-          actionGroup.complete_action("speed");
           break;
         /**************************************************************************************************
         
@@ -2874,12 +2991,11 @@
             }
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (sgSprite2 != null) {
-              sgSprite2.set_depth(depth_type, value2);
+              sgSprite2.setDepth(depth_type, value2);
             }
           } else {
             Globals.log.error("Missing raise/lower data at line " + action.number);
           }
-          actionGroup.complete_action("raise");
           break;
         /**************************************************************************************************
         
@@ -2906,7 +3022,6 @@
             let duration2 = Parser.getDuration(words, 0);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("resize");
               break;
             }
             sgSprite2.resize(
@@ -2920,7 +3035,6 @@
             );
           } else {
             Globals.log.error("Missing resize data at line " + action.number);
-            actionGroup.complete_action("resize");
           }
           break;
         /**************************************************************************************************
@@ -2968,12 +3082,10 @@
             let duration2 = Parser.getDuration(words, 0);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("scale");
               break;
             }
             if (action2 == "reset") {
-              sgSprite2.reset_size();
-              actionGroup.complete_action("scale");
+              sgSprite2.resetFont();
             } else if (w > 0 || h > 0) {
               sgSprite2.scale(
                 w,
@@ -2984,11 +3096,9 @@
               );
             } else {
               Globals.log.error("Invalid scale data at line " + action2.number);
-              actionGroup.complete_action("scale");
             }
           } else {
             Globals.log.error("Missing scale data at line " + action.number);
-            actionGroup.complete_action("scale");
           }
           break;
         /**************************************************************************************************
@@ -3005,7 +3115,6 @@
         case "remove":
         case "erase":
         case "delete":
-          actionGroup.complete_action("remove");
           if (words.length > 1) {
             const type2 = Parser.testWord(words, ["sprite", "audio", "sound", "var", "variable"]);
             const item = Parser.getWord(words);
@@ -3029,7 +3138,7 @@
                 } else {
                   for (let i = 0; i < Globals.scenes.length; i++) {
                     if (Globals.scenes[i].name == item) {
-                      if (Globals.scenes[i].state != defaults_default.SCENE_STOPPED) {
+                      if (Globals.scenes[i].state != SCENE_STOPPED) {
                         Globals.log.error("Cannot delete running scene on line " + action.number);
                       } else {
                         Globals.scenes.splice(i, 1);
@@ -3068,13 +3177,11 @@
             let duration2 = Parser.getDuration(words, 0);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("rotate");
               break;
             }
             sgSprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(actionGroup));
           } else {
             Globals.log.error("Missing rotate data at line " + action.number);
-            actionGroup.complete_action("rotateX");
           }
           break;
         /**************************************************************************************************
@@ -3093,19 +3200,17 @@
           if (words.length > 0) {
             let spriteName2 = words.shift();
             let skew_type = Parser.testWord(words, ["to", "by", "at"], "to");
-            let skew_x = Parser.getInt(words, 0);
-            let skew_y = Parser.getInt(words, 0);
+            let skewX = Parser.getInt(words, 0);
+            let skewY = Parser.getInt(words, 0);
             let dur_type = Parser.testWord(words, ["in", "per"], "in");
             let duration2 = Parser.getDuration(words, 0);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("skew");
               break;
             }
-            sgSprite2.set_skew(skew_x, skew_y, skew_type, duration2, now, makeCompletionCallback(actionGroup));
+            sgSprite2.setSkew(skewX, skewY, skew_type, duration2, now, makeCompletionCallback(actionGroup));
           } else {
             Globals.log.error("Missing skew data at line " + action.number);
-            actionGroup.complete_action("skew");
           }
           break;
         /**************************************************************************************************
@@ -3128,16 +3233,15 @@
             Parser.testWord(words, ["deg", "degs", "degrees"]);
             Parser.testWord(words, "with");
             Parser.testWord(words, ["force", "velocity", "speed"]);
-            let initial_velocity = Parser.getInt(words, 10);
+            let initialVelocity = Parser.getInt(words, 10);
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("throw");
               break;
             }
             if (stop_or_at == "stop") {
               sgSprite2.throw("stop");
             } else {
-              sgSprite2.throw(angle, initial_velocity, now, makeCompletionCallback(actionGroup));
+              sgSprite2.throw(angle, initialVelocity, now, makeCompletionCallback(actionGroup));
             }
           } else {
             Globals.log.error("Missing throw data at line " + action.number);
@@ -3159,7 +3263,6 @@
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("drop");
               break;
             }
             if (Parser.testWord(words, "stop")) {
@@ -3183,7 +3286,6 @@
         
         **************************************************************************************************/
         case "flip":
-          actionGroup.complete_action();
           if (words.length > 0) {
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
@@ -3210,7 +3312,6 @@
         case "show":
         case "hide":
         case "toggle":
-          actionGroup.complete_action();
           if (words.length > 0) {
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
@@ -3245,12 +3346,11 @@
             const scene = _Scene.find(scene_name);
             if (scene !== false) {
               this.completionCallback = makeCompletionCallback(actionGroup);
-              scene.start(words.join(" "));
+              scene.start(Parser.joinWords(words));
             }
           } else {
             Globals.log.error("Missing scene name at line " + action.number);
           }
-          actionGroup.complete_action("start");
           break;
         /**************************************************************************************************
         
@@ -3265,7 +3365,6 @@
         **************************************************************************************************/
         case "copy":
         case "clone":
-          actionGroup.complete_action("clone");
           if (words.length > 0) {
             const scene_name = Parser.getWord(words);
             if (scene_name == MAIN_NAME) {
@@ -3303,7 +3402,6 @@
         **************************************************************************************************/
         case "stop":
         case "halt":
-          actionGroup.complete_action("stop");
           this.completionCallback = makeCompletionCallback(actionGroup);
           if (words.length > 0) {
             while (words.length > 0) {
@@ -3367,7 +3465,6 @@
           } else {
             Globals.log.error("Missing variable name at line " + action.number);
           }
-          actionGroup.complete_action("let");
           break;
         case "assign":
           if (words.length > 0) {
@@ -3392,7 +3489,6 @@
           } else {
             Globals.log.error("Missing variable name at line " + action.number);
           }
-          actionGroup.complete_action("assign");
           break;
         case "increment":
         case "decrement":
@@ -3410,7 +3506,6 @@
           } else {
             Globals.log.error("Missing variable name at line " + action.number);
           }
-          actionGroup.complete_action(command);
           break;
         case "choose":
           if (words.length > 2) {
@@ -3420,7 +3515,6 @@
           } else {
             Globals.log.error("Missing variable name at line " + action.number);
           }
-          actionGroup.complete_action("choose");
           break;
         case "match":
           if (words.length > 4) {
@@ -3452,7 +3546,6 @@
           } else {
             Globals.log.error("Missing values for match at line " + action.number);
           }
-          actionGroup.complete_action("match");
           break;
         /**************************************************************************************************
         
@@ -3466,7 +3559,6 @@
         
         **************************************************************************************************/
         case "flicker":
-          actionGroup.complete_action("flicker");
           if (words.length > 0) {
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
@@ -3477,11 +3569,11 @@
             if (on_off == "stop") {
               sgSprite2.flicker(0, 0);
             } else {
-              let flicker_size = Parser.getInt(words, 0, 0, 50) * Globals.scriptScaleX;
+              let flickerFont = Parser.getInt(words, 0, 0, 50) * Globals.scriptScaleX;
               Parser.testWord(words, "with");
               Parser.testWord(words, "chance");
               let flickerChance = Parser.getInt(words, 50);
-              sgSprite2.flicker(flicker_size, flickerChance);
+              sgSprite2.flicker(flickerFont, flickerChance);
             }
           } else {
             Globals.log.error("Missing values at line " + action.number);
@@ -3500,7 +3592,6 @@
         **************************************************************************************************/
         case "jiggle":
         case "jitter":
-          actionGroup.complete_action("jiggle");
           if (words.length > 0) {
             let sgSpriteName = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
@@ -3511,13 +3602,13 @@
             if (on_off == "stop") {
               sgSprite2.jiggle(0, 0, 0);
             } else {
-              let jiggle_x = Parser.getInt(words, 0) * Globals.scriptScaleX;
-              let jiggle_y = Parser.getInt(words, 0) * Globals.scriptScaleY;
+              let jiggleX = Parser.getInt(words, 0) * Globals.scriptScaleX;
+              let jiggleY = Parser.getInt(words, 0) * Globals.scriptScaleY;
               let jiggle_r = Parser.getInt(words, 0);
               Parser.testWord(words, "with");
               Parser.testWord(words, "chance");
               let jiggleChance = Parser.getInt(words, 50);
-              sgSprite2.jiggle(jiggle_x, jiggle_y, jiggle_r, jiggleChance);
+              sgSprite2.jiggle(jiggleX, jiggleY, jiggle_r, jiggleChance);
             }
           } else {
             Globals.log.error("Missing values at line " + action.number);
@@ -3535,15 +3626,14 @@
         
         **************************************************************************************************/
         case "flash":
-          actionGroup.complete_action("flash");
           if (words.length > 0) {
             let sgSpriteName = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
             if (!sgSprite2) {
               break;
             }
-            let flash_count = Parser.getInt(words, 0, 1, 10);
-            sgSprite2.flash(flash_count, now);
+            let flashCount = Parser.getInt(words, 0, 1, 10);
+            sgSprite2.flash(flashCount, now);
           } else {
             Globals.log.error("Missing values at line " + action.number);
           }
@@ -3560,7 +3650,6 @@
         
         **************************************************************************************************/
         case "blink":
-          actionGroup.complete_action("blink");
           if (words.length > 0) {
             let sgSpriteName = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
@@ -3596,7 +3685,6 @@
         **************************************************************************************************/
         case "pulse":
         case "pulsate":
-          actionGroup.complete_action("pulse");
           if (words.length > 0) {
             let sgSpriteName = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
@@ -3612,10 +3700,10 @@
               Parser.testWord(words, "per");
               Parser.testWord(words, "second");
               Parser.testWord(words, "from");
-              let pulse_min = Parser.getInt(words, 0, 0, 100);
+              let pulseMin = Parser.getInt(words, 0, 0, 100);
               Parser.testWord(words, "to");
-              let pulse_max = Parser.getInt(words, 100, 0, 100);
-              sgSprite2.pulse(pulseRate, pulse_min, pulse_max, now);
+              let pulseMax = Parser.getInt(words, 100, 0, 100);
+              sgSprite2.pulse(pulseRate, pulseMin, pulseMax, now);
             }
           } else {
             Globals.log.error("Missing values at line " + action.number);
@@ -3638,7 +3726,6 @@
             let sgSpriteName = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, sgSpriteName);
             if (!sgSprite2) {
-              actionGroup.complete_action("fade");
               break;
             }
             let fade_type = Parser.testWord(words, ["to", "by", "up", "down"], "to");
@@ -3646,11 +3733,10 @@
             Parser.testWord(words, "in");
             let duration2 = Parser.getDuration(words, 0);
             if (sgSprite2 != null) {
-              sgSprite2.set_trans(value2, duration2, fade_type, now, makeCompletionCallback(actionGroup));
+              sgSprite2.setTransparency(value2, duration2, fade_type, now, makeCompletionCallback(actionGroup));
             }
           } else {
             Globals.log.error("Missing fade parameters");
-            actionGroup.complete_action("fade");
           }
           break;
         /**************************************************************************************************
@@ -3666,7 +3752,6 @@
         **************************************************************************************************/
         case "wave":
         case "sway":
-          actionGroup.complete_action("wave");
           if (words.length > 0) {
             let sgSpriteName = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName);
@@ -3681,16 +3766,16 @@
                 sgSprite2.sway(0, 0, 0);
               }
             } else {
-              let wave_max = Parser.getInt(words, 0, 1, 10);
+              let waveMax = Parser.getInt(words, 0, 1, 10);
               Parser.testWord(words, "in");
               let waveRate = Parser.getDuration(words, 1);
               Parser.testWord(words, "with");
               Parser.testWord(words, "chance");
               let waveChance = Parser.getInt(words, 100, 0, 100);
               if (command == "wave") {
-                sgSprite2.wave(wave_max, waveRate, waveChance);
+                sgSprite2.wave(waveMax, waveRate, waveChance);
               } else {
-                sgSprite2.sway(wave_max, waveRate, waveChance);
+                sgSprite2.sway(waveMax, waveRate, waveChance);
               }
             }
           } else {
@@ -3714,7 +3799,6 @@
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action("blur");
               break;
             }
             let blur_type = Parser.testWord(words, ["to", "by", "up", "down"], "to");
@@ -3722,11 +3806,10 @@
             Parser.testWord(words, "in");
             let duration2 = Parser.getDuration(words, 0);
             if (sgSprite2 != null) {
-              sgSprite2.set_blur(value2, duration2, blur_type, now, makeCompletionCallback(actionGroup));
+              sgSprite2.setBlur(value2, duration2, blur_type, now, makeCompletionCallback(actionGroup));
             }
           } else {
             Globals.log.error("Missing fade parameters");
-            actionGroup.complete_action("blur");
           }
           break;
         /**************************************************************************************************
@@ -3741,7 +3824,6 @@
         
         **************************************************************************************************/
         case "tint":
-          actionGroup.complete_action("tint");
           if (words.length > 0) {
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
@@ -3750,7 +3832,7 @@
             }
             Parser.testWord(words, ["to", "by", "at"]);
             const value2 = Parser.getWord(words, "red");
-            sgSprite2.set_tint(value2);
+            sgSprite2.setTint(value2);
           } else {
             Globals.log.error("Missing tint colour");
           }
@@ -3761,7 +3843,6 @@
             let spriteName2 = words.shift();
             let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
             if (!sgSprite2) {
-              actionGroup.complete_action(command);
               break;
             }
             Parser.testWord(words, ["to", "by", "at"]);
@@ -3771,10 +3852,9 @@
             }
             Parser.testWord(words, "in");
             let duration2 = Parser.getDuration(words, 0);
-            sgSprite2.set_tint(value2, duration2, now, makeCompletionCallback(actionGroup));
+            sgSprite2.setTint(value2, duration2, now, makeCompletionCallback(actionGroup));
           } else {
             Globals.log.error("Missing " + command + " parameters");
-            actionGroup.complete_action(command);
           }
           break;
         /**************************************************************************************************
@@ -3789,7 +3869,6 @@
         
         **************************************************************************************************/
         case "for":
-          actionGroup.complete_action("for");
           if (words.length > 0) {
             let varName = words.shift();
             Parser.testWord(words, "in");
@@ -3803,7 +3882,6 @@
         case "next":
         case "endfor":
           {
-            actionGroup.complete_action("next");
             const stackSize = actionGroup.stack.length;
             if (stackSize < 1) {
               Globals.log.error("No for loop for next at " + action.number);
@@ -3814,7 +3892,7 @@
               actionGroup.stack.pop();
             } else {
               this.varList.setValue(stackFrame.varName, stackFrame.forValues.shift());
-              actionGroup.next_action = stackFrame.jump_line;
+              actionGroup.nextAction = stackFrame.jump_line;
             }
           }
           break;
@@ -3830,7 +3908,6 @@
         
         **************************************************************************************************/
         case "if":
-          actionGroup.complete_action("if");
           if (words.length > 0) {
             if (actionGroup.failedIfCount > 0) {
               actionGroup.failedIfCount += 1;
@@ -3894,37 +3971,37 @@
             case "scenes":
             case "all":
               for (let i = 0; i < Globals.scenes.length; i++) {
-                Globals.log.report(Globals.scenes[i].scene_data());
+                Globals.log.report(Globals.scenes[i].showSceneData());
               }
               break;
             case "scene":
               if (arg) {
                 const listScene = _Scene.find(arg);
                 if (listScene) {
-                  Globals.log.report(listScene.scene_data());
+                  Globals.log.report(listScene.showSceneData());
                 }
               } else {
-                Globals.log.report(this.scene_data());
+                Globals.log.report(this.showSceneData());
               }
               break;
             case "sprites":
               if (arg) {
                 const listScene = _Scene.find(arg);
                 if (listScene) {
-                  Globals.log.report(listScene.list_sprites());
+                  Globals.log.report(listScene.listSprites());
                 }
               } else {
-                Globals.log.report(this.list_sprites());
+                Globals.log.report(this.listSprites());
               }
               break;
             case "images":
               if (arg) {
                 const listScene = _Scene.find(arg);
                 if (listScene) {
-                  Globals.log.report(listScene.list_images());
+                  Globals.log.report(listScene.listImages());
                 }
               } else {
-                Globals.log.report(this.list_images());
+                Globals.log.report(this.listImages());
               }
               break;
             case "actions":
@@ -3946,7 +4023,7 @@
 
   // src/main.js
   var SlowGlass = class _SlowGlass {
-    static next_action_run = 0;
+    static nextAction_run = 0;
     static next_spriteUpdate = 0;
     static sg_id = "body";
     static clean = true;
@@ -3994,8 +4071,8 @@
         if (!currentLine.match(/\w+/)) {
           continue;
         }
-        currentLine = currentLine.replace(/^[^a-zA-Z\$]+/, "");
-        let words = currentLine.toLowerCase().split(/[\s,]+/);
+        currentLine = currentLine.replace(/^[^a-zA-Z"\$]+/, "");
+        let words = Parser.splitWords(currentLine.toLowerCase());
         if (words[0] == "and") {
           words.shift();
         }
@@ -4146,7 +4223,7 @@
     }
     update(ticker) {
       let current_millis = Date.now();
-      if (_SlowGlass.next_action_run < current_millis) {
+      if (_SlowGlass.nextAction_run < current_millis) {
         if (Globals.app.screen.width != Globals.displayWidth) {
           Globals.app.screen.width = Globals.displayWidth;
         }
@@ -4155,7 +4232,7 @@
         }
         for (let i = 0; i < Globals.scenes.length; i++) {
           let current = Globals.scenes[i];
-          if (current.state != defaults_default.SCENE_RUNNING) {
+          if (current.state != SCENE_RUNNING) {
             continue;
           }
           for (let j = 0; j < current.timers.length; j++) {
@@ -4185,12 +4262,12 @@
             }
           }
         }
-        _SlowGlass.next_action_run = current_millis + defaults_default.TRIGGER_RATE;
+        _SlowGlass.nextAction_run = current_millis + defaults_default.TRIGGER_RATE;
       }
       if (_SlowGlass.next_spriteUpdate < current_millis) {
         for (let i = 0; i < Globals.scenes.length; i++) {
           let current = Globals.scenes[i];
-          if (current.state != defaults_default.SCENE_RUNNING) {
+          if (current.state != SCENE_RUNNING) {
             continue;
           }
           for (let j = 0; j < current.sprites.length; j++) {
@@ -4224,10 +4301,10 @@
         }
         interactiveGroup.actions.push(new Line(i + 1, lineText));
       }
-      interactiveGroup.next_action = 0;
+      interactiveGroup.nextAction = 0;
       do {
-        topScene.runAction(interactiveGroup.next_action, interactiveGroup, Date.now());
-      } while (interactiveGroup.next_action < interactiveGroup.actions.length);
+        topScene.runAction(interactiveGroup.nextAction, interactiveGroup, Date.now());
+      } while (interactiveGroup.nextAction < interactiveGroup.actions.length);
     }
     setDrawingParent(elementID) {
       _SlowGlass.sg_id = elementID;

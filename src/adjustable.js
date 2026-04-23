@@ -26,7 +26,7 @@ export class Adjustable {
         this.jigChance = 0;
         // Accelerating
         this.accelerationRate = 0;
-        this.acceleration_time = 0;
+        this.accelerationTime = 0;
         // Callbacks
         this.positionCallback = null;
         this.accelerateCallback = null;

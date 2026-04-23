@@ -6,9 +6,10 @@ import { AudioManager } from "./audio.js";
 import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
 import * as constants from './constants.js';
+import { Parser } from "./parser.js";
 
 class SlowGlass {
-    static next_action_run = 0;
+    static nextAction_run = 0;
     static next_spriteUpdate = 0;
     static sg_id = "body";
     static clean = true;
@@ -65,8 +66,8 @@ class SlowGlass {
                 continue;
             }
             // ignore any punctuation used to show indenting
-            currentLine = currentLine.replace(/^[^a-zA-Z\$]+/,"");
-            let words = currentLine.toLowerCase().split(/[\s,]+/);
+            currentLine = currentLine.replace(/^[^a-zA-Z"\$]+/,"");
+            let words = Parser.splitWords(currentLine.toLowerCase());
             // ignore and as the first word (syntactic sugar)
             if (words[0] == 'and') {
                 words.shift();
@@ -238,7 +239,7 @@ class SlowGlass {
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"
         // Could adjust this if needed in defaults
         let current_millis = Date.now();
-        if (SlowGlass.next_action_run < current_millis) {
+        if (SlowGlass.nextAction_run < current_millis) {
             if (Globals.app.screen.width != Globals.displayWidth) {
                 Globals.app.screen.width = Globals.displayWidth;
             }
@@ -247,7 +248,7 @@ class SlowGlass {
             }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (current.state != defaults.SCENE_RUNNING) {
+                if (current.state != constants.SCENE_RUNNING) {
                     continue;
                 }
                 // First let's see if any local timers have expired
@@ -286,13 +287,13 @@ class SlowGlass {
                     }
                 }
             }
-            SlowGlass.next_action_run = current_millis + Defaults.TRIGGER_RATE;
+            SlowGlass.nextAction_run = current_millis + Defaults.TRIGGER_RATE;
         }
         // But sprites can be updated up to every frame if we want...
         if (SlowGlass.next_spriteUpdate < current_millis) {
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (current.state != defaults.SCENE_RUNNING) {
+                if (current.state != constants.SCENE_RUNNING) {
                     continue;
                 }
                 // Found an active scene, now go through each sprite
@@ -330,10 +331,10 @@ class SlowGlass {
             }
             interactiveGroup.actions.push(new Utils.Line(i + 1, lineText));
         }
-        interactiveGroup.next_action = 0;
+        interactiveGroup.nextAction = 0;
         do {
-            topScene.runAction(interactiveGroup.next_action, interactiveGroup, Date.now());
-        } while (interactiveGroup.next_action < interactiveGroup.actions.length);
+            topScene.runAction(interactiveGroup.nextAction, interactiveGroup, Date.now());
+        } while (interactiveGroup.nextAction < interactiveGroup.actions.length);
     }
 
     setDrawingParent(elementID) {

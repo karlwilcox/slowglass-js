@@ -7,6 +7,69 @@ export class Parser {
         ; // set any options here
     }
 
+    static joinWords(words) {
+        let result = "";
+        let isFirst = true;
+
+        for (let i = 0; i < words.length; i++) {
+            if (isFirst) {
+                isFirst = false;
+            } else { // needs a space before
+                result += " ";
+            }
+            if (words[i].includes(" ")) {
+                result += `"${words[i]}"`;
+            } else {
+                result += words[i];
+            }
+        }
+        return result;
+    }
+
+    static splitWords(input) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        let escape = false;
+
+        for (let i = 0; i < input.length; i++) {
+            const char = input[i];
+
+            if (escape) {
+            // Add character literally (including quotes)
+            current += char;
+            escape = false;
+            continue;
+            }
+
+            if (char === '\\') {
+            escape = true;
+            continue;
+            }
+
+            if (char === '"') {
+            inQuotes = !inQuotes;
+            continue; // Do not include the quote itself
+            }
+
+            if (char === ' ' && !inQuotes) {
+            if (current.length > 0) {
+                result.push(current);
+                current = '';
+            }
+            continue;
+            }
+
+            current += char;
+        }
+
+        if (current.length > 0) {
+            result.push(current);
+        }
+
+        return result;
+    }
+
     static testWord(words, word, def) {
         let retval = false;
         if (words.length > 0) {
@@ -60,7 +123,7 @@ export class Parser {
         return(def);
     }
 
-    static get_time_units(words, def) {
+    static getTime_units(words, def) {
         // return a multiplier that gives seconds
         let mult = 1;
         let units = Parser.getWord(words, def);
@@ -81,7 +144,7 @@ export class Parser {
 
     static getDuration(words, def) {
         // by default duration is in seconds
-        let value = Parser.getFloat(words, def) * Parser.get_time_units(words, "s");
+        let value = Parser.getFloat(words, def) * Parser.getTime_units(words, "s");
         return(Math.round(value));
     }
 
@@ -91,7 +154,7 @@ export class Parser {
             Parser.testWord(words, extra);
         }
         Parser.testWord(words,"per");
-        value *= Parser.get_time_units(words,"s");
+        value *= Parser.getTime_units(words,"s");
         return value;
     }
 }
