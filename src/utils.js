@@ -92,12 +92,17 @@ export class Line {
 **************************************************************************************************/
 
 export class StackFrame {
-    constructor(line_no, values, varName) {
-        this.type = "";
+    constructor(type, line_no, data = null, varName = null) {
+        this.type = type;
         // Looping constructs
         this.varName = varName;
+        this.forValues = data;
+        // While constructs
+        this.whileTest = data;
+        // common
         this.jump_line = line_no;
-        this.forValues = values;
+        // runaway protection
+        this.counter = 0;
     }
 }
 

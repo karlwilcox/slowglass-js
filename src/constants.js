@@ -23,3 +23,7 @@ export const SCENE_PAUSED = "_PAUSED_";
 export const SCALE_FIT = "_FIT_";
 export const SCALE_STRETCH = "_STRETCH_";
 export const SCALE_NONE = "_NONE_";
+
+// StackFrame types
+export const STACK_FOR = "_FOR_";
+export const STACK_REPEAT = "_REPEAT_";

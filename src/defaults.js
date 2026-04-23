@@ -19,4 +19,5 @@ export default {
     DEPTH_RIGHT: 301,
     DEPTH_FOREGROUND: 400,
     DEPTH_FRAME: 1000,
+    LOOP_MAXIMUM: 1000, // greatest number of times we allow a loop to run
 };

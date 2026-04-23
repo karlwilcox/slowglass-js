@@ -228,6 +228,8 @@
   var SCALE_FIT = "_FIT_";
   var SCALE_STRETCH = "_STRETCH_";
   var SCALE_NONE = "_NONE_";
+  var STACK_FOR = "_FOR_";
+  var STACK_REPEAT = "_REPEAT_";
 
   // src/vars.js
   var Variable = class {
@@ -463,6 +465,14 @@
             case "size.y":
               value2 = sgSprite.sizeY.value();
               break;
+            case "pivot.x":
+            case "px":
+              value2 = sgSprite.piSprite.pivot.x;
+              break;
+            case "pivot.y":
+            case "py":
+              value2 = sgSprite.piSprite.pivot.y;
+              break;
             case "angle":
             case "rotation":
               value2 = sgSprite.angle.value();
@@ -604,11 +614,12 @@
     }
   };
   var StackFrame = class {
-    constructor(line_no, values, varName) {
-      this.type = "";
+    constructor(type, line_no, data = null, varName = null) {
+      this.type = type;
       this.varName = varName;
+      this.forValues = data;
+      this.whileTest = data;
       this.jump_line = line_no;
-      this.forValues = values;
     }
   };
   var ActionGroup = class {
@@ -937,6 +948,8 @@
       this.scaleY = new Adjustable(0);
       this.flipH = false;
       this.flipV = false;
+      this.pivotX = new Adjustable(50, 0, 100);
+      this.pivotY = new Adjustable(50, 0, 100);
       this.visible = true;
       this.transparency = new Adjustable(100, 0, 100);
       this.tintValue = new Adjustable(0, 0, 100);
@@ -960,7 +973,7 @@
       this.bluriness = new Adjustable(0, 0, 100);
       this.blurFilter = null;
       this.textFont = "arial";
-      this.textFont = 24;
+      this.textSize = 24;
       this.textAlign = "center";
       this.fillColour = "black";
       this.strokeColour = "black";
@@ -1024,7 +1037,13 @@
       }
       if (dur_type == "in") {
         this.angle.setTargetValue(newValue, duration, now, callback);
+      } else {
+        this.angle.setTargetValue(newValue, 0);
       }
+    }
+    pivotPoint(pivotX, pivotY, duration, now, callback) {
+      this.pivotX.setTargetValue(pivotX, duration, now, callback);
+      this.pivotY.setTargetValue(pivotY, duration, now);
     }
     setTransparency(target, duration, fade_type, now, callback) {
       switch (fade_type) {
@@ -1332,9 +1351,21 @@
           this.piSprite.position.set(this.locX.value() + deltaX, this.locY.value() + deltaY);
         }
       }
-      if (this.angle.updateValue()) {
+      const pivotOnX = this.pivotX.updateValue();
+      const pivotOnY = this.pivotY.updateValue();
+      const changeAngle = this.angle.updateValue();
+      if (pivotOnX || pivotOnY || changeAngle) {
         if (this.piSprite !== null) {
+          if (this.type == SPRITE_GRAPHIC) {
+            this.piSprite.origin.set(
+              this.sizeX / -2 + this.sizeX * this.pivotX.value() / 100,
+              this.sizeY / -2 + this.sizeY * this.pivotY.value() / 100
+            );
+          } else {
+            this.piSprite.anchor.set(this.sizeX * this.pivotX.value() / 100, this.sizeY * this.pivotY.value() / 100);
+          }
           this.piSprite.angle = this.angle.value();
+          this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
         }
       }
       if (this.transparency.updateValue()) {
@@ -2949,6 +2980,33 @@
           break;
         /**************************************************************************************************
         
+        ########  #### ##     ##  #######  ######## 
+        ##     ##  ##  ##     ## ##     ##    ##    
+        ##     ##  ##  ##     ## ##     ##    ##    
+        ########   ##  ##     ## ##     ##    ##    
+        ##         ##   ##   ##  ##     ##    ##    
+        ##         ##    ## ##   ##     ##    ##    
+        ##        ####    ###     #######     ##    
+        
+        **************************************************************************************************/
+        case "pivot":
+          if (words.length > 0) {
+            let spriteName2 = words.shift();
+            Parser.testWord(words, ["around", "from"]);
+            let x = Parser.getInt(words, 0);
+            let y = Parser.getInt(words, 0);
+            let duration2 = Parser.getDuration(words, 0);
+            let sgSprite2 = SGSprite.getSprite(this.name, spriteName2);
+            if (!sgSprite2) {
+              break;
+            }
+            sgSprite2.pivotPoint(x, y, duration2, now, makeCompletionCallback(actionGroup));
+          } else {
+            Globals.log.error("Missing pivot data at line " + action.number);
+          }
+          break;
+        /**************************************************************************************************
+        
             ######  ########  ######## ######## ########  
            ##    ## ##     ## ##       ##       ##     ## 
            ##       ##     ## ##       ##       ##     ## 
@@ -3873,8 +3931,8 @@
             let varName = words.shift();
             Parser.testWord(words, "in");
             this.varList.setValue(varName, Parser.getWord(words, defaults_default.NOTFOUND));
-            const stackFrame = new StackFrame(actionIndex + 1, words, varName);
-            actionGroup.stack.push(stackFrame);
+            const stackFrame2 = new StackFrame(STACK_FOR, actionIndex + 1, words, varName);
+            actionGroup.stack.push(stackFrame2);
           } else {
             Globals.log.error("Missing for loop");
           }
@@ -3887,12 +3945,51 @@
               Globals.log.error("No for loop for next at " + action.number);
               break;
             }
-            const stackFrame = actionGroup.stack[stackSize - 1];
-            if (stackFrame.forValues.length < 1) {
+            const stackFrame2 = actionGroup.stack[stackSize - 1];
+            if (stackFrame2.type != STACK_FOR) {
+              Globals.log.error("For loop error at " + action.number);
+              break;
+            }
+            if (stackFrame2.forValues.length < 1) {
               actionGroup.stack.pop();
             } else {
-              this.varList.setValue(stackFrame.varName, stackFrame.forValues.shift());
-              actionGroup.nextAction = stackFrame.jump_line;
+              this.varList.setValue(stackFrame2.varName, stackFrame2.forValues.shift());
+              actionGroup.nextAction = stackFrame2.jump_line;
+            }
+          }
+          break;
+        /**************************************************************************************************
+        
+           ########  ######## ########  ########    ###    ######## 
+           ##     ## ##       ##     ## ##         ## ##      ##    
+           ##     ## ##       ##     ## ##        ##   ##     ##    
+           ########  ######   ########  ######   ##     ##    ##    
+           ##   ##   ##       ##        ##       #########    ##    
+           ##    ##  ##       ##        ##       ##     ##    ##    
+           ##     ## ######## ##        ######## ##     ##    ##    
+        
+        **************************************************************************************************/
+        case "repeat":
+          const stackFrame = new StackFrame(STACK_REPEAT, actionIndex + 1);
+          actionGroup.stack.push(stackFrame);
+          break;
+        case "until":
+          {
+            const stackSize = actionGroup.stack.length;
+            if (stackSize < 1) {
+              Globals.log.error("No repeat for until at " + action.number);
+              break;
+            }
+            const stackFrame2 = actionGroup.stack[stackSize - 1];
+            if (stackFrame2.type != STACK_REPEAT) {
+              Globals.log.error("Repeat loop error at " + action.number);
+              break;
+            }
+            const result = logical(words);
+            if (result) {
+              actionGroup.stack.pop();
+            } else {
+              actionGroup.nextAction = stackFrame2.jump_line;
             }
           }
           break;

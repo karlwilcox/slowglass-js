@@ -99,6 +99,9 @@ export class SGSprite {
         this.scaleY = new Adjustable(0);
         this.flipH = false;
         this.flipV = false;
+        // rotation point
+        this.pivotX = new Adjustable(50,0,100);
+        this.pivotY = new Adjustable(50,0,100);
         // visibility
         this.visible = true;
         this.transparency = new Adjustable(100,0,100);
@@ -130,7 +133,7 @@ export class SGSprite {
         this.blurFilter = null;
         // Text features
         this.textFont = 'arial';
-        this.textFont = 24;
+        this.textSize = 24;
         this.textAlign = "center";
         this.fillColour = "black";
         this.strokeColour = "black";
@@ -206,7 +209,14 @@ export class SGSprite {
         } // add "at"
         if (dur_type == "in") {
             this.angle.setTargetValue(newValue, duration, now, callback);
+        } else {
+            this.angle.setTargetValue(newValue, 0);
         }
+    }
+
+    pivotPoint(pivotX, pivotY, duration, now, callback) {
+        this.pivotX.setTargetValue(pivotX, duration, now, callback);
+        this.pivotY.setTargetValue(pivotY, duration, now); // only need one callback
     }
 
     setTransparency(target, duration, fade_type, now, callback) {
@@ -550,10 +560,24 @@ export class SGSprite {
                 this.piSprite.position.set(this.locX.value() + deltaX, this.locY.value() + deltaY);
             }
         }
+
         // Update rotation angle
-        if (this.angle.updateValue()) {
+        const pivotOnX = this.pivotX.updateValue();
+        const pivotOnY = this.pivotY.updateValue();
+        const changeAngle = this.angle.updateValue();
+        if (pivotOnX || pivotOnY || changeAngle) {
             if (this.piSprite !== null ) { // image has been loaded
+                if (this.type == constants.SPRITE_GRAPHIC) { // graphics are drawn around their centre
+                    // update pivot point (before turning)
+                    this.piSprite.origin.set((this.sizeX / -2) + (this.sizeX * this.pivotX.value()/100),
+                                             (this.sizeY / -2) + (this.sizeY * this.pivotY.value()/100));
+                } else { // sprite.type == constants.SPRITE_IMAGE, etc.
+                        // update pivot point (before turning)
+                        this.piSprite.anchor.set(this.sizeX * this.pivotX.value()/100, this.sizeY * this.pivotY.value()/100);
+                }
                 this.piSprite.angle = this.angle.value();
+                // put it back to the centre for scaling etc. afterwards
+                this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
             }
         }
 

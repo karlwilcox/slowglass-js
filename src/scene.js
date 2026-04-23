@@ -1144,6 +1144,35 @@ export class Scene {
 
 /**************************************************************************************************
 
+########  #### ##     ##  #######  ######## 
+##     ##  ##  ##     ## ##     ##    ##    
+##     ##  ##  ##     ## ##     ##    ##    
+########   ##  ##     ## ##     ##    ##    
+##         ##   ##   ##  ##     ##    ##    
+##         ##    ## ##   ##     ##    ##    
+##        ####    ###     #######     ##    
+
+**************************************************************************************************/
+
+            case "pivot":
+                if (words.length > 0) {
+                    let spriteName = words.shift();
+                    Parser.testWord(words,["around","from"]);
+                    let x = Parser.getInt(words, 0);
+                    let y = Parser.getInt(words, 0);
+                    let duration = Parser.getDuration(words, 0);
+                    let sgSprite = SGSprite.getSprite(this.name, spriteName);
+                    if (!sgSprite) {
+                        break;
+                    }
+                    sgSprite.pivotPoint(x, y, duration, now, Utils.makeCompletionCallback(actionGroup));
+                } else {
+                    Globals.log.error("Missing pivot data at line " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
     ######  ########  ######## ######## ########  
    ##    ## ##     ## ##       ##       ##     ## 
    ##       ##     ## ##       ##       ##     ## 
@@ -2107,14 +2136,11 @@ export class Scene {
 **************************************************************************************************/
 
             case "for":
-                // At the moment this breaks the completion callbacks for "then" 
-                // we will need to up the count depending on how many lines are
-                // in the loop
                 if (words.length > 0) {
                     let varName = words.shift();
                     Parser.testWord(words, "in");
                     this.varList.setValue(varName,Parser.getWord(words,defaults.NOTFOUND));
-                    const stackFrame = new Utils.StackFrame(actionIndex + 1, words, varName);
+                    const stackFrame = new Utils.StackFrame(constants.STACK_FOR, actionIndex + 1, words, varName);
                     actionGroup.stack.push(stackFrame);
                 } else {
                     Globals.log.error("Missing for loop");
@@ -2130,12 +2156,64 @@ export class Scene {
                         break;
                     }
                     const stackFrame = actionGroup.stack[stackSize - 1];
+                    if (stackFrame.type != constants.STACK_FOR) {
+                        Globals.log.error("For loop error at " + action.number);
+                        break;
+                    }
+                    if (stackFrame.counter++ > defaults.LOOP_MAXIMUM) {
+                        Globals.log.error("Looping exceeded at " + action.number);
+                        actionGroup.stack.pop();
+                        break;
+                    }
                     if (stackFrame.forValues.length < 1) {
                         // used all words, unwind stack.
                         actionGroup.stack.pop();
                         // just carry on with next line
                     } else { // still got more values to use up
                         this.varList.setValue(stackFrame.varName, stackFrame.forValues.shift());
+                        actionGroup.nextAction = stackFrame.jump_line;
+                    }
+                }
+                break;
+
+/**************************************************************************************************
+
+   ########  ######## ########  ########    ###    ######## 
+   ##     ## ##       ##     ## ##         ## ##      ##    
+   ##     ## ##       ##     ## ##        ##   ##     ##    
+   ########  ######   ########  ######   ##     ##    ##    
+   ##   ##   ##       ##        ##       #########    ##    
+   ##    ##  ##       ##        ##       ##     ##    ##    
+   ##     ## ######## ##        ######## ##     ##    ##    
+
+**************************************************************************************************/
+
+            case "repeat":
+                const stackFrame = new Utils.StackFrame(constants.STACK_REPEAT, actionIndex + 1);
+                actionGroup.stack.push(stackFrame);
+                break;
+            case "until": {
+                    const stackSize = actionGroup.stack.length;
+                    // error cases first
+                    if (stackSize < 1) {
+                        Globals.log.error("No repeat for until at " + action.number);
+                        break;
+                    }
+                    const stackFrame = actionGroup.stack[stackSize - 1];
+                    if (stackFrame.type != constants.STACK_REPEAT) {
+                        Globals.log.error("Repeat loop error at " + action.number);
+                        break;
+                    }
+                    if (stackFrame.counter++ > defaults.LOOP_MAXIMUM) {
+                        Globals.log.error("Looping exceeded at " + action.number);
+                        actionGroup.stack.pop();
+                        break;
+                    }
+                    const result = Utils.logical(words);
+                    if (result) { // break out of loop
+                        actionGroup.stack.pop();
+                        // just carry on with next line
+                    } else { // let's go round again... one more time...
                         actionGroup.nextAction = stackFrame.jump_line;
                     }
                 }
@@ -2154,9 +2232,6 @@ export class Scene {
 **************************************************************************************************/
 
             case "if": 
-                // At the moment this breaks the completion callbacks for "then" 
-                // we will need to up the count depending on how many lines are
-                // in the loop
                 if (words.length > 0) { 
                     if (actionGroup.failedIfCount > 0) { // we have a failed if condition active
                         actionGroup.failedIfCount += 1; // so just  nest another one

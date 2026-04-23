@@ -255,6 +255,14 @@ export class VarList {
                     case 'size.y':
                         value = sgSprite.sizeY.value();
                         break;
+                    case 'pivot.x':
+                    case 'px':
+                        value = sgSprite.piSprite.pivot.x;
+                        break;
+                    case 'pivot.y':
+                    case 'py':
+                        value = sgSprite.piSprite.pivot.y;
+                        break;
                     case 'angle':
                     case 'rotation':
                         value = sgSprite.angle.value();
