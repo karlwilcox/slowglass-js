@@ -437,6 +437,7 @@ export class Scene {
 
             case "echo":
             case "log":
+            case "print":
                 Globals.log.report(words.join(' '));
                 break;
 
@@ -582,11 +583,15 @@ export class Scene {
                     switch (sprite_command) {
                         // more to add here?
                         case "create":
-                            {
                                 let spriteName = false;
+            {                   let groupName = null;
                                 // should the sprite have a different tag?
                                 if (Parser.testWord(words,"named") || !Parser.testWord(words,"from"))  {
                                     spriteName = Parser.getWord(words);
+                                }
+                                // Are we adding this to a group?
+                                if (Parser.testWord(words,"in")) {
+                                    groupName = Parser.getWord(words);
                                 }
                                 Parser.testWord(words,"from");
                                 let imageName = Parser.getWord(words);
@@ -594,6 +599,17 @@ export class Scene {
                                     spriteName = imageName;
                                 }
                                 let sgSprite = new SGSprite(imageName, spriteName);
+                                if (groupName) {
+                                    const groupSprite = SGSprite.getSprite(this.name, groupName);
+                                    if (!groupSprite) {
+                                        break;
+                                    }
+                                    if (groupSprite.type != constants.SPRITE_GROUP) {
+                                        Globals.log.error("Not a group at line " + action.number);
+                                        break;
+                                    }
+                                    sgSprite.sgParent = groupName;
+                                }
                                 if (Parser.testWord(words,"area")) {
                                     const x = Parser.getInt(words,0);
                                     const y = Parser.getInt(words,0);
@@ -660,6 +676,12 @@ export class Scene {
                     // Got all the data, now create the sprite
                     if (!hidden) {
                         sgSprite.setVisibility(true);
+                    }
+                    if (sgSprite.sgParent) { // is this part of a group?
+                        const parentGroup = SGSprite.getSprite(this.name, this.sgParent);
+                        // Get the new group size
+                        parentGroup.sizeX.forceValue(parentGroup.piSprite.width);
+                        parentGroup.sizeY.forceValue(parentGroup.piSprite.height);
                     }
                 } else {
                     Globals.log.error("Missing place data" + " at line " + action.number);
@@ -784,8 +806,8 @@ export class Scene {
                                 const group = new PIXI.Container();
                                 // Bit of a fudge, we create a screen filling, empty graphic to act as
                                 // canvas for things added to the group later
-                                const blank = new PIXI.Graphics().rect(0, 0, Globals.displayWidth, Globals.displayHeight).fill({color: 0x000000, alpha: 0.0});
-                                group.addChild(blank);
+                                // const blank = new PIXI.Graphics().rect(0, 0, Globals.displayWidth, Globals.displayHeight).fill({color: 0x000000, alpha: 0.0});
+                                // group.addChild(blank);
                                 group.pivot.set(Globals.displayWidth / 2, Globals.displayHeight / 2);
                                 // this group goes on top for now...
                                 sgSprite.depth = Globals.nextZ(0);
@@ -793,11 +815,10 @@ export class Scene {
                                 Globals.root.addChild(group);
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(false);
-                                sgSprite.setVisibility(false);
-                                sgSprite.locX.setTargetValue(Globals.displayWidth / 2); 
-                                sgSprite.locY.setTargetValue(Globals.displayHeight / 2);
-                                sgSprite.sizeX.setTargetValue(Globals.displayWidth); // there isn't really a natural size
-                                sgSprite.sizeY.setTargetValue(Globals.displayHeight);
+                                // sgSprite.locX.forceValue(Globals.displayWidth / 2); 
+                                // sgSprite.locY.forceValue(Globals.displayHeight / 2);
+                                sgSprite.locX.forceValue(0); 
+                                sgSprite.locY.forceValue(0);
                                 this.sprites.push(sgSprite);                           
                             }
                             break;
@@ -823,6 +844,9 @@ export class Scene {
                                 // sgSprite.piSprite.parent.removeChild(sgSprite.piSprite);
                                 // Foster it out to the group
                                 groupSprite.piSprite.reparentChild(sgSprite.piSprite);
+                                // Get the new group size
+                                sgSprite.sizeX.forceValue(groupSprite.width);
+                                sgSprite.sizeY.forceValue(groupSprite.height);
                                 break;
                             }
                         default:
@@ -847,14 +871,14 @@ export class Scene {
 
             case "play":
                 if (words.length > 0) {
-                    const tag = words.shift();
+                    const resourceName = words.shift();
                     Parser.testWord(words,"fade");
                     Parser.testWord(words,"in");
                     const fadein = Parser.getDuration(words, 0);
                     Parser.testWord(words,"at");
                     Parser.testWord(words,"volume");
                     const volume = Parser.getInt(words, 50, defaults.VOLUME_MIN, defaults.VOLUME_MAX);
-                    AudioManager.play(tag, { fadeInMs: fadein * 1000, targetVolume: volume });
+                    AudioManager.play(resourceName, { fadeInMs: fadein * 1000, targetVolume: volume });
                 } else {
                     Globals.log.error("Nothing to play at line " + action.number);
                 }
@@ -877,12 +901,12 @@ export class Scene {
             case "volume":
                 if (words.length > 0) {
                     Parser.testWord(words,"of");
-                    const tag = words.shift();
+                    const resourceName = words.shift();
                     Parser.testWord(words,"to");
                     const volume = Parser.getInt(words, 0, defaults.VOLUME_MIN, defaults.VOLUME_MAX);
                     Parser.testWord(words,"in");
                     const fadein = Parser.getDuration(words, 0);
-                    AudioManager.setVolume(tag, volume, { fadeMs: fadein * 1000});
+                    AudioManager.setVolume(resourceName, volume, { fadeMs: fadein * 1000});
                 } else {
                     Globals.log.error("No volume change at line " + action.number);
                 }
@@ -904,12 +928,12 @@ export class Scene {
                 if (words.length > 2) {
                     const textCommand = words.shift();
                     const textName = words.shift();
-                    const text_args = Parser.joinWords(words);
+                    const textData = Parser.joinWords(words);
                     let sgSprite = null;
                     if (textCommand == "create") {
                         sgSprite = new SGSprite(null, textName, constants.SPRITE_TEXT);
                         const textSprite = new PIXI.Text({
-                            text: text_args,
+                            text: textData,
                                 style: {
                                 fontFamily: sgSprite.textFont,
                                 fontSize: sgSprite.textFont,
@@ -935,28 +959,31 @@ export class Scene {
                     switch(textCommand) {
                         case "font":
                         case "fontfamily":
-                            sgSprite.textFont = text_args;
+                            sgSprite.textFont = textData;
                             break;
                         case "fontsize":
                         case "size":
-                            sgSprite.textFont = text_args;
+                            sgSprite.textFont = textData;
                             break;
                         case "align":
-                            sgSprite.textAlign = text_args;
+                            sgSprite.textAlign = textData;
                             break;
                         case "color":
                         case "colour":
+                            sgSprite.fillColour = textData;
+                            sgSprite.strokeColour = textData;
+                            break;
                         case "fill":
-                            sgSprite.fillColour = text_args;
+                            sgSprite.fillColour = textData;
                             break;
                         case "stroke":
-                            sgSprite.strokeColour = text_args;
+                            sgSprite.strokeColour = textData;
                             break;
                         case "add":
-                           sgSprite.piSprite.text += "\n" + text_args;
+                           sgSprite.piSprite.text += "\n" + textData;
                            break;
                         case "replace":
-                           sgSprite.piSprite.text = text_args;
+                           sgSprite.piSprite.text = textData;
                            break;
                         default:
                             doUpdate = false;
@@ -1087,9 +1114,12 @@ export class Scene {
                                 Globals.log.error("Invalid graphic arguments at " + action.number);
                             }
                             break;
-                        case "fill":
                         case "color":
                         case "colour":
+                            this.graphicFill = Parser.getWord(words,"black");
+                            this.graphicStroke = Parser.getWord(words,"black");
+                            break;
+                        case "fill":
                             this.graphicFill = Parser.getWord(words,"black");
                             break;
                         case "stroke":
@@ -1823,11 +1853,11 @@ export class Scene {
                     if (on_off == "stop") {
                         sgSprite.flicker(0,0);
                     } else {
-                        let flickerFont = Parser.getInt(words,0,0,50) * Globals.scriptScaleX;
+                        let flickerStrength = Parser.getInt(words,0,0,50) * Globals.scriptScaleX;
                         Parser.testWord(words,"with");
                         Parser.testWord(words,"chance");
                         let flickerChance = Parser.getInt(words,50);
-                        sgSprite.flicker(flickerFont, flickerChance);
+                        sgSprite.flicker(flickerStrength, flickerChance);
                     }
                 } else {
                     Globals.log.error("Missing values at line " + action.number);

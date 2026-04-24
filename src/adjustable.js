@@ -108,7 +108,8 @@ export class Adjustable {
     // Some things need to be kept in step (e.g. size and scale) without triggering
     // an update, so do it here.
     forceValue(value) {
-        this.value = value;
+        this.currentValue = value;
+        this.targettValue = value;
         this.deltaValue = 0;
         this.changing = false;
     }

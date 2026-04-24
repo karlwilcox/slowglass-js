@@ -519,7 +519,12 @@ export class SGSprite {
                 this.piSprite.zIndex = this.depth;
                 this.piSprite.tint = this.currentTint();
                 this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
-                Globals.root.addChild(this.piSprite);
+                if (this.sgParent) {
+                    const parentGroup = SGSprite.getSprite(this.name, this.sgParent);
+                    parentGroup.piSprite.addChild(this.piSprite);
+                } else {
+                    Globals.root.addChild(this.piSprite);
+                }
             } // else, still loading, try again later
         }
         // Now update position
@@ -567,17 +572,17 @@ export class SGSprite {
         const changeAngle = this.angle.updateValue();
         if (pivotOnX || pivotOnY || changeAngle) {
             if (this.piSprite !== null ) { // image has been loaded
-                if (this.type == constants.SPRITE_GRAPHIC) { // graphics are drawn around their centre
+                // if (this.type == constants.SPRITE_GRAPHIC) { // graphics are drawn around their centre
                     // update pivot point (before turning)
-                    this.piSprite.origin.set((this.sizeX / -2) + (this.sizeX * this.pivotX.value()/100),
-                                             (this.sizeY / -2) + (this.sizeY * this.pivotY.value()/100));
-                } else { // sprite.type == constants.SPRITE_IMAGE, etc.
-                        // update pivot point (before turning)
-                        this.piSprite.anchor.set(this.sizeX * this.pivotX.value()/100, this.sizeY * this.pivotY.value()/100);
-                }
+                //     this.piSprite.origin.set((this.sizeX / -2) + (this.sizeX * this.pivotX.value()/100),
+                //                              (this.sizeY / -2) + (this.sizeY * this.pivotY.value()/100));
+                // } else { // sprite.type == constants.SPRITE_IMAGE, etc.
+                //         // update pivot point (before turning)
+                        // this.piSprite.anchor.set(this.sizeX * this.pivotX.value()/100, this.sizeY * this.pivotY.value()/100);
+                // }
                 this.piSprite.angle = this.angle.value();
                 // put it back to the centre for scaling etc. afterwards
-                this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
+                // this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
             }
         }
 
@@ -684,6 +689,10 @@ export class SGSprite {
     }
 
     static getSprite(scene, tag, report = true) {
+        if (!tag) {
+            Globals.log.error("bad sprite name - ");
+            return false;
+        }
         let parts = tag.split(":");
         if (parts.length > 1) {
             scene = parts[0];
@@ -706,6 +715,9 @@ export class SGSprite {
     }
 
     static remove_sprite(scene, tag, report = false) {
+        if (!tag) {
+            return false;
+        }
         let parts = tag.split(":");
         if (parts.length > 1) {
             scene = parts[0];

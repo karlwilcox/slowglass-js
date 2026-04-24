@@ -93,7 +93,8 @@
     // Some things need to be kept in step (e.g. size and scale) without triggering
     // an update, so do it here.
     forceValue(value2) {
-      this.value = value2;
+      this.currentValue = value2;
+      this.targettValue = value2;
       this.deltaValue = 0;
       this.changing = false;
     }
@@ -212,7 +213,9 @@
     DEPTH_LEFT: 300,
     DEPTH_RIGHT: 301,
     DEPTH_FOREGROUND: 400,
-    DEPTH_FRAME: 1e3
+    DEPTH_FRAME: 1e3,
+    LOOP_MAXIMUM: 1e3
+    // greatest number of times we allow a loop to run
   };
 
   // src/constants.js
@@ -620,6 +623,7 @@
       this.forValues = data;
       this.whileTest = data;
       this.jump_line = line_no;
+      this.counter = 0;
     }
   };
   var ActionGroup = class {
@@ -929,7 +933,7 @@
       this.loading = false;
     }
   };
-  var SGSprite = class {
+  var SGSprite = class _SGSprite {
     constructor(imageName, spriteName = imageName, type = SPRITE_IMAGE) {
       this.type = type;
       this.imageName = imageName;
@@ -1321,7 +1325,12 @@
           this.piSprite.zIndex = this.depth;
           this.piSprite.tint = this.currentTint();
           this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
-          Globals.root.addChild(this.piSprite);
+          if (this.sgParent) {
+            const parentGroup = _SGSprite.getSprite(this.name, this.sgParent);
+            parentGroup.piSprite.addChild(this.piSprite);
+          } else {
+            Globals.root.addChild(this.piSprite);
+          }
         }
       }
       let changeX = this.locX.updateValue();
@@ -1356,16 +1365,7 @@
       const changeAngle = this.angle.updateValue();
       if (pivotOnX || pivotOnY || changeAngle) {
         if (this.piSprite !== null) {
-          if (this.type == SPRITE_GRAPHIC) {
-            this.piSprite.origin.set(
-              this.sizeX / -2 + this.sizeX * this.pivotX.value() / 100,
-              this.sizeY / -2 + this.sizeY * this.pivotY.value() / 100
-            );
-          } else {
-            this.piSprite.anchor.set(this.sizeX * this.pivotX.value() / 100, this.sizeY * this.pivotY.value() / 100);
-          }
           this.piSprite.angle = this.angle.value();
-          this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
         }
       }
       if (this.transparency.updateValue()) {
@@ -2329,6 +2329,7 @@
         **************************************************************************************************/
         case "echo":
         case "log":
+        case "print":
           Globals.log.report(words.join(" "));
           break;
         /**************************************************************************************************
@@ -2456,10 +2457,14 @@
             switch (sprite_command) {
               // more to add here?
               case "create":
+                let spriteName2 = false;
                 {
-                  let spriteName2 = false;
+                  let groupName = null;
                   if (Parser.testWord(words, "named") || !Parser.testWord(words, "from")) {
                     spriteName2 = Parser.getWord(words);
+                  }
+                  if (Parser.testWord(words, "in")) {
+                    groupName = Parser.getWord(words);
                   }
                   Parser.testWord(words, "from");
                   let imageName = Parser.getWord(words);
@@ -2467,6 +2472,17 @@
                     spriteName2 = imageName;
                   }
                   let sgSprite2 = new SGSprite(imageName, spriteName2);
+                  if (groupName) {
+                    const groupSprite = SGSprite.getSprite(this.name, groupName);
+                    if (!groupSprite) {
+                      break;
+                    }
+                    if (groupSprite.type != SPRITE_GROUP) {
+                      Globals.log.error("Not a group at line " + action.number);
+                      break;
+                    }
+                    sgSprite2.sgParent = groupName;
+                  }
                   if (Parser.testWord(words, "area")) {
                     const x = Parser.getInt(words, 0);
                     const y = Parser.getInt(words, 0);
@@ -2527,6 +2543,11 @@
             }
             if (!hidden) {
               sgSprite2.setVisibility(true);
+            }
+            if (sgSprite2.sgParent) {
+              const parentGroup = SGSprite.getSprite(this.name, this.sgParent);
+              parentGroup.sizeX.forceValue(parentGroup.piSprite.width);
+              parentGroup.sizeY.forceValue(parentGroup.piSprite.height);
             }
           } else {
             Globals.log.error("Missing place data at line " + action.number);
@@ -2638,19 +2659,14 @@
                   }
                   const sgSprite2 = new SGSprite(null, groupName, SPRITE_GROUP);
                   const group = new PIXI.Container();
-                  const blank = new PIXI.Graphics().rect(0, 0, Globals.displayWidth, Globals.displayHeight).fill({ color: 0, alpha: 0 });
-                  group.addChild(blank);
                   group.pivot.set(Globals.displayWidth / 2, Globals.displayHeight / 2);
                   sgSprite2.depth = Globals.nextZ(0);
                   group.zIndex = sgSprite2.depth;
                   Globals.root.addChild(group);
                   sgSprite2.piSprite = group;
                   sgSprite2.setVisibility(false);
-                  sgSprite2.setVisibility(false);
-                  sgSprite2.locX.setTargetValue(Globals.displayWidth / 2);
-                  sgSprite2.locY.setTargetValue(Globals.displayHeight / 2);
-                  sgSprite2.sizeX.setTargetValue(Globals.displayWidth);
-                  sgSprite2.sizeY.setTargetValue(Globals.displayHeight);
+                  sgSprite2.locX.forceValue(0);
+                  sgSprite2.locY.forceValue(0);
                   this.sprites.push(sgSprite2);
                 }
                 break;
@@ -2672,6 +2688,8 @@
                 }
                 sgSprite2.sgParent = groupName;
                 groupSprite.piSprite.reparentChild(sgSprite2.piSprite);
+                sgSprite2.sizeX.forceValue(groupSprite.width);
+                sgSprite2.sizeY.forceValue(groupSprite.height);
                 break;
               }
               default:
@@ -2694,14 +2712,14 @@
         **************************************************************************************************/
         case "play":
           if (words.length > 0) {
-            const tag2 = words.shift();
+            const resourceName = words.shift();
             Parser.testWord(words, "fade");
             Parser.testWord(words, "in");
             const fadein = Parser.getDuration(words, 0);
             Parser.testWord(words, "at");
             Parser.testWord(words, "volume");
             const volume = Parser.getInt(words, 50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
-            AudioManager.play(tag2, { fadeInMs: fadein * 1e3, targetVolume: volume });
+            AudioManager.play(resourceName, { fadeInMs: fadein * 1e3, targetVolume: volume });
           } else {
             Globals.log.error("Nothing to play at line " + action.number);
           }
@@ -2720,12 +2738,12 @@
         case "volume":
           if (words.length > 0) {
             Parser.testWord(words, "of");
-            const tag2 = words.shift();
+            const resourceName = words.shift();
             Parser.testWord(words, "to");
             const volume = Parser.getInt(words, 0, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
             Parser.testWord(words, "in");
             const fadein = Parser.getDuration(words, 0);
-            AudioManager.setVolume(tag2, volume, { fadeMs: fadein * 1e3 });
+            AudioManager.setVolume(resourceName, volume, { fadeMs: fadein * 1e3 });
           } else {
             Globals.log.error("No volume change at line " + action.number);
           }
@@ -2745,12 +2763,12 @@
           if (words.length > 2) {
             const textCommand = words.shift();
             const textName = words.shift();
-            const text_args = Parser.joinWords(words);
+            const textData = Parser.joinWords(words);
             let sgSprite2 = null;
             if (textCommand == "create") {
               sgSprite2 = new SGSprite(null, textName, SPRITE_TEXT);
               const textSprite = new PIXI.Text({
-                text: text_args,
+                text: textData,
                 style: {
                   fontFamily: sgSprite2.textFont,
                   fontSize: sgSprite2.textFont,
@@ -2776,28 +2794,31 @@
             switch (textCommand) {
               case "font":
               case "fontfamily":
-                sgSprite2.textFont = text_args;
+                sgSprite2.textFont = textData;
                 break;
               case "fontsize":
               case "size":
-                sgSprite2.textFont = text_args;
+                sgSprite2.textFont = textData;
                 break;
               case "align":
-                sgSprite2.textAlign = text_args;
+                sgSprite2.textAlign = textData;
                 break;
               case "color":
               case "colour":
+                sgSprite2.fillColour = textData;
+                sgSprite2.strokeColour = textData;
+                break;
               case "fill":
-                sgSprite2.fillColour = text_args;
+                sgSprite2.fillColour = textData;
                 break;
               case "stroke":
-                sgSprite2.strokeColour = text_args;
+                sgSprite2.strokeColour = textData;
                 break;
               case "add":
-                sgSprite2.piSprite.text += "\n" + text_args;
+                sgSprite2.piSprite.text += "\n" + textData;
                 break;
               case "replace":
-                sgSprite2.piSprite.text = text_args;
+                sgSprite2.piSprite.text = textData;
                 break;
               default:
                 doUpdate = false;
@@ -2926,9 +2947,12 @@
                   Globals.log.error("Invalid graphic arguments at " + action.number);
                 }
                 break;
-              case "fill":
               case "color":
               case "colour":
+                this.graphicFill = Parser.getWord(words, "black");
+                this.graphicStroke = Parser.getWord(words, "black");
+                break;
+              case "fill":
                 this.graphicFill = Parser.getWord(words, "black");
                 break;
               case "stroke":
@@ -3627,11 +3651,11 @@
             if (on_off == "stop") {
               sgSprite2.flicker(0, 0);
             } else {
-              let flickerFont = Parser.getInt(words, 0, 0, 50) * Globals.scriptScaleX;
+              let flickerStrength = Parser.getInt(words, 0, 0, 50) * Globals.scriptScaleX;
               Parser.testWord(words, "with");
               Parser.testWord(words, "chance");
               let flickerChance = Parser.getInt(words, 50);
-              sgSprite2.flicker(flickerFont, flickerChance);
+              sgSprite2.flicker(flickerStrength, flickerChance);
             }
           } else {
             Globals.log.error("Missing values at line " + action.number);
@@ -3950,6 +3974,11 @@
               Globals.log.error("For loop error at " + action.number);
               break;
             }
+            if (stackFrame2.counter++ > defaults_default.LOOP_MAXIMUM) {
+              Globals.log.error("Looping exceeded at " + action.number);
+              actionGroup.stack.pop();
+              break;
+            }
             if (stackFrame2.forValues.length < 1) {
               actionGroup.stack.pop();
             } else {
@@ -3983,6 +4012,11 @@
             const stackFrame2 = actionGroup.stack[stackSize - 1];
             if (stackFrame2.type != STACK_REPEAT) {
               Globals.log.error("Repeat loop error at " + action.number);
+              break;
+            }
+            if (stackFrame2.counter++ > defaults_default.LOOP_MAXIMUM) {
+              Globals.log.error("Looping exceeded at " + action.number);
+              actionGroup.stack.pop();
               break;
             }
             const result = logical(words);
