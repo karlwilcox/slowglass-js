@@ -2,7 +2,7 @@
 import { Globals } from "./globals.js";
 import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
-import { SGSprite } from "./sgsprite";
+import { SGSprite } from "./sgsprite.js";
 import { Scene } from "./scene.js";
 import * as constants from './constants.js';
 
@@ -47,6 +47,20 @@ export class VarList {
                 this.variables.push(new Variable(name, value));
             }
         }
+    }
+
+    listNames() {
+        let result = "";
+        let first = true;
+        for (let i = 0; i < this.variables.length; i++ ) {
+            if (first) {
+                first = false;
+            } else {
+                result += " ";
+            }
+            result += this.variables[i].name;
+        }
+        return result;
     }
 
 /**************************************************************************************************
@@ -170,13 +184,16 @@ export class VarList {
             case "MILLIS":
             case "MS":
                 return (Date.now() - Globals.startTime);
+            case "VARIABLES":
+            case "VARNAMES":
+                return this.listNames();
             default:
                 return false;
         }
     }
 
     sceneVar(varName) {
-        let value = "NONE";
+        let value = defaults.NOTFOUND;
         const parts = varName.split(/:/);
         const scene = Scene.find(parts[0]);
         if (scene !== false) {
@@ -195,7 +212,7 @@ export class VarList {
         return false;
     }
 
-    getValue(varName) {
+    getValue(varName, report=false) {
         let value = false;
         let sceneName = this.sceneName; // assume we are local
         if (varName.match(/:/)) { // this is a different scene
@@ -301,7 +318,7 @@ export class VarList {
                 } 
             }
         }
-        if (value === false) {
+        if (report && value === false) {
             Globals.log.error("Variable not found " + varName);
             value = defaults.NOTFOUND;
         }
@@ -332,7 +349,8 @@ export class VarList {
 
             // Handle variable starting with $
             if (input[i] === '$') {
-                let j = i + 1;
+                let indirect = input[i + 1] === '$';
+                let j = i + (indirect ? 2 : 1);
                 let varName = '';
 
                 // Case: ${varName}
@@ -364,6 +382,9 @@ export class VarList {
                 }
 
                 let replacement = this.getValue(varName);
+                if (indirect) {
+                    replacement = this.getValue(replacement);
+                }
 
                 output += replacement;
                 i = j;

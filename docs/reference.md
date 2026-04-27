@@ -49,15 +49,18 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 ## System Commands
 
-* **(echo \| log \| print)** {text...} - write text to console (or page element)
+* **(log \| print)** {text...} - write text to console (or page element)
+* **echo** (on \| off \| flip) - log expanded and evaluated commands prior to executing them
 * **wait** {duration} - do nothing for given time (safe to use, not busy wait)
 * **finish** - stop application
 * **list** (scenes \| all) - basic information on all scenes to console
 * **list** (scene \| sprites \| images \| actions) \[{scene-name}\] - detailed information to console
+* **debug** {integer} {text...} - if a top level variable called DEBUGLEVEL exists and is lower than the number given print the text to console
 
 ## Resource Management
 
 * **from** {folder} - take all resources from the named folder
+* **reset from** - set folder name to blank
 * **(load \| upload)** {file} named {resource-name} \[split {cols} by {rows}\] - load resource of any type
 * **unload** {r-tag...} - remove resources from memory
 
@@ -73,8 +76,10 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 ## Sprite Management
 
 * **reset sprite** {sprite-name} - set all sprite aspects back to their original state
-* **sprite create** \[named {sprite-name}\] from {resource-name} - creates a sprite, hidden, needs to be placed (AREA???)
+* **sprite create** \[named {sprite-name}\] \[in {group-name}\] from {resource-name} - creates a sprite, hidden, needs to be placed (AREA???)
 * **replace** {sprite-name} \[with\] {resource-name} - change the sprite image leaving all other aspects unchanged
+* **with** {scene-name} - sprite names without a prefix assumed to in the named scene
+* **reset with** - sprite names without a prefix assumed to be in the current scene (the default behaviour)
 
 ## Sprite Placement
 
@@ -101,16 +106,19 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 ## Sprite Movement
 
 * **move** {sprite-name} to {x},{y} \[in {duration}\] - Move image to a new location on screen in a given time
-* **move** {sprite-name} to {x},{y} \[at {speed}\] - Move image to a new location on screen at a given speed
+* **move** {sprite-name} (horizontally \| vertically) to {delta} \[in {duration}\] - Move image along an axis in a given time
+* **move** {sprite-name} (horizontally \| vertically) **by** {delta} \[in {duration}\] - Move image along an axis in a given time
+* **move** {sprite-name} to {x},{y} \[at {speed}\] - Move image to a new location on screen at a given speed TBD
 * **move** {sprite-name} **by** {x},{y} \[in {duration}\] - Move image relative to current position a given time
-* **move** {sprite-name} **by** {x},{y} \[at {speed}\] - Move image relative to current position at a given speed
-* set **speed** of {sprite-name} to {speed} \[in {duration}\] - set the speed of image (acclerate/slow if duration given) TBD)
+* **move** {sprite-name} **by** {x},{y} \[at {speed}\] - Move image relative to current position at a given speed TBD
+* set **speed** of {sprite-name} to {speed} \[in {duration}\] - set the speed of image (acclerate/slow if duration given) TBD
 * **rotate** {sprite-name} **to** {value} - turn image on screen to the given angle (degrees clockwise, 0 at top)
 * **rotate** {sprite-name} **by** {value} - turn image on screen by given angle (degrees clockwise)
 * **pause/resume** {sprite-name} - pause or resume all current changes to an image (does not change visibility)
 * **throw** {sprite-name} at {angle} \[with speed\] {speed} - throw the sprite in the given direction with the given speed
 * **throw** {sprite-name} stop - stop thrown motion
 * **drop** {sprite-name} - convenience function, same as throw {sprite} at 180, 0
+* **align** {sprite-name} (top \| bottom \| left \| right) to {location} - move edge of sprite to the location, x or y
 
 ## Sprite Sizing
 
@@ -145,7 +153,7 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 ## Text Commands
 
-* **text create** {text-name} {text...} - create a named text item
+* **text create** {text-name} \[in {group-name}\] {text...} - create a named text item
 * **text replace** {text-name} {text...} - changes the displayed text
 * **text add** {text-name} {text...} - Adds the displayed text as additional line
 * **text font** {text-name} {font-name} - sets font face (no checking)
@@ -160,12 +168,12 @@ and other aspects of appearance can be changed after the text item has been crea
 
 ## Graphic Commands
 
-* **graphic create** {graphic-name} as (rect \| rectangle) {width} {height} \[{corner-radius}\]
-* **graphic create** {graphic-name} as circle {radius}
-* **graphic create** {graphic-name} as line {height} (rotate as required)
-* **graphic create** {graphic-name} as star {num-points} {outer-radius} \[{inner-radius}\]
-* **graphic create** {graphic-name} as circle {x-radius} {y-radius} (rotate as required)
-* **graphic create** {graphic-name} as grid {x-size} {y-size} (covers whole display)
+* **graphic create** {graphic-name} \[in {group-name}\] as (rect \| rectangle) {width} {height} \[{corner-radius}\]
+* **graphic create** {graphic-name} \[in {group-name}\] as circle {radius}
+* **graphic create** {graphic-name} \[in {group-name}\] as line {height} (rotate as required)
+* **graphic create** {graphic-name} \[in {group-name}\] as star {num-points} {outer-radius} \[{inner-radius}\]
+* **graphic create** {graphic-name} \[in {group-name}\] as circle {x-radius} {y-radius} (rotate as required)
+* **graphic create** {graphic-name} \[in {group-name}\] as grid {x-size} {y-size} (covers whole display)
 * **graphic stroke** {graphic-name} {colour} - sets fill to named colour or hex code
 * **graphic fill** {graphic-name} {colour} - sets fill to named colour or hex code
 * **graphic stroke** {graphic-name} {colour} - sets stroke to named colour or hex code
@@ -183,11 +191,12 @@ text item is like a sprite and must be placed to become visible.
 
 ## Group Management
 
-* **group create** {group-name} - create a named empty group, needs to be placed
+* **group create** {group-name} \[size {width} {height}\] - create a named empty group, needs to be placed
 * **group add** {sprite-name} to {group-name} - add named sprites to the group (removes them from scene)
 
+If you do not provide a group size it will be notionally the same size as the display.
 The named group can now be used as an image source for sprites, e.g. "place
-named-group at x,y,z" and all sprite commands operate on the whole image,
+named-group at x,y,z" and all sprite commands operate on the whole group,
 however individual sprites within the group can still be operated on by name.
 
 ## Flow Control
@@ -214,11 +223,11 @@ to their values.
 
 All the standard operator symbols are supported,
 including ! and ^ for factorial and power. Brackets can be nested to any depth.
-'pi' and 'e' are replace by their respective values. The following functions are
+'Pi' and 'e' are replace by their respective values. The following functions are
 supported:
 
 * sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh - trigonmetric, angles in degrees
-* mod log ln - modulus & logarithms
+* Mod log ln - modulus & logarithms (not capitals)
 
 ## Variable Creation
 
@@ -277,6 +286,7 @@ trigger is tested. Variables can **NOT** be used in directives
 * $SPRITES - list of all sprites in current scene
 * $IMAGES - as above for images
 * $SCENES - list of all scene names
+* $VARIABLES - list of all variables in the current scene ONLY
 
 ## Sprite properties
 

@@ -70,6 +70,7 @@ export class Globals {
         Globals.gravity = defaults.GRAVITY_PS2;
         Globals.lastKey = null;
         Globals.key = null;
+        Globals.highestZ = 0;
     }
 
     static event(type, data) {

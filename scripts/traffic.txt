@@ -1,0 +1,73 @@
+# Traffic demo
+# All images created by Affinty App generative AI
+# call from URL /slow-glass/scripts/traffic.txt
+
+
+display width 800
+display height 450
+
+begin
+    load /slow-glass/assets/vehicles/city-street.png as street
+    use street as background
+    load /slow-glass/assets/vehicles/vehicles.png as vehicles
+    make near_reduction be 75
+    make near_roadheight be 380
+    make far_reduction be 80
+    make far_roadheight be 360
+    make counter be 1
+    # row 1
+    make v_refusetruck be 16 50 1194 526
+    make v_firetruck be 1234 36 1382 526
+    make v_minivan be 2616 28 908 526
+    # row 2
+    make v_citybus be 6 596 1522 534
+    make v_greycar be 1680 740 906 344
+    make v_bluecar be 2592 760 870 308
+    # row 3
+    make v_darkcar be 58 1194 964 332
+    make v_taxi be 1258 1182 934 354
+    make v_minibus be 2296 1082 1078 452
+    # row 4
+    make v_van be 70 1546 1078 474
+    make v_sportscar be 1240 1706 1030 324
+    make v_greencar be 2354 1646 990 370
+    make run be yes
+
+every 5 seconds
+    if $run
+        if $PERCENT > 50
+            match traffic to v_ at start from $VARIABLES
+            choose vehicle from $traffic
+            choose direction from _ltor _rtol
+            clone drive$direction as drive$counter
+            log calling drive$counter with $vehicle
+            start scene drive$counter $$vehicle
+            increment counter
+        endif
+    endif
+
+scene drive_rtol
+    begin
+        sprite create vehicle from _MAIN_:vehicles view $PARAMS
+        shrink vehicle by ${_MAIN_:near_reduction}
+        place vehicle at -200 330 500
+        align vehicle bottom to ${_MAIN_:near_roadheight}
+        move vehicle horizontally to 1000 in (8 + ($CHANCE * 4)) seconds
+    after 13 seconds
+        stop $SCENENAME
+        remove scene $SCENENAME
+end scene
+
+scene drive_ltor
+    begin
+        sprite create vehicle from _MAIN_:vehicles view $PARAMS
+        shrink vehicle by ${_MAIN_:far_reduction}
+        flip vehicle horizontally
+        place vehicle at 1000 330 400
+        align vehicle bottom to ${_MAIN_:far_roadheight}
+        move vehicle horizontally to -200 in (8 + ($CHANCE * 4)) seconds
+    after 13 seconds
+        stop $SCENENAME
+        remove scene $SCENENAME
+end scene
+

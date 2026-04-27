@@ -1,0 +1,31 @@
+# Swiss clock scene
+# Clock face from https://commons.wikimedia.org/wiki/File:Swiss_railway_clock_1.svg
+# Call from URL /slow-glass/scripts/swiss-clock.txt
+
+display width 800
+display height 450
+
+begin
+    start swiss-clock
+
+scene swiss-clock
+    begin
+        group create clock 200 200
+        group create hours in group clock size 200 200
+        group create minutes in group clock size 200 200
+        load /slow-glass/assets/clock/swiss-railway-clock.png named clockface
+        sprite create face in group clock from clockface
+        place face at 100 100 size 200 200
+        graphic create hourhand in group hours as rect 10 80
+        place hourhand at 100 62 200
+        graphic create minutehand in group minutes as rect 10 96
+        place minutehand at 100 53 206
+        place hours at 100 100 200
+        place minutes at 100 100 201
+        place clock at 300 300 205
+        rotate minutes to ($MINUTES * 6)
+        rotate hours to ((($HOURS Mod 12) * 30) + ($MINUTES/2))
+
+    every 1 minute
+        rotate minutes to ($MINUTES * 6)
+        rotate hours to ((($HOURS Mod 12) * 30) + ($MINUTES/2))

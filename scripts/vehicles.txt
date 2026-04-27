@@ -1,0 +1,33 @@
+begin
+    load /slow-glass/assets/vehicles/city-street.png as street
+    use street as background
+    load /slow-glass/assets/vehicles/vehicles.png as vehicles
+    make reduction be 75
+    # First row
+    sprite create v-refusetruck from vehicles view 0 0 1215 588
+	sprite create v-firetruck from vehicles view 1215 0 2628 588
+	sprite create v-minivan from vehicles view 2628 0 3508 588
+    shrink v-refusetruck by $reduction
+    shrink v-firetruck by $reduction
+    shrink v-minivan by $reduction
+    # second row
+	sprite create v-citybus from vehicles view 0 588 1606 1155
+	sprite create v-greycar from vehicles view 1606 588 2591 1155
+	sprite create v-bluecar from vehicles view 2591 588 3508 1155
+    shrink v-citybus by $reduction
+    shrink v-greycar by $reduction
+    shrink v-bluecar by $reduction
+    # third row
+	sprite create v-darkcar from vehicles view 0 1155 1123 1544
+	sprite create v-taxi from vehicles view 1123 1155 2244 1544
+	sprite create v-minibus from vehicles view 2244 1081 3508 1544
+    shrink v-darkcar by $reduction
+    shrink v-taxi by $reduction
+    shrink v-minibus by $reduction
+    # fourth row
+	sprite create v-van from vehicles view 0 1544 1187 2073
+	sprite create v-sportscar from vehicles view 1187 1544 2306 2073
+	sprite create v-greencar from vehicles view 2306 1544 3508 2073
+    shrink v-van by $reduction
+    shrink v-sportscar by $reduction
+    shrink v-greencar by $reduction

@@ -41,20 +41,24 @@ function getImage(scene, tag) {
 export class SGImage {
     constructor(data, tag) {
         this.name = tag;
+        this.width = 0;
+        this.height = 0;
         if (typeof data === "string") {
-            this.pi_image = null;
+            this.piImage = null;
             this.loading = true;
             this.url = data;
         } else { // must be text - careful if new types added!
-            this.pi_image = data;
+            this.piImage = data;
             this.loading = false;
             this.url = null;
         }
     }
 
     async load_image() {
-        this.pi_image = await PIXI.Assets.load(this.url);
+        this.piImage = await PIXI.Assets.load(this.url);
         this.loading = false;
+        this.width = this.piImage.width;
+        this.height = this.piImage.height;
     }
 }
 
@@ -151,7 +155,7 @@ export class SGSprite {
         this.setDepth("to", depth);
     }
 
-    setDepth(depth_type, value) {
+    setDepth(depth_type, value="to") {
         if (depth_type == "by") {
             this.depth += value;
         } else {
@@ -189,8 +193,21 @@ export class SGSprite {
 
     move(newX, newY, to_or_by, in_or_at, duration, now, callback) {
         if (to_or_by == "by") {
+            if (newX === false) {
+                newX = 0;
+            }
+            if (newY === false) {
+                newY = 0;
+            }
             newX += this.locX.value();
             newY += this.locY.value();
+        } else { // to
+            if (newX === false) {
+                newX = this.locX.value();
+            }
+            if (newY === false) {
+                newY = this.locY.value();
+            }
         }
         if (in_or_at == "at") {
             // to be done...
@@ -401,8 +418,8 @@ export class SGSprite {
     }
 
     resetFont() {
-        this.sizeX.setTargetValue(this.pi_image.orig.width);
-        this.sizeY.setTargetValue(this.pi_image.orig.height);
+        this.sizeX.setTargetValue(this.piImage.orig.width);
+        this.sizeY.setTargetValue(this.piImage.orig.height);
     }
 
 
@@ -435,8 +452,8 @@ export class SGSprite {
                 return;
             }
             if (image != "loading") { // now ready
-                const img_width = image.pi_image.width;
-                const imgHeight = image.pi_image.height;
+                const img_width = image.piImage.width;
+                const imgHeight = image.piImage.height;
                 // Are we in a specific location?
                 if (this.role != null) {
                     // Yes, but we need the image size to work out scaling
@@ -497,7 +514,7 @@ export class SGSprite {
                         this.sizeY.setTargetValue(imgHeight);
                     }
                 }
-                const fullTexture = new PIXI.Texture(image.pi_image);
+                const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = null;
                 if (this.image_portion) {
                     texture = new PIXI.Texture({
@@ -520,8 +537,7 @@ export class SGSprite {
                 this.piSprite.tint = this.currentTint();
                 this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
                 if (this.sgParent) {
-                    const parentGroup = SGSprite.getSprite(this.name, this.sgParent);
-                    parentGroup.piSprite.addChild(this.piSprite);
+                    this.sgParent.piSprite.addChild(this.piSprite);
                 } else {
                     Globals.root.addChild(this.piSprite);
                 }
