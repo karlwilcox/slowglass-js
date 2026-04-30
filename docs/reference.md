@@ -91,12 +91,13 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 * **show/hide** {sprite-name} for {duration}- reveal or remove images from screens just for a set length of time (TBD)
 * **remove** {sprite-name...} - remove images from the screen
 
-## Animated Sprite Management (all TBD)
+## Animated Sprite Management (all TBD except where noted)
 
  **window** {sprite-name} at {ix},{iy},{iw},{ih} - define a window on the source image centered at ix,iy of size iw,ih
  **zoom window** {sprite-name} to {iw},{ih} \[in {duration}\]- set new window size on source image
  **move window** of {sprite-name} to {ix},{iy} \[in {duration}\]- set new window centre on source image
  **scroll window** of {sprite-name} up\|down\|left\|right \[at {speed}\] - move window centre continuously at speed pixels per minute
+ **scroll** {sprite-name} \[at\] {x} {y} - move window continuously at  x / y pixels per minute DONE
  set **animation** rate of {sprite-name} to {value} - if image is sprite, update the frame every {value} seconds
  **advance** {sprite-name} **to** {number} - switch sprite to the given frame (set rate to zero to use)
  **advance/reverse** {sprite-name} **by** {number} - advance or reverse sprite by the given number of frames

@@ -28,7 +28,7 @@ class SlowGlass {
 
 **************************************************************************************************/
 
-    readFromText(text) {
+    readFromText(text, include = false) {
         const script = text.split(/\r?\n/);
         const count = script.length;
         const top = new Scene(constants.MAIN_NAME);
@@ -108,6 +108,10 @@ class SlowGlass {
                 }
             // end processing (ignore rest of file)
             } else if (command == "display") {
+                if (include) {
+                    Globals.log.error('Directives in include will be ignored!');
+                    continue;
+                }
                 if (argument == 'width') {
                     let displayWidth = parseInt(argument2);
                     if (displayWidth < 50 || displayWidth > 5000) {
@@ -123,9 +127,13 @@ class SlowGlass {
                     }
                     Globals.displayHeight = displayHeight;
                 } // else look for fullscreen
-            } else if (command == 'include') {
-                Globals.log.error('Include not supported yet');
+            // } else if (command == 'include') {
+            //     Globals.log.error('Include not supported yet');
             } else if (command == 'script') {
+                if (include) {
+                    Globals.log.error('Directives in include will be ignored!');
+                    continue;
+                }
                 if (argument == 'width') {
                     let scriptWidth = parseInt(argument2);
                     if (scriptWidth < 50 || scriptWidth > 5000) {
@@ -155,6 +163,10 @@ class SlowGlass {
                     }
                 }
             } else if (command == 'gravity') {
+                if (include) {
+                    Globals.log.error('Directives in include will be ignored!');
+                    continue;
+                }
                 let gravity = parseFloat(argument);
                 if (gravity <= 0) {
                     Globals.log.error("silly gravity setting");
@@ -162,6 +174,10 @@ class SlowGlass {
                 }
                 Globals.gravity_ps2 = gravity; // NOTE, not scaled, scale on use
             } else if (command == "ground") {
+                if (include) {
+                    Globals.log.error('Directives in include will be ignored!');
+                    continue;
+                }
                 if (argument == "level") {
                     argument = argument2;
                 }
@@ -180,27 +196,34 @@ class SlowGlass {
         if (holding != null) {
             Globals.scenes.push(holding);
         }
-        if (top.content.length < 1) {
-            Globals.log.error('No top level actions, nothing will happen!');
-            return false;
-        } else {
-            // calculate overall scaling
-            switch (Globals.scriptScaleType) {
-                case constants.SCALE_STRETCH:
-                    Globals.scriptScaleX = Globals.displayWidth / Globals.scriptWidth;
-                    Globals.scriptScaleY = Globals.displayHeight / Globals.scriptHeight;
-                    break;
-                case constants.SCALE_FIT:
-                    // todo
-                case constants.SCALE_NONE:
-                default:
-                    break;
-            }
+        if (include) {
+            // scenes have already been added, we may have some top level commands
+            top.name = "_INCLUDE_";
             top.start();
-            // Add an empty action group to the top level for interactive actions
-            top.interactive_index = top.actionGroups.length;
-            top.actionGroups.push(new Utils.ActionGroup());
             Globals.scenes.push(top);
+        } else {
+            if (top.content.length < 1) {
+                Globals.log.error('No top level actions, nothing will happen!');
+                return false;
+            } else {
+                // calculate overall scaling
+                switch (Globals.scriptScaleType) {
+                    case constants.SCALE_STRETCH:
+                        Globals.scriptScaleX = Globals.displayWidth / Globals.scriptWidth;
+                        Globals.scriptScaleY = Globals.displayHeight / Globals.scriptHeight;
+                        break;
+                    case constants.SCALE_FIT:
+                        // todo
+                    case constants.SCALE_NONE:
+                    default:
+                        break;
+                }
+                top.start();
+                // Add an empty action group to the top level for interactive actions
+                top.interactive_index = top.actionGroups.length;
+                top.actionGroups.push(new Utils.ActionGroup());
+                Globals.scenes.push(top);
+            }
         }
         return true;
     }
@@ -305,16 +328,22 @@ class SlowGlass {
         }
     }
 
-    async scriptFromURL(url) {
-        Globals.log.report("Starting Slow Glass from " + url);
-        this.cleanUp();
+    async scriptFromURL(url, include = false) {
+        if (include) {
+            Globals.log.report("Including script from " + url);
+        } else {
+            Globals.log.report("Starting Slow Glass from " + url);
+            this.cleanUp();
+        }
         const response = await fetch(url);
         if (!response.ok) {
             Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
         const text = await response.text();
-        if (this.readFromText(text)) {
-            this.run();
+        if (this.readFromText(text, include)) {
+            if (!include) {
+                this.run();
+            } // include file just adds scenes to the existing list
         }
     }
 

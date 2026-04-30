@@ -1,33 +1,75 @@
-begin
-    load /slow-glass/assets/vehicles/city-street.png as street
-    use street as background
-    load /slow-glass/assets/vehicles/vehicles.png as vehicles
-    make reduction be 75
-    # First row
-    sprite create v-refusetruck from vehicles view 0 0 1215 588
-	sprite create v-firetruck from vehicles view 1215 0 2628 588
-	sprite create v-minivan from vehicles view 2628 0 3508 588
-    shrink v-refusetruck by $reduction
-    shrink v-firetruck by $reduction
-    shrink v-minivan by $reduction
-    # second row
-	sprite create v-citybus from vehicles view 0 588 1606 1155
-	sprite create v-greycar from vehicles view 1606 588 2591 1155
-	sprite create v-bluecar from vehicles view 2591 588 3508 1155
-    shrink v-citybus by $reduction
-    shrink v-greycar by $reduction
-    shrink v-bluecar by $reduction
-    # third row
-	sprite create v-darkcar from vehicles view 0 1155 1123 1544
-	sprite create v-taxi from vehicles view 1123 1155 2244 1544
-	sprite create v-minibus from vehicles view 2244 1081 3508 1544
-    shrink v-darkcar by $reduction
-    shrink v-taxi by $reduction
-    shrink v-minibus by $reduction
-    # fourth row
-	sprite create v-van from vehicles view 0 1544 1187 2073
-	sprite create v-sportscar from vehicles view 1187 1544 2306 2073
-	sprite create v-greencar from vehicles view 2306 1544 3508 2073
-    shrink v-van by $reduction
-    shrink v-sportscar by $reduction
-    shrink v-greencar by $reduction
+# Traffic demo
+# All images created by Affinty App generative AI
+# call from URL /slow-glass/scripts/vehicles.txt
+
+
+scene road_users
+    begin
+        load /slow-glass/assets/vehicles/vehicles.png as vehicles
+        make near_reduction be 75
+        make near_roadheight be 380
+        make far_reduction be 80
+        make far_roadheight be 360
+        make counter be 1
+        # row 1
+        make v_refusetruck be 20 46 1172 516
+        make v_firetruck be 1242 76 1374 480
+        make v_minivan be 2632 214 868 322
+        # row 2
+        make v_citybus be 4 610 1524 506
+        make v_greycar be 1686 748 894 318
+        make v_bluecar be 2596 768 850 288
+        # row 3
+        make v_darkcar be 48 1196 970 324
+        make v_taxi be 1262 1184 924 336
+        make v_minibus be 2298 1084 1072 438
+        # row 4
+        make v_van be 78 1558 1072 454
+        make v_sportscar be 1242 1726 1026 290
+        make v_greencar be 2364 1652 984 352
+        make run be yes
+        make elapsed_ltor be $ELAPSED
+        make elapsed_rtol be $ELAPSED
+
+    every 1 seconds
+        if $run
+            if $PERCENT > 50
+                match traffic to v_ at start from $VARIABLES
+                choose vehicle from $traffic
+                choose direction from _ltor _rtol
+                make gap be elapsed$direction
+                if ($ELAPSED - $$gap) > 3
+                    clone drive$direction as drive$counter
+                    start scene drive$counter $$vehicle
+                    increment counter
+                    make $gap be $ELAPSED
+                endif
+            endif
+        endif
+end scene
+
+scene drive_rtol
+    begin
+        sprite create vehicle from road_users:vehicles view $PARAMS
+        shrink vehicle by ${road_users:near_reduction}
+        place vehicle at -200 330 500
+        align vehicle bottom to ${road_users:near_roadheight}
+        move vehicle horizontally to 1000 in (8 + ($CHANCE * 4)) seconds
+    after 13 seconds
+        stop $SCENENAME
+        remove scene $SCENENAME
+end scene
+
+scene drive_ltor
+    begin
+        sprite create vehicle from road_users:vehicles view $PARAMS
+        shrink vehicle by ${road_users:far_reduction}
+        flip vehicle horizontally
+        place vehicle at 1000 330 400
+        align vehicle bottom to ${road_users:far_roadheight}
+        move vehicle horizontally to -200 in (8 + ($CHANCE * 4)) seconds
+    after 13 seconds
+        stop $SCENENAME
+        remove scene $SCENENAME
+end scene
+

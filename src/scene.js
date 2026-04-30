@@ -537,6 +537,28 @@ export class Scene {
 
 /**************************************************************************************************
 
+   #### ##    ##  ######  ##       ##     ## ########  ######## 
+    ##  ###   ## ##    ## ##       ##     ## ##     ## ##       
+    ##  ####  ## ##       ##       ##     ## ##     ## ##       
+    ##  ## ## ## ##       ##       ##     ## ##     ## ######   
+    ##  ##  #### ##       ##       ##     ## ##     ## ##       
+    ##  ##   ### ##    ## ##       ##     ## ##     ## ##       
+   #### ##    ##  ######  ########  #######  ########  ######## 
+
+**************************************************************************************************/
+
+            case "include":
+            case "require":
+                if (wordList.wordsLeft() > 0) {
+                    const URL = wordList.getWord();
+                    slowGlass.scriptFromURL(URL, true);
+                } else {
+                    Globals.log.error("Expected URL at " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
    ##      ## #### ######## ##     ## 
    ##  ##  ##  ##     ##    ##     ## 
    ##  ##  ##  ##     ##    ##     ## 
@@ -729,13 +751,28 @@ export class Scene {
                         Globals.log.error("Sprite does not have view window " + action.number);
                         break;
                     }
-                    const atOrStop = wordList.testWord(["at","stop"]);
+                    const direction = wordList.testWord(["stop","left","right","up","down"]);
+                    wordList.testWord("at");
                     const dx = wordList.getFloat(0);
                     const dy = wordList.getFloat(0);
-                    if (atOrStop == "stop") {
-                        sgSprite.setScroll(0,0);
-                    } else {
-                        sgSprite.setScroll(dx, dy);
+                    switch (direction) {
+                        case "stop":
+                            sgSprite.setScroll(0,0);
+                            break;
+                        case "right":
+                            sgSprite.setScroll(dx,0);
+                            break;
+                        case "left":
+                            sgSprite.setScroll(dx * -1,0);
+                            break;
+                        case "up":
+                            sgSprite.setScroll(0, dy * -1);
+                            break;
+                        case "down":
+                            sgSprite.setScroll(0, dy);
+                            break;
+                        default:
+                            sgSprite.setScroll(dx, dy);
                     }
                 } else {
                     Globals.log.error("Missing scroll data at line " + action.number);
