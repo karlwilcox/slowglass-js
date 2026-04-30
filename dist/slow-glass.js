@@ -410,7 +410,7 @@
       }
     }
     sceneVar(varName) {
-      let value2 = "NONE";
+      let value2 = defaults_default.NOTFOUND;
       const parts = varName.split(/:/);
       const scene = Scene2.find(parts[0]);
       if (scene !== false) {
@@ -427,7 +427,7 @@
       }
       return false;
     }
-    getValue(varName) {
+    getValue(varName, report = false) {
       let value2 = false;
       let sceneName = this.sceneName;
       if (varName.match(/:/)) {
@@ -528,7 +528,7 @@
           }
         }
       }
-      if (value2 === false) {
+      if (report && value2 === false) {
         Globals.log.error("Variable not found " + varName);
         value2 = defaults_default.NOTFOUND;
       }
@@ -963,7 +963,6 @@
       this.type = type;
       this.imageName = imageName;
       this.name = spriteName;
-      this.image_portion = null;
       this.sgParent = null;
       this.piSprite = null;
       this.enabled = true;
@@ -973,10 +972,16 @@
       this.depth = 0;
       this.sizeX = new Adjustable(0);
       this.sizeY = new Adjustable(0);
-      this.scaleX = new Adjustable(0);
-      this.scaleY = new Adjustable(0);
+      this.scaleX = new Adjustable(1);
+      this.scaleY = new Adjustable(1);
       this.flipH = false;
       this.flipV = false;
+      this.flipChange = false;
+      this.windowed = false;
+      this.viewX = new Adjustable(0);
+      this.viewY = new Adjustable(0);
+      this.viewWidth = new Adjustable(0);
+      this.viewHeight = new Adjustable(0);
       this.pivotX = new Adjustable(50, 0, 100);
       this.pivotY = new Adjustable(50, 0, 100);
       this.visible = true;
@@ -1009,9 +1014,9 @@
       this.skewX = new Adjustable(0);
       this.skewY = new Adjustable(0);
     }
-    setPosition(x2, y2, depth = 0) {
-      this.locX.setTargetValue(x2);
-      this.locY.setTargetValue(y2);
+    setPosition(x, y, depth = 0) {
+      this.locX.setTargetValue(x);
+      this.locY.setTargetValue(y);
       this.setDepth("to", depth);
     }
     setDepth(depth_type, value2 = "to") {
@@ -1069,6 +1074,13 @@
       this.locX.setTargetValue(newX, duration, now, callback);
       this.locY.setTargetValue(newY, duration, now);
       this.enabled = true;
+    }
+    setView(x, y, w, h, dur_type, duration, now, callback) {
+      this.windowed = true;
+      this.viewX.setTargetValue(x, duration, now, callback);
+      this.viewY.setTargetValue(y, duration, now);
+      this.viewWidth.setTargetValue(w, duration, now);
+      this.viewHeight.setTargetValue(h, duration, now);
     }
     rotate(turn_type, value2, dur_type, duration, now, callback) {
       let newValue = 0;
@@ -1139,19 +1151,14 @@
     }
     flip(axis) {
       if (axis == "h") {
-        this.scaleX.setTargetValue(this.flipH ? 1 : -1);
-        this.scaleY.setTargetValue(1);
         this.flipH = !this.flipH;
       } else if (axis == "v") {
-        this.scaleX.setTargetValue(1);
-        this.scaleY.setTargetValue(this.flipV ? 1 : -1);
         this.flipV = !this.flipV;
       } else if (axis == "r") {
-        this.scaleX.setTargetValue(this.flipH ? 1 : -1);
-        this.scaleY.setTargetValue(this.flipV ? 1 : -1);
         this.flipV = false;
         this.flipH = false;
       }
+      this.flipChange = true;
     }
     currentTint() {
       const shade = Math.round(255 * (100 - this.tintValue.value()) / 100);
@@ -1161,10 +1168,10 @@
       this.flashCount = flashCount;
       this.nextFlash = now + 100;
     }
-    jiggle(x2, y2, rot, chance) {
+    jiggle(x, y, rot, chance) {
       if (chance > 0) {
-        this.locX.jiggle_start(x2, chance);
-        this.locY.jiggle_start(y2, chance);
+        this.locX.jiggle_start(x, chance);
+        this.locY.jiggle_start(y, chance);
         this.angle.jiggle_start(rot, chance);
       } else {
         this.locX.jiggle_stop();
@@ -1252,21 +1259,40 @@
       this.sizeX.setTargetValue(new_w, duration, now, callback);
       this.sizeY.setTargetValue(newH, duration, now);
     }
-    resetFont() {
+    resetSize() {
       this.sizeX.setTargetValue(this.piImage.orig.width);
       this.sizeY.setTargetValue(this.piImage.orig.height);
     }
-    scale(new_w, newH, duration, now, callback) {
-      const old_w = this.sizeX.value();
-      const oldH = this.sizeY.value();
-      if (new_w < 1) {
-        new_w = newH;
+    setScale(scaleX, scaleY, command, toOrBy, duration, now, callback) {
+      const currentX = this.scaleX.value() * 100;
+      const currentY = this.scaleY.value() * 100;
+      switch (command) {
+        case "shrink":
+          if (toOrBy == "by") {
+            scaleX = currentX - scaleX;
+            scaleY = currentY - scaleY;
+          }
+          break;
+        case "grow":
+          if (toOrBy == "by") {
+            scaleX = currentX + scaleX;
+            scaleY = currentY + scaleY;
+          }
+          break;
+        case "scale":
+        // just use the given values
+        // toOrBy is ignored (it means the same thing)
+        default:
+          break;
       }
-      if (newH < 1) {
-        newH = new_w;
+      if (scaleX <= 0) {
+        scaleX = 1;
       }
-      this.sizeX.setTargetValue(old_w * new_w / 100, duration, now, callback);
-      this.sizeY.setTargetValue(oldH * newH / 100);
+      if (scaleY <= 0) {
+        scaleY = 1;
+      }
+      this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
+      this.scaleY.setTargetValue(scaleY / 100);
     }
     update(scene, now) {
       if (!this.enabled) {
@@ -1284,8 +1310,8 @@
           if (this.role != null) {
             const wdw_width = Globals.app.screen.width;
             const wdwHeight = Globals.app.screen.height;
-            const scaleY = imgHeight / wdwHeight;
-            const scaleX = img_width / wdw_width;
+            const aspectY = imgHeight / wdwHeight;
+            const aspectX = img_width / wdw_width;
             let depth = null;
             switch (this.role) {
               case "background":
@@ -1300,23 +1326,23 @@
               case "left":
                 this.locX.setTargetValue(img_width / 2);
                 this.locY.setTargetValue(wdwHeight / 2);
-                this.sizeX.setTargetValue(scaleY * img_width);
-                this.sizeY.setTargetValue(scaleY * imgHeight);
+                this.sizeX.setTargetValue(aspectY * img_width);
+                this.sizeY.setTargetValue(aspectY * imgHeight);
                 depth = defaults_default.DEPTH_LEFT;
                 break;
               case "right":
                 this.locX.setTargetValue(wdw_width - img_width / 2);
                 this.locY.setTargetValue(wdwHeight / 2);
-                this.sizeX.setTargetValue(scaleY * img_width);
-                this.sizeY.setTargetValue(scaleY * imgHeight);
+                this.sizeX.setTargetValue(aspectY * img_width);
+                this.sizeY.setTargetValue(aspectY * imgHeight);
                 depth = defaults_default.DEPTH_RIGHT;
                 break;
               case "top":
               case "sky":
                 this.locX.setTargetValue(wdw_width / 2);
                 this.locY.setTargetValue(imgHeight / 2);
-                this.sizeX.setTargetValue(scaleX * img_width);
-                this.sizeY.setTargetValue(scaleX * imgHeight);
+                this.sizeX.setTargetValue(aspectX * img_width);
+                this.sizeY.setTargetValue(aspectX * imgHeight);
                 depth = defaults_default.DEPTH_SKY;
                 break;
               case "bottom":
@@ -1324,8 +1350,8 @@
               case "foreground":
                 this.locX.setTargetValue(wdw_width / 2);
                 this.locY.setTargetValue(wdwHeight - imgHeight / 2);
-                this.sizeX.setTargetValue(scaleX * img_width);
-                this.sizeY.setTargetValue(scaleX * imgHeight);
+                this.sizeX.setTargetValue(aspectX * img_width);
+                this.sizeY.setTargetValue(aspectX * imgHeight);
                 depth = this.role == "ground" ? defaults_default.DEPTH_GROUND : defaults_default.DEPTH_FOREGROUND;
                 break;
             }
@@ -1342,11 +1368,19 @@
           }
           const fullTexture = new PIXI.Texture(image.piImage);
           let texture = null;
-          if (this.image_portion) {
+          if (this.windowed) {
+            const viewRectangle = new PIXI.Rectangle(
+              this.viewX.value(),
+              this.viewY.value(),
+              this.viewWidth.value(),
+              this.viewHeight.value()
+            );
             texture = new PIXI.Texture({
               source: fullTexture.source,
-              frame: this.image_portion
+              frame: viewRectangle
             });
+            this.sizeX.setTargetValue(this.viewWidth.value());
+            this.sizeY.setTargetValue(this.viewHeight.value());
           } else {
             texture = fullTexture;
           }
@@ -1362,11 +1396,36 @@
           this.depth = Globals.nextZ(this.depth);
           this.piSprite.zIndex = this.depth;
           this.piSprite.tint = this.currentTint();
-          this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
+          Globals.log.report(this.sizeX.value() + " " + this.scaleX.value() + " " + Globals.scriptScaleX + " by " + this.sizeY.value() + " " + this.scaleY.value() + " " + Globals.scriptScaleY);
+          this.piSprite.setSize(
+            this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+            this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
+          );
           if (this.sgParent) {
             this.sgParent.piSprite.addChild(this.piSprite);
           } else {
             Globals.root.addChild(this.piSprite);
+          }
+        }
+      }
+      if (this.piSprite !== null && this.flipChange) {
+        this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
+        this.flipChange = false;
+      }
+      if (this.windowed) {
+        const updateViewX = this.viewX.updateValue();
+        const updateViewY = this.viewY.updateValue();
+        const updateViewWidth = this.viewWidth.updateValue();
+        const updateViewHeight = this.viewHeight.updateValue();
+        if (updateViewHeight || updateViewWidth || updateViewX || updateViewY) {
+          if (this.piSprite !== null) {
+            this.piSprite.texture.frame = new PIXI.Rectangle(
+              this.viewX.value(),
+              this.viewY.value(),
+              this.viewWidth.value(),
+              this.viewHeight.value()
+            ), this.sizeX.setTargetValue(this.viewWidth.value());
+            this.sizeY.setTargetValue(this.viewHeight.value());
           }
         }
       }
@@ -1393,8 +1452,10 @@
             this.throwCallback();
           }
         }
+        this.locX.setTargetValue(this.locX.value() + deltaX);
+        this.locY.setTargetValue(this.locY.value() + deltaY);
         if (this.piSprite !== null) {
-          this.piSprite.position.set(this.locX.value() + deltaX, this.locY.value() + deltaY);
+          this.piSprite.position.set(this.locX.value(), this.locY.value());
         }
       }
       const pivotOnX = this.pivotX.updateValue();
@@ -1431,19 +1492,16 @@
           this.piSprite.tint = this.currentTint();
         }
       }
+      const changeSX = this.scaleX.updateValue();
+      const changeSY = this.scaleY.updateValue();
       changeX = this.sizeX.updateValue();
       changeY = this.sizeY.updateValue();
-      if (changeX || changeY) {
+      if (changeSX || changeSY || changeX || changeY) {
         if (this.piSprite !== null) {
-          this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
-        }
-      }
-      changeX = this.scaleX.updateValue();
-      changeY = this.scaleY.updateValue();
-      if (changeX || changeY) {
-        if (this.piSprite !== null) {
-          this.piSprite.scale.set(this.scaleX.value(), this.scaleY.value());
-          this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
+          this.piSprite.setSize(
+            this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+            this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
+          );
         }
       }
       if (this.blinkRate > 0 && this.next_blink < now) {
@@ -2297,12 +2355,12 @@
       for (let i = 0; i < this.sprites.length; i++) {
         const sprite = this.sprites[i];
         if (verbose) {
-          const x2 = sprite.locX.value();
-          const y2 = sprite.locY.value();
+          const x = sprite.locX.value();
+          const y = sprite.locY.value();
           const z = sprite.depth;
           text += `${sprite.name} (${sprite.type}) `;
           text += sprite.visible ? "visible" : "hidden";
-          text += ` at ${x2} ${y2} ${z}
+          text += ` at ${x} ${y} ${z}
 `;
           const sx = sprite.sizeX.value();
           const sy = sprite.sizeY.value();
@@ -2541,8 +2599,8 @@
         
         **************************************************************************************************/
         case "echo":
-          const action3 = wordList.getWord("flip");
-          switch (action3) {
+          const request = wordList.getWord("flip");
+          switch (request) {
             case "flip":
               this.echo = !this.echo;
               break;
@@ -2552,6 +2610,13 @@
             case "off":
               this.echo = false;
               break;
+          }
+          break;
+        case "debug":
+          const thisLevel = wordList.getInt(0);
+          const targetLevel = this.varList.getValue("_MAIN_:DEBUG_LEVEL", false);
+          if (targetLevel != defaults_default.NOTFOUND && thisLevel >= targetLevel) {
+            Globals.log.report(wordList.joinWords());
           }
           break;
         case "log":
@@ -2573,7 +2638,7 @@
         case "upload":
           let tag = null;
           if (wordList.wordsLeft() < 1) {
-            Globals.log.error("Missing filename at line " + action3.number);
+            Globals.log.error("Missing filename at line " + action2.number);
             break;
           }
           let filename = wordList.getWord();
@@ -2614,7 +2679,7 @@
           if (wordList.wordsLeft() > 0) {
             this.folder = wordList.getWord() + "/";
           } else {
-            Globals.log.error("Expected folder name at " + action3.number);
+            Globals.log.error("Expected folder name at " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2632,7 +2697,7 @@
           if (wordList.wordsLeft() > 0) {
             this.spriteScene = wordList.getWord();
           } else {
-            Globals.log.error("Expected folder name at " + action3.number);
+            Globals.log.error("Expected folder name at " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2656,7 +2721,7 @@
                 if (!sgSprite2) {
                   break;
                 }
-                sgSprite2.resetFont();
+                sgSprite2.resetsize();
                 sgSprite2.jiggle(0, 0, 0, 0);
                 sg_spitre.flicker(0);
                 sgSprite2.blink(0, 0);
@@ -2667,7 +2732,7 @@
                 sg_spriet.setSkew(0, 0);
                 sgSprite2.rotate("to", 0, "in");
               } else {
-                Globals.log.error("Missing sprite name at line " + action3.number);
+                Globals.log.error("Missing sprite name at line " + action2.number);
               }
             } else if (reset_type == "scene") {
               let sceneName = this.name;
@@ -2678,7 +2743,7 @@
               if (scene != false) {
                 scene.stop(true);
               } else {
-                Globals.log.error("Scene not found at line " + action3.number);
+                Globals.log.error("Scene not found at line " + action2.number);
               }
             } else if (reset_type == "from") {
               this.folder = "";
@@ -2721,14 +2786,12 @@
                     sgSprite2.sgParent = groupSprite;
                   }
                   if (wordList.testWord("view")) {
-                    const x2 = wordList.getInt(0);
-                    const y2 = wordList.getInt(0);
+                    const x = wordList.getInt(0);
+                    const y = wordList.getInt(0);
                     const w = wordList.getInt(0);
                     const h = wordList.getInt(0);
                     if (w > 0 && h > 0) {
-                      sgSprite2.image_portion = new PIXI.Rectangle(x2, y2, w, h);
-                      sgSprite2.sizeX.setTargetValue(w);
-                      sgSprite2.sizeY.setTargetValue(h);
+                      sgSprite2.setView(x, y, w, h, "in", 0, now, null);
                     }
                   }
                   sgSprite2.setVisibility(false);
@@ -2736,10 +2799,53 @@
                 }
                 break;
               default:
-                Globals.log.error("Unknown sprite command at line " + action3.number);
+                Globals.log.error("Unknown sprite command at line " + action2.number);
             }
           } else {
-            Globals.log.error("Missing sprite data at line " + action3.number);
+            Globals.log.error("Missing sprite data at line " + action2.number);
+          }
+          break;
+        /**************************************************************************************************
+        
+           ##     ## #### ######## ##      ## 
+           ##     ##  ##  ##       ##  ##  ## 
+           ##     ##  ##  ##       ##  ##  ## 
+           ##     ##  ##  ######   ##  ##  ## 
+            ##   ##   ##  ##       ##  ##  ## 
+             ## ##    ##  ##       ##  ##  ## 
+              ###    #### ########  ###  ###  
+        
+        **************************************************************************************************/
+        case "view":
+          if (wordList.wordsLeft() > 0) {
+            let spriteName2 = wordList.getWord();
+            let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
+            if (!sgSprite2) {
+              break;
+            }
+            wordList.testWord("to");
+            const x = wordList.getInt(0);
+            const y = wordList.getInt(0);
+            const w = wordList.getInt(0);
+            const h = wordList.getInt(0);
+            let inOrAt = wordList.testWord(["in", "at"], "in");
+            let duration2 = wordList.getDuration(0);
+            if (w > 0 && h > 0) {
+              sgSprite2.setView(
+                x,
+                y,
+                w,
+                h,
+                inOrAt,
+                duration2,
+                now,
+                makeCompletionCallback(actionGroup)
+              );
+            } else {
+              Globals.log.error("Not sensible view data at line " + action2.number);
+            }
+          } else {
+            Globals.log.error("Missing view data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2791,7 +2897,7 @@
               sgSprite2.sgParent.sizeY.forceValue(sgSprite2.sgParent.piSprite.height);
             }
           } else {
-            Globals.log.error("Missing place data at line " + action3.number);
+            Globals.log.error("Missing place data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2821,7 +2927,7 @@
             sgSprite2.imageName = imageName;
             sgSprite2.piSprite.texture = PIXI.Texture.EMPTY;
           } else {
-            Globals.log.error("Missing replace data at line " + action3.number);
+            Globals.log.error("Missing replace data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2857,7 +2963,7 @@
               "frame"
             ]);
             if (role == false) {
-              Globals.log.error("Unknown role " + role + " at line " + action3.number);
+              Globals.log.error("Unknown role " + role + " at line " + action2.number);
               break;
             }
             if (spriteName2 == null) {
@@ -2873,7 +2979,7 @@
             }
             this.sprites.push(sgSprite2);
           } else {
-            Globals.log.error("Missing put data at line " + action3.number);
+            Globals.log.error("Missing put data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2949,10 +3055,10 @@
                 break;
               }
               default:
-                Globals.log.error("Unknown group command at line " + action3.number);
+                Globals.log.error("Unknown group command at line " + action2.number);
             }
           } else {
-            Globals.log.error("Missing group data at line " + action3.number);
+            Globals.log.error("Missing group data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -2977,7 +3083,7 @@
             const volume = wordList.getInt(50, defaults_default.VOLUME_MIN, defaults_default.VOLUME_MAX);
             AudioManager.play(resourceName, { fadeInMs: fadein * 1e3, targetVolume: volume });
           } else {
-            Globals.log.error("Nothing to play at line " + action3.number);
+            Globals.log.error("Nothing to play at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3000,7 +3106,7 @@
             const fadein = wordList.getDuration(0);
             AudioManager.setVolume(resourceName, volume, { fadeMs: fadein * 1e3 });
           } else {
-            Globals.log.error("No volume change at line " + action3.number);
+            Globals.log.error("No volume change at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3049,7 +3155,7 @@
             }
             sgSprite2 = SGSprite.getSprite(this.spriteScene, textName);
             if (sgSprite2.type != SPRITE_TEXT) {
-              Globals.log.error("Sprite is not text at " + action3.number);
+              Globals.log.error("Sprite is not text at " + action2.number);
               break;
             }
             let doUpdate = true;
@@ -3084,7 +3190,7 @@
                 break;
               default:
                 doUpdate = false;
-                Globals.log.error("Unknown text command at " + action3.number);
+                Globals.log.error("Unknown text command at " + action2.number);
                 break;
             }
             if (doUpdate) {
@@ -3093,7 +3199,7 @@
               sgSprite2.sizeY.setTargetValue(sgSprite2.piSprite.height);
             }
           } else {
-            Globals.log.error("Missing argument at line " + action3.number);
+            Globals.log.error("Missing argument at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3178,23 +3284,23 @@
                     break;
                   case "grid":
                     {
-                      const x2 = wordList.getInt(100);
-                      const y2 = wordList.getInt(x2);
+                      const x = wordList.getInt(100);
+                      const y = wordList.getInt(x);
                       graphic2 = new PIXI.Graphics();
                       const width = Globals.app.screen.width;
                       const height = Globals.app.screen.height;
-                      if (x2 > 10 && y2 > 10) {
-                        for (let i = width / -2 + x2; i < width / 2; i += x2) {
+                      if (x > 10 && y > 10) {
+                        for (let i = width / -2 + x; i < width / 2; i += x) {
                           graphic2.moveTo(i, height / -2).lineTo(i, height / 2);
                         }
-                        for (let j = height / -2 + y2; j < height / 2; j += y2) {
+                        for (let j = height / -2 + y; j < height / 2; j += y) {
                           graphic2.moveTo(width / -2, j).lineTo(width / 2, j);
                         }
                       }
                     }
                     break;
                   default:
-                    Globals.log.error("Unknown graphic type at " + action3.number);
+                    Globals.log.error("Unknown graphic type at " + action2.number);
                     break;
                 }
                 if (graphic2 != null) {
@@ -3212,7 +3318,7 @@
                   sgSprite2.sizeY.setTargetValue(graphic2.height);
                   this.sprites.push(sgSprite2);
                 } else {
-                  Globals.log.error("Invalid graphic arguments at " + action3.number);
+                  Globals.log.error("Invalid graphic arguments at " + action2.number);
                 }
                 break;
               }
@@ -3232,11 +3338,11 @@
                 }
                 break;
               default:
-                Globals.log.error("Unknown graphics command at " + action3.number);
+                Globals.log.error("Unknown graphics command at " + action2.number);
                 break;
             }
           } else {
-            Globals.log.error("Missing argument at line " + action3.number);
+            Globals.log.error("Missing argument at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3255,16 +3361,18 @@
             let spriteName2 = wordList.getWord();
             const direction = wordList.testWord(["horizontally", "hor", "h", "vertically", "vert", "v"]);
             let delta = 0;
+            let x = 0;
+            let y = 0;
             let byOrTo = wordList.getWord(["by", "to"]);
             if (byOrTo === false) {
-              Globals.log.error("Expected by or to on line " + action3.number);
+              Globals.log.error("Expected by or to on line " + action2.number);
               break;
             }
             if (direction !== false) {
               delta = wordList.getInt(0) * Globals.scriptScaleX;
             } else {
-              let x2 = wordList.getInt(0) * Globals.scriptScaleX;
-              let y2 = wordList.getInt(0) * Globals.scriptScaleY;
+              x = wordList.getInt(0) * Globals.scriptScaleX;
+              y = wordList.getInt(0) * Globals.scriptScaleY;
             }
             let inOrAt = wordList.testWord(["in", "at"], "in");
             let duration2 = wordList.getDuration(0);
@@ -3288,7 +3396,7 @@
                 break;
             }
           } else {
-            Globals.log.error("Missing move data at line " + action3.number);
+            Globals.log.error("Missing move data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3306,16 +3414,16 @@
           if (wordList.wordsLeft() > 0) {
             let spriteName2 = wordList.getWord();
             wordList.testWord(["around", "from"]);
-            let x2 = wordList.getInt(0);
-            let y2 = wordList.getInt(0);
+            let x = wordList.getInt(0);
+            let y = wordList.getInt(0);
             let duration2 = wordList.getDuration(0);
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
             }
-            sgSprite2.pivotPoint(x2, y2, duration2, now, makeCompletionCallback(actionGroup));
+            sgSprite2.pivotPoint(x, y, duration2, now, makeCompletionCallback(actionGroup));
           } else {
-            Globals.log.error("Missing pivot data at line " + action3.number);
+            Globals.log.error("Missing pivot data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3353,7 +3461,7 @@
             let spriteName2 = wordList.getWord();
             let depth_type = wordList.getWord(["to", "by"]);
             if (depth_type === false) {
-              Globals.log.error("Expected to or by on line " + action3.number);
+              Globals.log.error("Expected to or by on line " + action2.number);
               break;
             }
             let value2 = wordList.getInt(0);
@@ -3365,7 +3473,7 @@
               sgSprite2.setDepth(depth_type, value2);
             }
           } else {
-            Globals.log.error("Missing raise/lower data at line " + action3.number);
+            Globals.log.error("Missing raise/lower data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3382,9 +3490,9 @@
         case "resize":
           if (wordList.wordsLeft() > 0) {
             let spriteName2 = wordList.getWord();
-            let toOrBy = wordList.getWord(["to", "by"]);
+            let toOrBy = wordList.getWord(["to", "by", "reset"]);
             if (toOrBy === false) {
-              Globals.log.error("Expected to or by on line " + action3.number);
+              Globals.log.error("Expected to or by on line " + action2.number);
               break;
             }
             let w = wordList.getInt(0) * Globals.scriptScaleX;
@@ -3395,17 +3503,21 @@
             if (!sgSprite2) {
               break;
             }
-            sgSprite2.resize(
-              w,
-              h,
-              toOrBy,
-              inOrAt,
-              duration2,
-              now,
-              makeCompletionCallback(actionGroup)
-            );
+            if (toOrBy == "reset") {
+              sgSprite2.resetSize();
+            } else {
+              sgSprite2.resize(
+                w,
+                h,
+                toOrBy,
+                inOrAt,
+                duration2,
+                now,
+                makeCompletionCallback(actionGroup)
+              );
+            }
           } else {
-            Globals.log.error("Missing resize data at line " + action3.number);
+            Globals.log.error("Missing resize data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3425,50 +3537,32 @@
         case "grow":
           if (wordList.wordsLeft() > 0) {
             let spriteName2 = wordList.getWord();
-            const action4 = wordList.testWord(["to", "by"]);
+            const toOrBy = wordList.testWord(["to", "by", "reset"]);
             let w = wordList.getInt(0);
-            let h = wordList.getInt(0);
-            if (command == "shrink") {
-              if (w > 100) {
-                w = 99;
-              }
-              if (w > 0) {
-                w = 100 - w;
-              }
-              if (h > 100) {
-                h = 99;
-              }
-              if (h > 0) {
-                h = 100 - h;
-              }
-            } else if (command == "grow") {
-              if (w > 0) {
-                w += 100;
-              }
-              if (h > 0) {
-                h += 100;
-              }
-            }
+            let h = wordList.getInt(w);
             let duration2 = wordList.getDuration(0);
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
             }
-            if (action4 == "reset") {
-              sgSprite2.resetFont();
-            } else if (w > 0 || h > 0) {
-              sgSprite2.scale(
+            if (toOrBy == "reset") {
+              sgSprite2.scaleX.setTargetValue(100);
+              sgSprite2.scaleY.setTargetValue(100);
+            } else if (w != 0 || h != 0) {
+              sgSprite2.setScale(
                 w,
                 h,
+                command,
+                toOrBy,
                 duration2,
                 now,
                 makeCompletionCallback(actionGroup)
               );
             } else {
-              Globals.log.error("Invalid scale data at line " + action4.number);
+              Globals.log.error("Invalid scale data at line " + action2.number);
             }
           } else {
-            Globals.log.error("Missing scale data at line " + action3.number);
+            Globals.log.error("Missing scale data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3511,7 +3605,7 @@
                 newX = location - width / 2;
                 break;
               default:
-                Globals.log.error("Unknown alignment at line " + action3.number);
+                Globals.log.error("Unknown alignment at line " + action2.number);
                 break;
             }
             sgSprite2.move(
@@ -3524,7 +3618,7 @@
               makeCompletionCallback(actionGroup)
             );
           } else {
-            Globals.log.error("Missing alignment at line " + action3.number);
+            Globals.log.error("Missing alignment at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3560,12 +3654,12 @@
                 break;
               case "scene":
                 if (item == MAIN_NAME) {
-                  Globals.log.error("Cannot delete main scene on line " + action3.number);
+                  Globals.log.error("Cannot delete main scene on line " + action2.number);
                 } else {
                   for (let i = 0; i < Globals.scenes.length; i++) {
                     if (Globals.scenes[i].name == item) {
                       if (Globals.scenes[i].state != SCENE_STOPPED) {
-                        Globals.log.error("Cannot delete running scene on line " + action3.number);
+                        Globals.log.error("Cannot delete running scene on line " + action2.number);
                       } else {
                         Globals.scenes.splice(i, 1);
                         break;
@@ -3575,11 +3669,11 @@
                 }
                 break;
               default:
-                Globals.log.error("Unknown deletion type on line " + action3.number);
+                Globals.log.error("Unknown deletion type on line " + action2.number);
                 break;
             }
           } else {
-            Globals.log.error("Nothing to remove at line " + action3.number);
+            Globals.log.error("Nothing to remove at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3607,7 +3701,7 @@
             }
             sgSprite2.rotate(turn_type, value2, dur_type, duration2, now, makeCompletionCallback(actionGroup));
           } else {
-            Globals.log.error("Missing rotate data at line " + action3.number);
+            Globals.log.error("Missing rotate data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3636,7 +3730,7 @@
             }
             sgSprite2.setSkew(skewX, skewY, skew_type, duration2, now, makeCompletionCallback(actionGroup));
           } else {
-            Globals.log.error("Missing skew data at line " + action3.number);
+            Globals.log.error("Missing skew data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3670,7 +3764,7 @@
               sgSprite2.throw(angle, initialVelocity, now, makeCompletionCallback(actionGroup));
             }
           } else {
-            Globals.log.error("Missing throw data at line " + action3.number);
+            Globals.log.error("Missing throw data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3697,7 +3791,7 @@
               sgSprite2.throw(180, 0, now, makeCompletionCallback(actionGroup));
             }
           } else {
-            Globals.log.error("Missing drop data at line " + action3.number);
+            Globals.log.error("Missing drop data at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3721,7 +3815,7 @@
             let axis = wordList.getWord("h");
             sgSprite2.flip(axis.charAt(0));
           } else {
-            Globals.log.error("Missing sprite tag at line " + action3.number);
+            Globals.log.error("Missing sprite tag at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3752,7 +3846,7 @@
               sgSprite2.setVisibility("toggle");
             }
           } else {
-            Globals.log.error("Missing sprite tag at line " + action3.number);
+            Globals.log.error("Missing sprite tag at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3776,7 +3870,7 @@
               scene.start(wordList.joinWords());
             }
           } else {
-            Globals.log.error("Missing scene name at line " + action3.number);
+            Globals.log.error("Missing scene name at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3795,25 +3889,25 @@
           if (wordList.wordsLeft() > 0) {
             const scene_name = wordList.getWord();
             if (scene_name == MAIN_NAME) {
-              Globals.log.error("Cannot duplicate main scene at line " + action3.number);
+              Globals.log.error("Cannot duplicate main scene at line " + action2.number);
               break;
             }
             wordList.testWord("as");
             const new_name = wordList.getWord();
             const scene = _Scene.find(scene_name, false);
             if (scene === false) {
-              Globals.log.error("Scene not found at line " + action3.number);
+              Globals.log.error("Scene not found at line " + action2.number);
               break;
             }
             if (_Scene.find(new_name, false)) {
-              Globals.log.error("Scene with that name already exists " + action3.number);
+              Globals.log.error("Scene with that name already exists " + action2.number);
               break;
             }
             const new_scene = new _Scene(new_name);
             new_scene.content = scene.content;
             Globals.scenes.push(new_scene);
           } else {
-            Globals.log.error("Missing scene name at line " + action3.number);
+            Globals.log.error("Missing scene name at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3830,7 +3924,7 @@
         case "stop":
         case "halt":
           if (wordList.wordsLeft() < 1) {
-            Globals.log.error("Nothing to stop on line " + action3.number);
+            Globals.log.error("Nothing to stop on line " + action2.number);
             break;
           }
           this.completionCallback = makeCompletionCallback(actionGroup);
@@ -3890,14 +3984,14 @@
             wordList.testWord(["be", "to"]);
             this.varList.setValue(varName, wordList.joinWords());
           } else {
-            Globals.log.error("Missing variable name at line " + action3.number);
+            Globals.log.error("Missing variable name at line " + action2.number);
           }
           break;
         case "assign":
           if (wordList.wordsLeft() > 0) {
             const assignIndex = wordList.indexOf("as");
             if (assignIndex < 1) {
-              Globals.log.error("Missing assign separator 'as' at line " + action3.number);
+              Globals.log.error("Missing assign separator 'as' at line " + action2.number);
             } else {
               const varNames = wordList.sliceWords(1, assignIndex);
               const values = wordList.sliceWords(assignIndex + 1);
@@ -3914,7 +4008,7 @@
               }
             }
           } else {
-            Globals.log.error("Missing variable name at line " + action3.number);
+            Globals.log.error("Missing variable name at line " + action2.number);
           }
           break;
         case "increment":
@@ -3931,7 +4025,7 @@
               }
             }
           } else {
-            Globals.log.error("Missing variable name at line " + action3.number);
+            Globals.log.error("Missing variable name at line " + action2.number);
           }
           break;
         case "choose":
@@ -3940,23 +4034,23 @@
             wordList.testWord("from");
             this.varList.setValue(varName, wordList.randomWord());
           } else {
-            Globals.log.error("Missing variable name at line " + action3.number);
+            Globals.log.error("Missing variable name at line " + action2.number);
           }
           break;
         case "match":
           if (wordList.wordsLeft() > 4) {
             const varName = wordList.getWord();
             if (!wordList.testWord("to")) {
-              Globals.log.error("Missing match separator 'to' at line " + action3.number);
+              Globals.log.error("Missing match separator 'to' at line " + action2.number);
             } else {
               const searchWord = wordList.getWord();
               if (searchWord == null) {
-                Globals.log.error("Missing search word at line " + action3.number);
+                Globals.log.error("Missing search word at line " + action2.number);
               } else {
                 wordList.testWord("at");
                 const anchor = wordList.testWord(["start", "end"]);
                 if (!wordList.testWord("from")) {
-                  Globals.log.error("Missing match separator 'from' at line " + action3.number);
+                  Globals.log.error("Missing match separator 'from' at line " + action2.number);
                 } else {
                   const matches = wordList.matchWords(searchWord, anchor);
                   this.varList.setValue(varName, matches.length > 0 ? matches.join(" ") : defaults_default.NOTFOUND);
@@ -3964,7 +4058,7 @@
               }
             }
           } else {
-            Globals.log.error("Missing values for match at line " + action3.number);
+            Globals.log.error("Missing values for match at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3996,7 +4090,7 @@
               sgSprite2.flicker(flickerStrength, flickerChance);
             }
           } else {
-            Globals.log.error("Missing values at line " + action3.number);
+            Globals.log.error("Missing values at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4031,7 +4125,7 @@
               sgSprite2.jiggle(jiggleX, jiggleY, jiggle_r, jiggleChance);
             }
           } else {
-            Globals.log.error("Missing values at line " + action3.number);
+            Globals.log.error("Missing values at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4055,7 +4149,7 @@
             let flashCount = wordList.getInt(0, 1, 10);
             sgSprite2.flash(flashCount, now);
           } else {
-            Globals.log.error("Missing values at line " + action3.number);
+            Globals.log.error("Missing values at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4089,7 +4183,7 @@
               sgSprite2.blink(blinkRate, blinkChance, now);
             }
           } else {
-            Globals.log.error("Missing values at line " + action3.number);
+            Globals.log.error("Missing values at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4126,7 +4220,7 @@
               sgSprite2.pulse(pulseRate, pulseMin, pulseMax, now);
             }
           } else {
-            Globals.log.error("Missing values at line " + action3.number);
+            Globals.log.error("Missing values at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4197,7 +4291,7 @@
               }
             }
           } else {
-            Globals.log.error("Missing values at line " + action3.number);
+            Globals.log.error("Missing values at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4303,16 +4397,16 @@
           {
             const stackSize = actionGroup.stack.length;
             if (stackSize < 1) {
-              Globals.log.error("No for loop for next at " + action3.number);
+              Globals.log.error("No for loop for next at " + action2.number);
               break;
             }
             const stackFrame2 = actionGroup.stack[stackSize - 1];
             if (stackFrame2.type != STACK_FOR) {
-              Globals.log.error("For loop error at " + action3.number);
+              Globals.log.error("For loop error at " + action2.number);
               break;
             }
             if (stackFrame2.counter++ > defaults_default.LOOP_MAXIMUM) {
-              Globals.log.error("Looping exceeded at " + action3.number);
+              Globals.log.error("Looping exceeded at " + action2.number);
               actionGroup.stack.pop();
               break;
             }
@@ -4343,16 +4437,16 @@
           {
             const stackSize = actionGroup.stack.length;
             if (stackSize < 1) {
-              Globals.log.error("No repeat for until at " + action3.number);
+              Globals.log.error("No repeat for until at " + action2.number);
               break;
             }
             const stackFrame2 = actionGroup.stack[stackSize - 1];
             if (stackFrame2.type != STACK_REPEAT) {
-              Globals.log.error("Repeat loop error at " + action3.number);
+              Globals.log.error("Repeat loop error at " + action2.number);
               break;
             }
             if (stackFrame2.counter++ > defaults_default.LOOP_MAXIMUM) {
-              Globals.log.error("Looping exceeded at " + action3.number);
+              Globals.log.error("Looping exceeded at " + action2.number);
               actionGroup.stack.pop();
               break;
             }
@@ -4386,7 +4480,7 @@
               }
             }
           } else {
-            Globals.log.error("Missing if condition at line " + action3.number);
+            Globals.log.error("Missing if condition at line " + action2.number);
           }
           break;
         case "endif":

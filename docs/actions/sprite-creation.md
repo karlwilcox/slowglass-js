@@ -61,124 +61,6 @@ specify the x and y coordinates of the top left corner and the width
 and height of the required rectangle. There is little validation of
 these inputs other than the width and height being greater than 0.
 
-## Sprite Initial Placement
-
-`place {sprite-name} [hidden] at {x} {y} [depth {z}] [size {w} {h}]`
-
-`place {sprite-name} [hidden] at (centre | center) [depth {z}] [size {w} {h}]`
-
-Places the named sprite at the given location and depth. If no
-depth is specified the sprite will automatically be assigned
-the next highest depth that has been used so far. I.e. sprites
-will be overlaid in the order that they are placed, so later
-placements will be "on top" of earlier ones, excluding the **frame**
-if present (see below).
-
-If the keyword **hidden** is present then the sprite will be placed
-but will not be visible. In this way you can apply further modifications
-or effects before making the sprite visible with the **show** command.
-
-The sprite will be created at its original size unless you explicitly
-provide a size. If one of the size parameters is less than 1 then it
-will be calculated from the other dimension to preseve the aspect ratio.
-For example if the source image was 250 by 200 pixels and you request
-a size of **0, 100** then the sprite will be created sized **125, 100**.
-
-This command completes immediately (but see the note above about
-asynchronous image loading).
-
-## Sprite Special Placement
-
-Some images are not expected to move around but to occupy a particular
-location or fulfill a particular role on the "stage". Although you
-can use the place command for this purpose there is a separate
-helper command which automatically takes account of the display
-area size.
-
-`(put | use) {image-name} as {role} [named {sprite-name}]`
-
-This command will put the named image in a specific location
-depending on the role. If you do not provide a name then the
-role will be used as the name.
-
-These are normal sprites and can have all the usual sprite
-modification commands applied to them, including changing
-the depth although I wouldn't expect them to be moved much.
-
-You do not have to use these roles, you can set your own
-sprites for these purposes they are just provided for
-convenience.
-
-The roles, and their characteristics are as follows:
-
-### Background
-
-The image is scaled to occupy the whole of the display area, aspect
-ratio is **not** preserved. The background is placed at a depth
-of 1.
-
-Obviously this is expected to be used as the furthest background
-against which everything else is drawn.
-
-### Sky / Top
-
-The image is scaled in width and placed flush to the top of the display area
-with the aspect ratio preserved. It is placed at a depth of 100.
-
-The expectation is that is perhaps a cloudscape?
-
-### Ground / Bottom
-
-The image is scaled in width and placed flush to the bottom of the
-display area with the aspect ratio preserved. It is placed at a depth of
-200, i.e. it will obscure parts of the sky.
-
-The expectation is that this is the ground surface such as grass or
-city streets or whatever.
-
-### Left / Right
-
-The image will be scaled in height and placed flush to the left or
-right edge of the display area with the aspect ratio preserved. They are
-placed at a depth of 300 and 400 respectively, i.e. they will
-obscure the ground and sky.
-
-The expectation is that these are nearby trees or buildings for example.
-
-### Foreground
-
-The image will be scaled in width and placed flush to the bottom
-of the display area, with the aspect ratio preserved. It will be
-placed at a depth of 500, i.e. it will be obscure the ground, sky
-and anything to the left or right.
-
-The expectation is that this might be used for fixed objects in the immediate
-foreground.
-
-### Frame
-
-This is scaled to the fit the whole of the display without
-preserving the aspect ratio. It is place at a depth of 1000 and thus
-is drawn on top of everything else.
-
-The expectation is that it can be used for an outer frame with a
-transparent centre, like a theatre stage. Since it appears on top
-of everything else it can also be used to display title cards
-or speech like in silent movies. Just use the **show** command
-to make it invisible once you are finished with it.
-
-### Depth hints
-
-If you choose to use the roles noted above then you will typically
-place your own (moving) sprites at depths between 500 and 1000 so
-that they are drawn above all of the other elements apart from
-the frame.
-
-## Sprite Modification
-
-There are many sprite modification commands which are listed separately.
-(Add links...?)
-
 ## Text Creation and Modification
 
 `text create {sprite-name} {content...}`
@@ -231,7 +113,7 @@ place all within the same bounds.
 
 All text commands complete immediately.
 
-## Future Intentions
+### Future Intentions
 
 I might think about some more sophisticated text formatting commands
 but need to strike a balance between the simplicity and readability
@@ -277,3 +159,43 @@ This graphic is not expected to be especially useful but may be helpful when
 debugging placement issues.
 
 All graphic commands complete immediately.
+
+## A Note On Size and Scaling
+
+All sprite types have a natural "size" which will be used if you don't
+provide any other information - for image sprites it will be the size
+of the source image (or the size of the view onto that image);
+for text it depends on font size and the number
+of characters and lines; for graphics it is determined by the sizes
+that you provided for the item.
+
+You can determine the actual number of pixels that a sprite will occupy
+on the actual screen by adjusting its size, its scaling, or both.
+
+Size is given in pixels of width and height. It can be set arbitrarily
+and also adjusted, either instantly or over a given period. Commands
+which operate on the sprite size or change it are:
+
+**create**, **resize**, **view**
+
+Sprites also have a scaling factor, separately in the x and y dimensions.
+The scale is a pure number, acting as a multiplier. Scale can be
+adjusted, again either instantaneously or over a give period.
+For ease of use scaling is given in percentages, where 50 means half
+the existing size and 200 means twice the size. The default
+value for scaling is 100. Commands which modify the scale of the sprite are:
+
+**scale**, **shrink**, **grow**
+
+The actual number of pixels used to display the sprite is hence
+the size multiplied by the scale.
+
+You can use either size or scale to modify the sprite, or even both. Size is
+best if you need to put a sprite into a specific place in relation to other
+picture elements, scale is perhaps best used when you wan to make the sprite
+a little larger or smaller to make it "look right" in a situation.
+You can also use changing scale to make a sprite appear to come from
+the depths of the scene and then adopt your intended size for sideways
+or other movements. However none of these things are requirements,
+your are free to use (or not use) size and scale however best suits
+your needs.

@@ -32,17 +32,22 @@ begin
     make v_sportscar be 1240 1706 1030 324
     make v_greencar be 2354 1646 990 370
     make run be yes
+    make elapsed_ltor be $ELAPSED
+    make elapsed_rtol be $ELAPSED
 
-every 5 seconds
+every 1 seconds
     if $run
         if $PERCENT > 50
             match traffic to v_ at start from $VARIABLES
             choose vehicle from $traffic
             choose direction from _ltor _rtol
-            clone drive$direction as drive$counter
-            log calling drive$counter with $vehicle
-            start scene drive$counter $$vehicle
-            increment counter
+            make gap be elapsed$direction
+            if ($ELAPSED - $$gap) > 3
+                clone drive$direction as drive$counter
+                start scene drive$counter $$vehicle
+                increment counter
+                make $gap be $ELAPSED
+            endif
         endif
     endif
 

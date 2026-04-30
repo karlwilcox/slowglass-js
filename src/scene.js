@@ -436,8 +436,8 @@ export class Scene {
 **************************************************************************************************/
 
             case "echo":
-                const action = wordList.getWord("flip");
-                switch (action) {
+                const request = wordList.getWord("flip");
+                switch (request) {
                     case "flip":
                         this.echo = !this.echo;
                         break;
@@ -575,7 +575,7 @@ export class Scene {
                             let spriteName = wordList.getWord();
                             let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                             if (!sgSprite) { break; }
-                            sgSprite.resetFont(); // go back to original size
+                            sgSprite.resetsize(); // go back to original size
                             sgSprite.jiggle(0,0,0,0);  // stop jiggling
                             sg_spitre.flicker(0); // stop flickering
                             sgSprite.blink(0,0); // stop blinking (makes invisible)
@@ -652,9 +652,7 @@ export class Scene {
                                     const w = wordList.getInt(0);
                                     const h = wordList.getInt(0);
                                     if (w > 0 && h > 0) {
-                                        sgSprite.image_portion = new PIXI.Rectangle(x,y,w,h);
-                                        sgSprite.sizeX.setTargetValue(w);
-                                        sgSprite.sizeY.setTargetValue(h);
+                                        sgSprite.setView(x, y, w, h, "in", 0, now, null);
                                     }
                                 }
                                 sgSprite.setVisibility(false);
@@ -666,6 +664,43 @@ export class Scene {
                         }
                 } else {
                     Globals.log.error("Missing sprite data at line " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
+   ##     ## #### ######## ##      ## 
+   ##     ##  ##  ##       ##  ##  ## 
+   ##     ##  ##  ##       ##  ##  ## 
+   ##     ##  ##  ######   ##  ##  ## 
+    ##   ##   ##  ##       ##  ##  ## 
+     ## ##    ##  ##       ##  ##  ## 
+      ###    #### ########  ###  ###  
+
+**************************************************************************************************/
+
+            case "view":
+                if (wordList.wordsLeft() > 0) {
+                    let spriteName = wordList.getWord();
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) {
+                        break;
+                    }
+                    wordList.testWord("to");
+                    const x = wordList.getInt(0);
+                    const y = wordList.getInt(0);
+                    const w = wordList.getInt(0);
+                    const h = wordList.getInt(0);
+                    let inOrAt = wordList.testWord( ["in","at"], "in");
+                    let duration = wordList.getDuration(0);
+                    if (w > 0 && h > 0) {
+                        sgSprite.setView(x, y, w, h, inOrAt, duration, now, 
+                            Utils.makeCompletionCallback(actionGroup));
+                    } else {
+                        Globals.log.error("Not sensible view data" + " at line " + action.number);
+                    }
+                } else {
+                    Globals.log.error("Missing view data" + " at line " + action.number);
                 }
                 break;
 
@@ -1219,6 +1254,8 @@ export class Scene {
                     let spriteName = wordList.getWord();
                     const direction = wordList.testWord(["horizontally","hor","h","vertically","vert","v"]);
                     let delta = 0;
+                    let x = 0;
+                    let y = 0;
                     let byOrTo = wordList.getWord( ["by","to"]);
                     if (byOrTo === false) {
                         Globals.log.error("Expected by or to on line " + action.number);
@@ -1227,8 +1264,8 @@ export class Scene {
                     if (direction !== false) {
                         delta = wordList.getInt(0) * Globals.scriptScaleX;
                     } else {
-                        let x = wordList.getInt(0) * Globals.scriptScaleX;
-                        let y = wordList.getInt(0) * Globals.scriptScaleY;
+                        x = wordList.getInt(0) * Globals.scriptScaleX;
+                        y = wordList.getInt(0) * Globals.scriptScaleY;
                     }
                     let inOrAt = wordList.testWord( ["in","at"], "in");
                     let duration = wordList.getDuration(0);
@@ -1355,7 +1392,7 @@ export class Scene {
             case "resize":
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getWord();
-                    let toOrBy = wordList.getWord( ["to","by"]);
+                    let toOrBy = wordList.getWord( ["to","by", "reset"]);
                     if (toOrBy === false) {
                         Globals.log.error("Expected to or by on line " + action.number);
                         break;
@@ -1369,9 +1406,12 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
-                    sgSprite.resize( w, h, toOrBy, inOrAt, duration, now,
-                        Utils.makeCompletionCallback(actionGroup)
-                    );
+                    if (toOrBy == "reset") {
+                        sgSprite.resetSize();
+                    } else {
+                        sgSprite.resize( w, h, toOrBy, inOrAt, duration, now,
+                            Utils.makeCompletionCallback(actionGroup));
+                    }
                 } else {
                     Globals.log.error("Missing resize data at line " + action.number);
                 }
@@ -1395,39 +1435,19 @@ export class Scene {
             case "grow":
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getWord();
-                    const action = wordList.testWord( ["to", "by"]);
+                    const toOrBy = wordList.testWord( ["to", "by", "reset"]);
                     let w = wordList.getInt(0);
-                    let h = wordList.getInt(0);
-                    if (command == "shrink") {
-                        if (w > 100) { // if we shrink by 100% or more we disappear!
-                            w = 99;
-                        }
-                        if (w > 0) {
-                            w = 100 - w; // e.g. shrink by 25% means scale to 75%
-                        }
-                        if (h > 100) {
-                            h = 99;
-                        }
-                        if (h > 0) {
-                            h = 100 - h; // e.g. shrink by 25% means scale to 75%
-                        }
-                    } else if (command == "grow") {
-                        if (w > 0) {
-                            w += 100; // e.g. grow by 50% means scale to 150% of original
-                        }
-                        if (h > 0) {
-                            h += 100; // e.g. grow by 50% means scale to 150% of original
-                        }
-                    }
+                    let h = wordList.getInt(w);
                     let duration = wordList.getDuration(0);
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
                     }
-                    if  (action == "reset") {
-                        sgSprite.resetFont();
-                    } else if (w > 0 || h > 0) {
-                        sgSprite.scale( w, h, duration, now,
+                    if  (toOrBy == "reset") {
+                        sgSprite.scaleX.setTargetValue(100);
+                        sgSprite.scaleY.setTargetValue(100);
+                    } else if (w != 0 || h != 0) {
+                        sgSprite.setScale( w, h, command, toOrBy, duration, now,
                             Utils.makeCompletionCallback(actionGroup));
                     } else {
                         Globals.log.error("Invalid scale data at line " + action.number);
@@ -1462,8 +1482,8 @@ export class Scene {
                     }
                     let newX = sgSprite.locX.value();
                     let newY = sgSprite.locY.value();
-                    const height = sgSprite.sizeY.value();
-                    const width = sgSprite.sizeX.value();
+                    const width = sgSprite.sizeX.value() * sgSprite.scaleX.value();
+                    const height = sgSprite.sizeY.value() * sgSprite.scaleY.value();
                     switch (type) {
                         case "top":
                             newY = location + (height / 2);

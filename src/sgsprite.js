@@ -83,7 +83,6 @@ export class SGSprite {
         this.type = type;
         this.imageName = imageName;
         this.name = spriteName
-        this.image_portion = null;
         this.sgParent = null;
         // created yet?
         this.piSprite = null;
@@ -99,10 +98,18 @@ export class SGSprite {
         this.sizeX = new Adjustable(0);
         this.sizeY = new Adjustable(0);
         // scale
-        this.scaleX = new Adjustable(0);
-        this.scaleY = new Adjustable(0);
+        this.scaleX = new Adjustable(1);
+        this.scaleY = new Adjustable(1);
+        // flipping
         this.flipH = false;
         this.flipV = false;
+        this.flipChange = false;
+        // View window
+        this.windowed = false;
+        this.viewX = new Adjustable(0);
+        this.viewY = new Adjustable(0);
+        this.viewWidth = new Adjustable(0);
+        this.viewHeight = new Adjustable(0);
         // rotation point
         this.pivotX = new Adjustable(50,0,100);
         this.pivotY = new Adjustable(50,0,100);
@@ -217,6 +224,14 @@ export class SGSprite {
         this.enabled = true;
     }
 
+    setView(x, y, w, h, dur_type, duration, now, callback) {
+        this.windowed = true;
+        this.viewX.setTargetValue(x, duration, now, callback);
+        this.viewY.setTargetValue(y, duration, now);
+        this.viewWidth.setTargetValue(w, duration, now);
+        this.viewHeight.setTargetValue(h, duration, now);
+    }
+
     rotate(turn_type, value, dur_type, duration, now, callback) {
         let newValue = 0;
         if (turn_type == "to") {
@@ -291,19 +306,14 @@ export class SGSprite {
 
     flip(axis) {
         if (axis == "h") {
-            this.scaleX.setTargetValue(this.flipH ? 1 : -1);
-            this.scaleY.setTargetValue(1);
             this.flipH = !this.flipH;
         } else if (axis == "v") {
-            this.scaleX.setTargetValue(1);
-            this.scaleY.setTargetValue(this.flipV ? 1 : -1);
             this.flipV = !this.flipV;
         } else if (axis == "r") { // reset
-            this.scaleX.setTargetValue(this.flipH ? 1 : -1);
-            this.scaleY.setTargetValue(this.flipV ? 1 : -1);
             this.flipV = false;
             this.flipH = false;
         }
+        this.flipChange = true;
     }
 
     currentTint() {
@@ -417,28 +427,48 @@ export class SGSprite {
         this.sizeY.setTargetValue(newH, duration, now);
     }
 
-    resetFont() {
+    resetSize() {
         this.sizeX.setTargetValue(this.piImage.orig.width);
         this.sizeY.setTargetValue(this.piImage.orig.height);
     }
 
-
-    scale(new_w, newH, duration, now, callback) {
-        const old_w = this.sizeX.value();
-        const oldH = this.sizeY.value();
-        if (new_w < 1) {
-            new_w = newH;
+    setScale(scaleX, scaleY, command, toOrBy, duration, now, callback) {
+        const currentX = this.scaleX.value() * 100;
+        const currentY = this.scaleY.value() * 100;
+        switch (command) {
+            case "shrink":
+                // e.g. shrink by 10% means go from 100% to 90%
+                if (toOrBy == "by") {
+                    scaleX = currentX - scaleX;
+                    scaleY = currentY - scaleY;
+                } // else
+                // shrink to 10% means go to 10%
+                break;
+            case "grow":
+                if (toOrBy == "by") {
+                    scaleX = currentX + scaleX;
+                    scaleY = currentY + scaleY;
+                } // else
+                // e.g. grow by 10% means go from 100% to 110%
+                // grow to 110% means just that
+                break;
+            case "scale": // just use the given values
+                // toOrBy is ignored (it means the same thing)
+            default:
+                break;
         }
-        if (newH < 1) {
-            newH = new_w;
+        // Do some sense checks
+        if (scaleX <= 0) {
+            scaleX = 1; // %
         }
-        this.sizeX.setTargetValue(old_w * new_w / 100, duration, now, callback);
-        this.sizeY.setTargetValue(oldH * newH / 100);
+        if (scaleY <=0) {
+            scaleY = 1; // %
+        }
+        // convert percentages to float values
+        this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
+        this.scaleY.setTargetValue(scaleY / 100);
     }
         
-
-
-
     update(scene, now) {
         if (!this.enabled) {
             return;
@@ -459,8 +489,8 @@ export class SGSprite {
                     // Yes, but we need the image size to work out scaling
                     const wdw_width = Globals.app.screen.width;
                     const wdwHeight = Globals.app.screen.height;
-                    const scaleY = imgHeight / wdwHeight ;
-                    const scaleX = img_width / wdw_width ;
+                    const aspectY = imgHeight / wdwHeight ;
+                    const aspectX = img_width / wdw_width ;
                     let depth = null;
                     switch ( this.role ) {
                         case "background": // centre, and scale to window size
@@ -474,23 +504,23 @@ export class SGSprite {
                         case "left":
                             this.locX.setTargetValue(img_width / 2);
                             this.locY.setTargetValue(wdwHeight / 2);
-                            this.sizeX.setTargetValue(scaleY * img_width);
-                            this.sizeY.setTargetValue(scaleY * imgHeight);
+                            this.sizeX.setTargetValue(aspectY * img_width);
+                            this.sizeY.setTargetValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_LEFT;
                             break;
                         case "right":
                             this.locX.setTargetValue(wdw_width - (img_width / 2));
                             this.locY.setTargetValue(wdwHeight / 2);
-                            this.sizeX.setTargetValue(scaleY * img_width);
-                            this.sizeY.setTargetValue(scaleY * imgHeight);
+                            this.sizeX.setTargetValue(aspectY * img_width);
+                            this.sizeY.setTargetValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_RIGHT;
                             break;
                         case "top":
                         case "sky":
                             this.locX.setTargetValue(wdw_width / 2);
                             this.locY.setTargetValue(imgHeight / 2);
-                            this.sizeX.setTargetValue(scaleX * img_width);
-                            this.sizeY.setTargetValue(scaleX * imgHeight);
+                            this.sizeX.setTargetValue(aspectX * img_width);
+                            this.sizeY.setTargetValue(aspectX * imgHeight);
                             depth = defaults.DEPTH_SKY;
                             break;
                         case "bottom":
@@ -498,8 +528,8 @@ export class SGSprite {
                         case "foreground":
                             this.locX.setTargetValue(wdw_width / 2);
                             this.locY.setTargetValue(wdwHeight - (imgHeight / 2));
-                            this.sizeX.setTargetValue(scaleX * img_width);
-                            this.sizeY.setTargetValue(scaleX * imgHeight);
+                            this.sizeX.setTargetValue(aspectX * img_width);
+                            this.sizeY.setTargetValue(aspectX * imgHeight);
                             depth = this.role == "ground" ? defaults.DEPTH_GROUND : defaults.DEPTH_FOREGROUND;
                             break;
                     }
@@ -516,11 +546,15 @@ export class SGSprite {
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = null;
-                if (this.image_portion) {
+                if (this.windowed) {
+                    const viewRectangle =  new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
+                                    this.viewWidth.value(), this.viewHeight.value());
                     texture = new PIXI.Texture({
                         source: fullTexture.source,
-                        frame: this.image_portion,
-                    });
+                        frame: viewRectangle,
+                        });
+                    this.sizeX.setTargetValue(this.viewWidth.value());
+                    this.sizeY.setTargetValue(this.viewHeight.value());
                 } else {
                     texture = fullTexture;
                 }
@@ -535,13 +569,37 @@ export class SGSprite {
                 this.depth = Globals.nextZ(this.depth);
                 this.piSprite.zIndex = this.depth;
                 this.piSprite.tint = this.currentTint();
-                this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
+                Globals.log.report(this.sizeX.value() + " " + this.scaleX.value() + " " + Globals.scriptScaleX + " by " + 
+                    this.sizeY.value() + " " + this.scaleY.value() + " " + Globals.scriptScaleY);
+                this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+                    this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
                 if (this.sgParent) {
                     this.sgParent.piSprite.addChild(this.piSprite);
                 } else {
                     Globals.root.addChild(this.piSprite);
                 }
             } // else, still loading, try again later
+        }
+        // Do we need to flip?
+        if (this.piSprite !== null && this.flipChange) {
+            this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
+            this.flipChange = false;
+        }
+
+        // Is our window moving?
+        if (this.windowed) {
+            const updateViewX = this.viewX.updateValue();
+            const updateViewY = this.viewY.updateValue();
+            const updateViewWidth = this.viewWidth.updateValue();
+            const updateViewHeight = this.viewHeight.updateValue();
+            if (updateViewHeight || updateViewWidth || updateViewX || updateViewY) {
+                if (this.piSprite !== null) {
+                    this.piSprite.texture.frame = new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
+                                    this.viewWidth.value(), this.viewHeight.value()),
+                    this.sizeX.setTargetValue(this.viewWidth.value());
+                    this.sizeY.setTargetValue(this.viewHeight.value());
+                }
+            }
         }
         // Now update position
         // can't test both in same expression because of short-circuiting
@@ -564,10 +622,6 @@ export class SGSprite {
             const deltaX = this.thrownVx * fallingTime * Globals.scriptScaleX;
             // gravity is negative because y grows downwards on a canvas
             const deltaY = ((this.thrownVy * fallingTime) - (0.5 * Globals.gravity * -1 * fallingTime * fallingTime)) * Globals.scriptScaleY;
-            // if (!this.logged) {
-            //     Globals.log.report(`Initial deltas ${deltaX} ${deltaY}`);
-            //     this.logged = true;
-            // }
             if (((Math.abs(deltaX) > Globals.app.screen.width * 2) || (Math.abs(deltaY) > Globals.app.screen.height * 2)) ||
                 (Globals.ground_level > 0 && this.locY.value + deltaY > Globals.ground_level)) {
                 this.falling = false; // gone off the edge of the world or hit the ground
@@ -577,8 +631,10 @@ export class SGSprite {
                     this.throwCallback();
                 }
             }
+            this.locX.setTargetValue(this.locX.value() + deltaX);
+            this.locY.setTargetValue(this.locY.value() + deltaY);
             if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.position.set(this.locX.value() + deltaX, this.locY.value() + deltaY);
+                this.piSprite.position.set(this.locX.value(), this.locY.value());
             }
         }
 
@@ -633,32 +689,18 @@ export class SGSprite {
                 this.piSprite.tint = this.currentTint();
             }
         }
-
-        // update size
-        // can't test both in same expression because of short-circuiting
-        changeX = this.sizeX.updateValue();
-        changeY = this.sizeY.updateValue();
-        if (changeX || changeY) {
-            if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
-                // this may have changed the scaling, so update it
-                // this.scaleX.forceValue(this.piSprite.scale.x);
-                // this.scaleY.forceValue(this.piSprite.scale.y);
-            }
-        }
         
         // update scale
         // can't test both in same expression because of short-circuiting
-        changeX = this.scaleX.updateValue();
-        changeY = this.scaleY.updateValue();
-        if (changeX || changeY) {
+        const changeSX = this.scaleX.updateValue();
+        const changeSY = this.scaleY.updateValue();
+        // update size
+        changeX = this.sizeX.updateValue();
+        changeY = this.sizeY.updateValue();
+        if (changeSX || changeSY || changeX || changeY) {
             if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.scale.set(this.scaleX.value(), this.scaleY.value());
-                // Force the size back to what we want
-                this.piSprite.setSize(this.sizeX.value(), this.sizeY.value());
-                // this may have changed the size, so update it
-                // this.sizeX.forceValue(this.piSprite.size.x);
-                // this.sizeY.forceValue(this.piSprite.size.y);
+                this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+                    this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
             }
         }
          
