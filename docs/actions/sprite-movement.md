@@ -23,6 +23,24 @@ the currently visible area.
 
 The command completes when the movement has been accomplished.
 
+## Scroll
+
+If the sprite was created with a view (i.e. a "window" on to the underlying
+texture then you can use the following command on it:
+
+`scroll {sprite-name} by {x} {y} [pixels per second]`
+
+`scroll {sprite-name} stop`
+
+Whilst this does NOT (strictly speaking) move the sprite it does move
+the _*content*- of the sprite which can have a similar effect, for
+example moving clouds across the sky.
+
+If the scrolled window reaches the edge of the underlying texture
+then it will be repeated as a mirror repeat and hence may appear
+seemless. If you want ot take advantage of this then use tileable
+textures.
+
 ## Rotate
 
 `rotate {sprite-name} (by | to | at) {angle} [in {duration}]`

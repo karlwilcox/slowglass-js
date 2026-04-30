@@ -110,6 +110,9 @@ export class SGSprite {
         this.viewY = new Adjustable(0);
         this.viewWidth = new Adjustable(0);
         this.viewHeight = new Adjustable(0);
+        this.scrollX = 0;
+        this.scrollY = 0;
+        this.lastScroll = 0;
         // rotation point
         this.pivotX = new Adjustable(50,0,100);
         this.pivotY = new Adjustable(50,0,100);
@@ -225,11 +228,24 @@ export class SGSprite {
     }
 
     setView(x, y, w, h, dur_type, duration, now, callback) {
-        this.windowed = true;
-        this.viewX.setTargetValue(x, duration, now, callback);
-        this.viewY.setTargetValue(y, duration, now);
-        this.viewWidth.setTargetValue(w, duration, now);
-        this.viewHeight.setTargetValue(h, duration, now);
+        if (dur_type == "stop") {
+            this.windowed = false;
+            this.viewX.forceValue(this.viewX.value());
+            this.viewY.forceValue(this.viewY.value());
+            this.viewWidth.forceValue(this.viewWidth.value());
+            this.viewHeight.forceValue(this.viewHeight.value());
+        } else {
+            this.windowed = true;
+            this.viewX.setTargetValue(x, duration, now, callback);
+            this.viewY.setTargetValue(y, duration, now);
+            this.viewWidth.setTargetValue(w, duration, now);
+            this.viewHeight.setTargetValue(h, duration, now);
+        }
+    }
+
+    setScroll(dx, dy) {
+        this.scrollX = dx;
+        this.scrollY = dy;
     }
 
     rotate(turn_type, value, dur_type, duration, now, callback) {
@@ -553,6 +569,7 @@ export class SGSprite {
                         source: fullTexture.source,
                         frame: viewRectangle,
                         });
+                    texture.source.wrapMode = "mirror-repeat";
                     this.sizeX.setTargetValue(this.viewWidth.value());
                     this.sizeY.setTargetValue(this.viewHeight.value());
                 } else {
@@ -586,19 +603,36 @@ export class SGSprite {
 
         // Is our window moving?
         if (this.windowed) {
+            let scrolled = false;
+            // Are we scrolling the window?
+            if (this.scrollX || this.scrollY) {
+                if (this.scrollX != 0 && (now - this.lastScroll) > 1000 / this.scrollX) {
+                    this.viewX.tweak(this.scrollX > 0 ? 1 : -1);
+                    scrolled = true;
+                }
+                if (this.scrollY != 0 && (now - this.lastScroll) > 1000 / this.scrollY) {
+                    this.viewY.tweak(this.scrollY > 0 ? 1 : -1);
+                    scrolled = true;
+                }
+                if (scrolled) {
+                    this.lastScroll = now;
+                }
+            }
             const updateViewX = this.viewX.updateValue();
             const updateViewY = this.viewY.updateValue();
             const updateViewWidth = this.viewWidth.updateValue();
             const updateViewHeight = this.viewHeight.updateValue();
-            if (updateViewHeight || updateViewWidth || updateViewX || updateViewY) {
+            if (scrolled || updateViewHeight || updateViewWidth || updateViewX || updateViewY) {
                 if (this.piSprite !== null) {
                     this.piSprite.texture.frame = new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
-                                    this.viewWidth.value(), this.viewHeight.value()),
+                                    this.viewWidth.value(), this.viewHeight.value());
+                    this.piSprite.texture.updateUvs();
                     this.sizeX.setTargetValue(this.viewWidth.value());
                     this.sizeY.setTargetValue(this.viewHeight.value());
                 }
             }
         }
+
         // Now update position
         // can't test both in same expression because of short-circuiting
         let changeX = this.locX.updateValue();

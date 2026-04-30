@@ -12,7 +12,7 @@ export default {
     GRAVITY_PS2: 100,   // force of gravity in pixels per second per second
     BOUNDS_X: 2,        // Multiplier for display width for bounds checking
     BOUNDS_Y: 2,        // Multiplier for display height for bounds checking
-    DEPTH_BACKGROUND: 1,
+    DEPTH_BACKGROUND: 50,
     DEPTH_SKY: 100,
     DEPTH_GROUND: 200,
     DEPTH_LEFT: 300,

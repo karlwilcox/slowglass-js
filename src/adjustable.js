@@ -113,6 +113,10 @@ export class Adjustable {
         this.deltaValue = 0;
         this.changing = false;
     }
+     tweak(value) {
+        this.currentValue += value;
+        this.changing = true;
+     }
 
     setTargetValue(target, seconds, timestamp, callback) {
         if (arguments.length == 1) {

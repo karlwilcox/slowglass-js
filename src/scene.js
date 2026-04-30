@@ -708,6 +708,42 @@ export class Scene {
 
 /**************************************************************************************************
 
+    ######   ######  ########   #######  ##       ##       
+   ##    ## ##    ## ##     ## ##     ## ##       ##       
+   ##       ##       ##     ## ##     ## ##       ##       
+    ######  ##       ########  ##     ## ##       ##       
+         ## ##       ##   ##   ##     ## ##       ##       
+   ##    ## ##    ## ##    ##  ##     ## ##       ##       
+    ######   ######  ##     ##  #######  ######## ######## 
+
+**************************************************************************************************/
+
+            case "scroll":
+                if (wordList.wordsLeft() > 0) {
+                    let spriteName = wordList.getWord();
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) {
+                        break;
+                    }
+                    if (!sgSprite.windowed) {
+                        Globals.log.error("Sprite does not have view window " + action.number);
+                        break;
+                    }
+                    const atOrStop = wordList.testWord(["at","stop"]);
+                    const dx = wordList.getFloat(0);
+                    const dy = wordList.getFloat(0);
+                    if (atOrStop == "stop") {
+                        sgSprite.setScroll(0,0);
+                    } else {
+                        sgSprite.setScroll(dx, dy);
+                    }
+                } else {
+                    Globals.log.error("Missing scroll data at line " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
 ########  ##          ###     ######  ######## 
 ##     ## ##         ## ##   ##    ## ##       
 ##     ## ##        ##   ##  ##       ##       
