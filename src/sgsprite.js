@@ -569,8 +569,6 @@ export class SGSprite {
                 this.depth = Globals.nextZ(this.depth);
                 this.piSprite.zIndex = this.depth;
                 this.piSprite.tint = this.currentTint();
-                Globals.log.report(this.sizeX.value() + " " + this.scaleX.value() + " " + Globals.scriptScaleX + " by " + 
-                    this.sizeY.value() + " " + this.scaleY.value() + " " + Globals.scriptScaleY);
                 this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
                     this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
                 if (this.sgParent) {

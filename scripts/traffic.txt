@@ -16,21 +16,21 @@ begin
     make far_roadheight be 360
     make counter be 1
     # row 1
-    make v_refusetruck be 16 50 1194 526
-    make v_firetruck be 1234 36 1382 526
-    make v_minivan be 2616 28 908 526
+    make v_refusetruck be 20 46 1172 516
+    make v_firetruck be 1242 76 1374 480
+    make v_minivan be 2632 214 868 322
     # row 2
-    make v_citybus be 6 596 1522 534
-    make v_greycar be 1680 740 906 344
-    make v_bluecar be 2592 760 870 308
+    make v_citybus be 4 610 1524 506
+    make v_greycar be 1686 748 894 318
+    make v_bluecar be 2596 768 850 288
     # row 3
-    make v_darkcar be 58 1194 964 332
-    make v_taxi be 1258 1182 934 354
-    make v_minibus be 2296 1082 1078 452
+    make v_darkcar be 48 1196 970 324
+    make v_taxi be 1262 1184 924 336
+    make v_minibus be 2298 1084 1072 438
     # row 4
-    make v_van be 70 1546 1078 474
-    make v_sportscar be 1240 1706 1030 324
-    make v_greencar be 2354 1646 990 370
+    make v_van be 78 1558 1072 454
+    make v_sportscar be 1242 1726 1026 290
+    make v_greencar be 2364 1652 984 352
     make run be yes
     make elapsed_ltor be $ELAPSED
     make elapsed_rtol be $ELAPSED

@@ -653,6 +653,8 @@ export class Scene {
                                     const h = wordList.getInt(0);
                                     if (w > 0 && h > 0) {
                                         sgSprite.setView(x, y, w, h, "in", 0, now, null);
+                                        sgSprite.sizeX.setTargetValue(w);
+                                        sgSprite.sizeY.setTargetValue(h);
                                     }
                                 }
                                 sgSprite.setVisibility(false);
@@ -1141,7 +1143,7 @@ export class Scene {
                                         break;
                                     case "line":
                                         {
-                                            const l = wordList.getInt(0);
+                                            const r = wordList.getInt(0);
                                             if (r > 0) {
                                                 graphic = new PIXI.Graphics().moveTo(l / -2, 0).lineTo(l/2, 0);
                                             }

@@ -1396,7 +1396,6 @@
           this.depth = Globals.nextZ(this.depth);
           this.piSprite.zIndex = this.depth;
           this.piSprite.tint = this.currentTint();
-          Globals.log.report(this.sizeX.value() + " " + this.scaleX.value() + " " + Globals.scriptScaleX + " by " + this.sizeY.value() + " " + this.scaleY.value() + " " + Globals.scriptScaleY);
           this.piSprite.setSize(
             this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
             this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
@@ -2792,6 +2791,8 @@
                     const h = wordList.getInt(0);
                     if (w > 0 && h > 0) {
                       sgSprite2.setView(x, y, w, h, "in", 0, now, null);
+                      sgSprite2.sizeX.setTargetValue(w);
+                      sgSprite2.sizeY.setTargetValue(h);
                     }
                   }
                   sgSprite2.setVisibility(false);
@@ -3230,10 +3231,10 @@
                     {
                       const w = wordList.getInt(0);
                       const h = wordList.getInt(w);
-                      const r2 = wordList.getInt(0);
+                      const r = wordList.getInt(0);
                       if (w > 0 && h > 0) {
-                        if (r2 > 0) {
-                          graphic2 = new PIXI.Graphics().roundRect(w / -2, h / -2, w, h, r2);
+                        if (r > 0) {
+                          graphic2 = new PIXI.Graphics().roundRect(w / -2, h / -2, w, h, r);
                         } else {
                           graphic2 = new PIXI.Graphics().rect(w / -2, h / -2, w, h);
                         }
@@ -3242,15 +3243,15 @@
                     break;
                   case "circle":
                     {
-                      const r2 = wordList.getInt(0);
-                      if (r2 > 0) {
-                        graphic2 = new PIXI.Graphics().circle(0, 0, r2);
+                      const r = wordList.getInt(0);
+                      if (r > 0) {
+                        graphic2 = new PIXI.Graphics().circle(0, 0, r);
                       }
                     }
                     break;
                   case "line":
                     {
-                      const l = wordList.getInt(0);
+                      const r = wordList.getInt(0);
                       if (r > 0) {
                         graphic2 = new PIXI.Graphics().moveTo(l / -2, 0).lineTo(l / 2, 0);
                       }
@@ -3589,8 +3590,8 @@
             }
             let newX = sgSprite2.locX.value();
             let newY = sgSprite2.locY.value();
-            const height = sgSprite2.sizeY.value();
-            const width = sgSprite2.sizeX.value();
+            const width = sgSprite2.sizeX.value() * sgSprite2.scaleX.value();
+            const height = sgSprite2.sizeY.value() * sgSprite2.scaleY.value();
             switch (type2) {
               case "top":
                 newY = location + height / 2;
