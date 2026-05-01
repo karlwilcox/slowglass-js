@@ -112,7 +112,8 @@ export class SGSprite {
         this.viewHeight = new Adjustable(0);
         this.scrollX = 0;
         this.scrollY = 0;
-        this.lastScroll = 0;
+        this.lastScrollX = 0;
+        this.lastScrollY = 0;
         // rotation point
         this.pivotX = new Adjustable(50,0,100);
         this.pivotY = new Adjustable(50,0,100);
@@ -154,6 +155,14 @@ export class SGSprite {
         // skewiness
         this.skewX = new Adjustable(0);
         this.skewY = new Adjustable(0);
+        // perspective warp corners, stored relative to the sprite position
+        this.warped = false;
+        this.warpCorners = [
+            new Adjustable(0), new Adjustable(0),
+            new Adjustable(0), new Adjustable(0),
+            new Adjustable(0), new Adjustable(0),
+            new Adjustable(0), new Adjustable(0)
+        ];
         // debugging
         // this.logged = false;
 
@@ -484,6 +493,117 @@ export class SGSprite {
         this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
         this.scaleY.setTargetValue(scaleY / 100);
     }
+
+    getDefaultWarpCorners() {
+        const halfWidth = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX / 2;
+        const halfHeight = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY / 2;
+        return [
+            -halfWidth, -halfHeight,
+             halfWidth, -halfHeight,
+             halfWidth,  halfHeight,
+            -halfWidth,  halfHeight
+        ];
+    }
+
+    getWarpCorners() {
+        if (!this.warped) {
+            return this.getDefaultWarpCorners();
+        }
+        return this.warpCorners.map(corner => corner.value());
+    }
+
+    currentWarpPoints() {
+        const corners = this.getWarpCorners();
+        const points = [];
+        for (let i = 0; i < corners.length; i += 2) {
+            points.push(corners[i] + this.locX.value(), corners[i + 1] + this.locY.value());
+        }
+        return points;
+    }
+
+    setWarp(points, toOrBy, duration, now, callback) {
+        if (points.length != 8) {
+            return;
+        }
+        const currentPoints = this.currentWarpPoints();
+        const targetPoints = [];
+        for (let i = 0; i < points.length; i++) {
+            targetPoints[i] = toOrBy == "by" ? currentPoints[i] + points[i] : points[i];
+        }
+        const centerX = (targetPoints[0] + targetPoints[2] + targetPoints[4] + targetPoints[6]) / 4;
+        const centerY = (targetPoints[1] + targetPoints[3] + targetPoints[5] + targetPoints[7]) / 4;
+        this.warped = true;
+        this.locX.setTargetValue(centerX, duration, now, callback);
+        this.locY.setTargetValue(centerY, duration, now);
+        for (let i = 0; i < targetPoints.length; i += 2) {
+            this.warpCorners[i].setTargetValue(targetPoints[i] - centerX, duration, now);
+            this.warpCorners[i + 1].setTargetValue(targetPoints[i + 1] - centerY, duration, now);
+        }
+        this.applyWarpCorners();
+    }
+
+    clearWarp() {
+        this.warped = false;
+        if (this.piSprite !== null && this.piSprite.constructor.name == "PerspectiveMesh") {
+            const texture = this.piSprite.texture;
+            const replacement = new PIXI.Sprite({
+                texture: texture,
+                anchor: 0.5,
+                position: {x: this.locX.value(), y: this.locY.value()},
+                visible: this.visible,
+            });
+            replacement.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+                this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+            this.replacePixiSprite(replacement);
+        }
+    }
+
+    replacePixiSprite(replacement) {
+        if (this.piSprite !== null) {
+            replacement.zIndex = this.piSprite.zIndex;
+            replacement.tint = this.piSprite.tint;
+            replacement.alpha = this.piSprite.alpha;
+            replacement.filters = this.piSprite.filters;
+            if (this.piSprite.parent) {
+                this.piSprite.parent.addChild(replacement);
+                this.piSprite.destroy();
+            }
+        }
+        this.piSprite = replacement;
+    }
+
+    ensurePerspectiveMesh(texture) {
+        if (typeof PIXI.PerspectiveMesh !== "function") {
+            Globals.log.error("PerspectiveMesh is not available in this PixiJS build");
+            return false;
+        }
+        if (this.piSprite !== null && this.piSprite.constructor.name == "PerspectiveMesh") {
+            return true;
+        }
+        const mesh = new PIXI.PerspectiveMesh({
+            texture: texture,
+            verticesX: 20,
+            verticesY: 20,
+            position: {x: this.locX.value(), y: this.locY.value()},
+            visible: this.visible,
+        });
+        if (this.piSprite === null) {
+            this.piSprite = mesh;
+            return true;
+        }
+        this.replacePixiSprite(mesh);
+        return true;
+    }
+
+    applyWarpCorners() {
+        if (!this.warped || this.piSprite === null) {
+            return;
+        }
+        if (!this.ensurePerspectiveMesh(this.piSprite.texture)) {
+            return;
+        }
+        this.piSprite.setCorners(...this.getWarpCorners());
+    }
         
     update(scene, now) {
         if (!this.enabled) {
@@ -575,19 +695,38 @@ export class SGSprite {
                 } else {
                     texture = fullTexture;
                 }
-                this.piSprite = new PIXI.Sprite({
+                if (this.warped && typeof PIXI.PerspectiveMesh === "function") {
+                    this.piSprite = new PIXI.PerspectiveMesh({
+                            texture: texture,
+                            verticesX: 20,
+                            verticesY: 20,
+                            position: {x: this.locX.value(),
+                                y: this.locY.value() },
+                            visible: this.visible,
+                            });
+                    this.piSprite.setCorners(...this.getWarpCorners());
+                } else {
+                    if (this.warped) {
+                        Globals.log.error("PerspectiveMesh is not available in this PixiJS build");
+                    }
+                    this.piSprite = new PIXI.Sprite({
                             texture: texture,
                             anchor: 0.5,
                             position: {x: this.locX.value(),
                                 y: this.locY.value() },
                             visible: this.visible,
-                            }); 
+                            });
+                }
                 // set depth to next highest, unless it is already set
                 this.depth = Globals.nextZ(this.depth);
                 this.piSprite.zIndex = this.depth;
                 this.piSprite.tint = this.currentTint();
-                this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
-                    this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+                if (this.warped) {
+                    this.applyWarpCorners();
+                } else {
+                    this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+                        this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+                }
                 if (this.sgParent) {
                     this.sgParent.piSprite.addChild(this.piSprite);
                 } else {
@@ -606,16 +745,15 @@ export class SGSprite {
             let scrolled = false;
             // Are we scrolling the window?
             if (this.scrollX || this.scrollY) {
-                if (this.scrollX != 0 && (now - this.lastScroll) > 1000 / this.scrollX) {
+                if (this.scrollX != 0 && (now - this.lastScrollX) > 1000 / this.scrollX) {
                     this.viewX.tweak(this.scrollX > 0 ? 1 : -1);
+                    this.lastScrollX = now;
                     scrolled = true;
                 }
-                if (this.scrollY != 0 && (now - this.lastScroll) > 1000 / this.scrollY) {
+                if (this.scrollY != 0 && (now - this.lastScrollY) > 1000 / this.scrollY) {
                     this.viewY.tweak(this.scrollY > 0 ? 1 : -1);
+                    this.lastScrollY = now;
                     scrolled = true;
-                }
-                if (scrolled) {
-                    this.lastScroll = now;
                 }
             }
             const updateViewX = this.viewX.updateValue();
@@ -731,8 +869,12 @@ export class SGSprite {
         changeY = this.sizeY.updateValue();
         if (changeSX || changeSY || changeX || changeY) {
             if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
-                    this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+                if (this.warped) {
+                    this.applyWarpCorners();
+                } else {
+                    this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+                        this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+                }
             }
         }
          
@@ -775,6 +917,14 @@ export class SGSprite {
         if (change_skewX || change_skewY) {
             this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
             this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
+        }
+
+        let changeWarp = false;
+        for (let i = 0; i < this.warpCorners.length; i++) {
+            changeWarp = this.warpCorners[i].updateValue() || changeWarp;
+        }
+        if (changeWarp) {
+            this.applyWarpCorners();
         }
     }
 

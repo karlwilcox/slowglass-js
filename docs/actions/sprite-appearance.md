@@ -124,6 +124,21 @@ A shear transform by the specified angle in the given time.
 
 The command completes when the skew is accomplished.
 
+## Warp
+
+`warp {sprite-name} to {top-left-x} {top-left-y} {top-right-x} {top-right-y} {bottom-right-x} {bottom-right-y} {bottom-left-x} {bottom-left-y} [in {duration}]`
+
+`warp {sprite-name} by {top-left-x} {top-left-y} {top-right-x} {top-right-y} {bottom-right-x} {bottom-right-y} {bottom-left-x} {bottom-left-y} [in {duration}]`
+
+`warp {sprite-name} reset`
+
+Warps a sprite onto the four named corner points, clockwise from top-left.
+The `by` form moves each corner relative to its current position. This uses
+PixiJS perspective mesh rendering, so the sprite texture is projected into the
+four-corner shape rather than simply skewed.
+
+The command completes when the warp is accomplished.
+
 ## Reset
 
 `reset [sprite] {sprite-name}`

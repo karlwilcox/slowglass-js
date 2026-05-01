@@ -1705,6 +1705,42 @@ export class Scene {
 
 /**************************************************************************************************
 
+   ##      ##    ###    ########  ########  
+   ##  ##  ##   ## ##   ##     ## ##     ## 
+   ##  ##  ##  ##   ##  ##     ## ##     ## 
+   ##  ##  ## ##     ## ########  ########  
+   ##  ##  ## ######### ##   ##   ##        
+   ##  ##  ## ##     ## ##    ##  ##        
+    ###  ###  ##     ## ##     ## ##        
+
+**************************************************************************************************/
+
+            case "warp":
+                if (wordList.wordsLeft() > 0) {
+                    let spriteName = wordList.getWord();
+                    let warpType = wordList.testWord(["to","by","reset"], "to");
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) {
+                        break;
+                    }
+                    if (warpType == "reset") {
+                        sgSprite.clearWarp();
+                        break;
+                    }
+                    const points = [];
+                    for (let i = 0; i < 4; i++) {
+                        points.push(wordList.getFloat(0) * Globals.scriptScaleX);
+                        points.push(wordList.getFloat(0) * Globals.scriptScaleY);
+                    }
+                    let duration = wordList.getDuration(0);
+                    sgSprite.setWarp(points, warpType, duration, now, Utils.makeCompletionCallback(actionGroup));
+                } else {
+                    Globals.log.error("Missing warp data" + " at line " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
    ######## ##     ## ########   #######  ##      ## 
       ##    ##     ## ##     ## ##     ## ##  ##  ## 
       ##    ##     ## ##     ## ##     ## ##  ##  ## 
