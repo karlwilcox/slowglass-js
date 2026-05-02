@@ -239,10 +239,36 @@
   var STACK_REPEAT = "_REPEAT_";
 
   // src/vars.js
+  var TagList = class {
+    constructor() {
+      this.tags = [];
+    }
+    addTag(tag2) {
+      if (!Array.isArray(tag2)) {
+        tag2 = [tag2];
+      }
+      for (let i = 0; i < tag2.length; i++) {
+        let cleanTag = tag2[i];
+        if (cleanTag.charAt(0) == "#") {
+          cleanTag = cleanTag.slice(1);
+        }
+        if (!this.tags.includes(cleanTag)) {
+          this.tags.push(cleanTag);
+        }
+      }
+    }
+    hasTag(tag2) {
+      if (tag2.charAt(0) == "#") {
+        tag2 = tag2.slice(1);
+      }
+      return this.tags.includes(tag2);
+    }
+  };
   var Variable = class {
     constructor(name, value2) {
       this.name = name;
       this.value = value2;
+      this.tags = new TagList();
     }
     getValue() {
       return this.value;
@@ -275,6 +301,42 @@
           this.variables.push(new Variable(name, value2));
         }
       }
+    }
+    setTag(name, tag2) {
+      if (Array.isArray(tag2) && tag2.length == 0) {
+        return;
+      }
+      if (this.built_in(name)) {
+        Globals.log.error("Cannot tag built-in variable " + name);
+      } else if (name.match(/[\.:]/)) {
+        Globals.log.error("Cannot tag variable with dot or colon in name " + name);
+      } else {
+        const index = this.find(name);
+        if (index !== false) {
+          this.variables[index].tags.addTag(tag2);
+        }
+      }
+    }
+    listTags(tags) {
+      if (!Array.isArray(tags)) {
+        tags = [tags];
+      }
+      let result = "";
+      let first = true;
+      for (let i = 0; i < this.variables.length; i++) {
+        for (let j = 0; j < tags.length; j++) {
+          if (this.variables[i].tags.hasTag(tags[j])) {
+            if (first) {
+              first = false;
+            } else {
+              result += " ";
+            }
+            result += this.variables[i].name;
+            break;
+          }
+        }
+      }
+      return result;
     }
     listNames() {
       let result = "";
@@ -406,9 +468,6 @@
         case "MILLIS":
         case "MS":
           return Date.now() - Globals.startTime;
-        case "VARIABLES":
-        case "VARNAMES":
-          return this.listNames();
         default:
           return false;
       }
@@ -443,16 +502,43 @@
       if (!scene) {
         value2 = defaults_default.NOTFOUND;
       }
-      switch (varName) {
+      let listName = varName;
+      let tagName = false;
+      if (varName.match(/#/)) {
+        const listParts = varName.split(/#/);
+        listName = listParts[0];
+        tagName = listParts[1];
+      }
+      switch (listName) {
+        case "VARIABLES":
+        case "VARNAMES":
+          if (tagName) {
+            value2 = this.listTags(tagName);
+          } else {
+            value2 = this.listNames();
+          }
+          break;
         case "SPRITES":
-          value2 = scene.listSprites(false);
+          if (tagName) {
+            value2 = scene.listSpriteTags(tagName);
+          } else {
+            value2 = scene.listSprites(false);
+          }
           break;
         case "IMAGES":
         case "IMGS":
-          value2 = scene.listImages(false);
+          if (tagName) {
+            value2 = scene.listImageTags(tagName);
+          } else {
+            value2 = scene.listImages(false);
+          }
           break;
         case "SCENES":
-          value2 = Globals.listScenes(false);
+          if (tagName) {
+            value2 = Globals.listSceneTags(tagName);
+          } else {
+            value2 = Globals.listScenes(false);
+          }
           break;
         default:
           break;
@@ -475,6 +561,14 @@
             case "pos.y":
             case "position.y":
               value2 = sgSprite.locY.value();
+              break;
+            case "speed.x":
+            case "dx":
+              value2 = sgSprite.locX.speed();
+              break;
+            case "speed.y":
+            case "dy":
+              value2 = sgSprite.locY.speed();
               break;
             case "z":
             case "depth":
@@ -576,7 +670,7 @@
             }
           } else {
             const start = j;
-            while (j < input.length && /[a-zA-Z0-9_:]/.test(input[j])) {
+            while (j < input.length && /[a-zA-Z0-9_:#]/.test(input[j])) {
               j++;
             }
             varName = input.slice(start, j);
@@ -887,6 +981,27 @@
       }
       return text;
     }
+    static listSceneTags(tags) {
+      if (!Array.isArray(tag)) {
+        tags = [tags];
+      }
+      let result = "";
+      let first = true;
+      for (let i = 0; i < _Globals.scenes.length; i++) {
+        for (let j = 0; j < tags.length; j++) {
+          if (_Globals.scenes[i].tags.hasTag(tags[j])) {
+            if (first) {
+              first = false;
+            } else {
+              result += " ";
+            }
+            result += this.images[i].name;
+            break;
+          }
+        }
+      }
+      return result;
+    }
     static reset() {
       _Globals.root = null;
       _Globals.scenes = [];
@@ -918,33 +1033,12 @@
   };
 
   // src/sgsprite.js
-  function getImage(scene, tag) {
-    let parts = tag.split(":");
-    if (parts.length > 1) {
-      scene = parts[0];
-      tag = parts[1];
-    }
-    for (let i = 0; i < Globals.scenes.length; i++) {
-      if (Globals.scenes[i].name == scene) {
-        for (let j = 0; j < Globals.scenes[i].images.length; j++) {
-          if (Globals.scenes[i].images[j].name == tag) {
-            if (Globals.scenes[i].images[j].loading) {
-              return "loading";
-            } else {
-              return Globals.scenes[i].images[j];
-            }
-          }
-        }
-      }
-    }
-    Globals.log.error("No image found- " + scene + ":" + tag);
-    return null;
-  }
   var SGImage = class {
-    constructor(data, tag) {
-      this.name = tag;
+    constructor(data, name) {
+      this.name = name;
       this.width = 0;
       this.height = 0;
+      this.tags = new TagList();
       if (typeof data === "string") {
         this.piImage = null;
         this.loading = true;
@@ -961,12 +1055,36 @@
       this.width = this.piImage.width;
       this.height = this.piImage.height;
     }
+    static getImage(scene, name) {
+      let parts = name.split(":");
+      if (parts.length > 1) {
+        scene = parts[0];
+        name = parts[1];
+      }
+      for (let i = 0; i < Globals.scenes.length; i++) {
+        if (Globals.scenes[i].name == scene) {
+          for (let j = 0; j < Globals.scenes[i].images.length; j++) {
+            if (Globals.scenes[i].images[j].name == name) {
+              if (Globals.scenes[i].images[j].loading) {
+                return "loading";
+              } else {
+                return Globals.scenes[i].images[j];
+              }
+            }
+          }
+        }
+      }
+      Globals.log.error("No image found- " + scene + ":" + name);
+      return null;
+    }
   };
   var SGSprite = class {
-    constructor(imageName, spriteName = imageName, type = SPRITE_IMAGE) {
+    constructor(imageName, spriteName = imageName, type = SPRITE_IMAGE, tags = []) {
       this.type = type;
       this.imageName = imageName;
       this.name = spriteName;
+      this.tags = new TagList();
+      this.tags.addTag(tags);
       this.sgParent = null;
       this.piSprite = null;
       this.enabled = true;
@@ -988,7 +1106,8 @@
       this.viewHeight = new Adjustable(0);
       this.scrollX = 0;
       this.scrollY = 0;
-      this.lastScroll = 0;
+      this.lastScrollX = 0;
+      this.lastScrollY = 0;
       this.pivotX = new Adjustable(50, 0, 100);
       this.pivotY = new Adjustable(50, 0, 100);
       this.visible = true;
@@ -1020,6 +1139,17 @@
       this.strokeColour = "black";
       this.skewX = new Adjustable(0);
       this.skewY = new Adjustable(0);
+      this.warped = false;
+      this.warpCorners = [
+        new Adjustable(0),
+        new Adjustable(0),
+        new Adjustable(0),
+        new Adjustable(0),
+        new Adjustable(0),
+        new Adjustable(0),
+        new Adjustable(0),
+        new Adjustable(0)
+      ];
     }
     setPosition(x, y, depth = 0) {
       this.locX.setTargetValue(x);
@@ -1313,12 +1443,121 @@
       this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
       this.scaleY.setTargetValue(scaleY / 100);
     }
+    getDefaultWarpCorners() {
+      const halfWidth = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX / 2;
+      const halfHeight = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY / 2;
+      return [
+        -halfWidth,
+        -halfHeight,
+        halfWidth,
+        -halfHeight,
+        halfWidth,
+        halfHeight,
+        -halfWidth,
+        halfHeight
+      ];
+    }
+    getWarpCorners() {
+      if (!this.warped) {
+        return this.getDefaultWarpCorners();
+      }
+      return this.warpCorners.map((corner) => corner.value());
+    }
+    currentWarpPoints() {
+      const corners = this.getWarpCorners();
+      const points = [];
+      for (let i = 0; i < corners.length; i += 2) {
+        points.push(corners[i] + this.locX.value(), corners[i + 1] + this.locY.value());
+      }
+      return points;
+    }
+    setWarp(points, toOrBy, duration, now, callback) {
+      if (points.length != 8) {
+        return;
+      }
+      const currentPoints = this.currentWarpPoints();
+      const targetPoints = [];
+      for (let i = 0; i < points.length; i++) {
+        targetPoints[i] = toOrBy == "by" ? currentPoints[i] + points[i] : points[i];
+      }
+      const centerX = (targetPoints[0] + targetPoints[2] + targetPoints[4] + targetPoints[6]) / 4;
+      const centerY = (targetPoints[1] + targetPoints[3] + targetPoints[5] + targetPoints[7]) / 4;
+      this.warped = true;
+      this.locX.setTargetValue(centerX, duration, now, callback);
+      this.locY.setTargetValue(centerY, duration, now);
+      for (let i = 0; i < targetPoints.length; i += 2) {
+        this.warpCorners[i].setTargetValue(targetPoints[i] - centerX, duration, now);
+        this.warpCorners[i + 1].setTargetValue(targetPoints[i + 1] - centerY, duration, now);
+      }
+      this.applyWarpCorners();
+    }
+    clearWarp() {
+      this.warped = false;
+      if (this.piSprite !== null && this.piSprite.constructor.name == "PerspectiveMesh") {
+        const texture = this.piSprite.texture;
+        const replacement = new PIXI.Sprite({
+          texture,
+          anchor: 0.5,
+          position: { x: this.locX.value(), y: this.locY.value() },
+          visible: this.visible
+        });
+        replacement.setSize(
+          this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+          this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
+        );
+        this.replacePixiSprite(replacement);
+      }
+    }
+    replacePixiSprite(replacement) {
+      if (this.piSprite !== null) {
+        replacement.zIndex = this.piSprite.zIndex;
+        replacement.tint = this.piSprite.tint;
+        replacement.alpha = this.piSprite.alpha;
+        replacement.filters = this.piSprite.filters;
+        if (this.piSprite.parent) {
+          this.piSprite.parent.addChild(replacement);
+          this.piSprite.destroy();
+        }
+      }
+      this.piSprite = replacement;
+    }
+    ensurePerspectiveMesh(texture) {
+      if (typeof PIXI.PerspectiveMesh !== "function") {
+        Globals.log.error("PerspectiveMesh is not available in this PixiJS build");
+        return false;
+      }
+      if (this.piSprite !== null && this.piSprite.constructor.name == "PerspectiveMesh") {
+        return true;
+      }
+      const mesh = new PIXI.PerspectiveMesh({
+        texture,
+        verticesX: 20,
+        verticesY: 20,
+        position: { x: this.locX.value(), y: this.locY.value() },
+        visible: this.visible
+      });
+      if (this.piSprite === null) {
+        this.piSprite = mesh;
+        return true;
+      }
+      this.replacePixiSprite(mesh);
+      return true;
+    }
+    applyWarpCorners() {
+      if (!this.warped || this.piSprite === null) {
+        return;
+      }
+      if (!this.ensurePerspectiveMesh(this.piSprite.texture)) {
+        return;
+      }
+      this.piSprite.setCorners(...this.getWarpCorners());
+    }
     update(scene, now) {
       if (!this.enabled) {
         return;
       }
       if (this.type == SPRITE_IMAGE && (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) {
-        let image = getImage(scene, this.imageName);
+        let image = SGImage.getImage(scene, this.imageName);
         if (image === null) {
           this.enabled = false;
           return;
@@ -1404,22 +1643,43 @@
           } else {
             texture = fullTexture;
           }
-          this.piSprite = new PIXI.Sprite({
-            texture,
-            anchor: 0.5,
-            position: {
-              x: this.locX.value(),
-              y: this.locY.value()
-            },
-            visible: this.visible
-          });
+          if (this.warped && typeof PIXI.PerspectiveMesh === "function") {
+            this.piSprite = new PIXI.PerspectiveMesh({
+              texture,
+              verticesX: 20,
+              verticesY: 20,
+              position: {
+                x: this.locX.value(),
+                y: this.locY.value()
+              },
+              visible: this.visible
+            });
+            this.piSprite.setCorners(...this.getWarpCorners());
+          } else {
+            if (this.warped) {
+              Globals.log.error("PerspectiveMesh is not available in this PixiJS build");
+            }
+            this.piSprite = new PIXI.Sprite({
+              texture,
+              anchor: 0.5,
+              position: {
+                x: this.locX.value(),
+                y: this.locY.value()
+              },
+              visible: this.visible
+            });
+          }
           this.depth = Globals.nextZ(this.depth);
           this.piSprite.zIndex = this.depth;
           this.piSprite.tint = this.currentTint();
-          this.piSprite.setSize(
-            this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
-            this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
-          );
+          if (this.warped) {
+            this.applyWarpCorners();
+          } else {
+            this.piSprite.setSize(
+              this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+              this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
+            );
+          }
           if (this.sgParent) {
             this.sgParent.piSprite.addChild(this.piSprite);
           } else {
@@ -1434,16 +1694,15 @@
       if (this.windowed) {
         let scrolled = false;
         if (this.scrollX || this.scrollY) {
-          if (this.scrollX != 0 && now - this.lastScroll > 1e3 / this.scrollX) {
+          if (this.scrollX != 0 && now - this.lastScrollX > 1e3 / this.scrollX) {
             this.viewX.tweak(this.scrollX > 0 ? 1 : -1);
+            this.lastScrollX = now;
             scrolled = true;
           }
-          if (this.scrollY != 0 && now - this.lastScroll > 1e3 / this.scrollY) {
+          if (this.scrollY != 0 && now - this.lastScrollY > 1e3 / this.scrollY) {
             this.viewY.tweak(this.scrollY > 0 ? 1 : -1);
+            this.lastScrollY = now;
             scrolled = true;
-          }
-          if (scrolled) {
-            this.lastScroll = now;
           }
         }
         const updateViewX = this.viewX.updateValue();
@@ -1533,10 +1792,14 @@
       changeY = this.sizeY.updateValue();
       if (changeSX || changeSY || changeX || changeY) {
         if (this.piSprite !== null) {
-          this.piSprite.setSize(
-            this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
-            this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
-          );
+          if (this.warped) {
+            this.applyWarpCorners();
+          } else {
+            this.piSprite.setSize(
+              this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
+              this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY
+            );
+          }
         }
       }
       if (this.blinkRate > 0 && this.next_blink < now) {
@@ -1572,44 +1835,51 @@
         this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
         this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
       }
+      let changeWarp = false;
+      for (let i = 0; i < this.warpCorners.length; i++) {
+        changeWarp = this.warpCorners[i].updateValue() || changeWarp;
+      }
+      if (changeWarp) {
+        this.applyWarpCorners();
+      }
     }
-    static getSprite(scene, tag, report = true) {
-      if (!tag) {
+    static getSprite(scene, name, report = true) {
+      if (!name) {
         Globals.log.error("bad sprite name - ");
         return false;
       }
-      let parts = tag.split(":");
+      let parts = name.split(":");
       if (parts.length > 1) {
         scene = parts[0];
-        tag = parts[1];
+        name = parts[1];
       }
       for (let i = 0; i < Globals.scenes.length; i++) {
         if (Globals.scenes[i].name == scene) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
-            if (!(Globals.scenes[i].state == SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
+            if (!(Globals.scenes[i].state == SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == name) {
               return Globals.scenes[i].sprites[j];
             }
           }
         }
       }
       if (report) {
-        Globals.log.error("No sprite found- " + scene + ":" + tag);
+        Globals.log.error("No sprite found- " + scene + ":" + name);
       }
       return false;
     }
-    static remove_sprite(scene, tag, report = false) {
-      if (!tag) {
+    static remove_sprite(scene, name, report = false) {
+      if (!name) {
         return false;
       }
-      let parts = tag.split(":");
+      let parts = name.split(":");
       if (parts.length > 1) {
         scene = parts[0];
-        tag = parts[1];
+        name = parts[1];
       }
       for (let i = 0; i < Globals.scenes.length; i++) {
         if (Globals.scenes[i].name == scene) {
           for (let j = 0; j < Globals.scenes[i].sprites.length; j++) {
-            if (Globals.scenes[i].sprites[j].tag == tag) {
+            if (Globals.scenes[i].sprites[j].name == name) {
               Globals.scenes[i].sprites[j].piSprite.destroy();
               Globals.scenes[i].sprites.splice(j, 1);
               return true;
@@ -1618,7 +1888,7 @@
         }
       }
       if (report) {
-        Globals.log.error("No sprite found- " + scene + ":" + tag);
+        Globals.log.error("No sprite found- " + scene + ":" + name);
       }
       return false;
     }
@@ -1963,17 +2233,17 @@
     function clampVolume(vol) {
       return Math.max(0, Math.min(100, vol));
     }
-    function clearFade(tag) {
-      const s = streams[tag];
+    function clearFade(name) {
+      const s = streams[name];
       if (s && s.fadeInterval) {
         clearInterval(s.fadeInterval);
         s.fadeInterval = null;
       }
     }
-    function fade(tag, targetVolume, durationMs) {
-      const s = streams[tag];
+    function fade(name, targetVolume, durationMs) {
+      const s = streams[name];
       if (!s) return;
-      clearFade(tag);
+      clearFade(name);
       const audio = s.audio;
       const startVolume = audio.volume;
       const endVolume = clampVolume(targetVolume) / 100;
@@ -1990,15 +2260,15 @@
         audio.volume = Math.max(0, Math.min(1, audio.volume + delta));
         if (currentStep >= steps) {
           audio.volume = endVolume;
-          clearFade(tag);
+          clearFade(name);
         }
       }, stepTime);
     }
     return {
       // Create a new audio stream
-      create(tag, url, options = {}) {
-        if (streams[tag]) {
-          throw new Error(`Stream with tag "${tag}" already exists`);
+      create(name, url, options = {}) {
+        if (streams[name]) {
+          throw new Error(`Stream with name "${name}" already exists`);
         }
         const audio = document.createElement("audio");
         audio.src = url;
@@ -2006,92 +2276,92 @@
         audio.controls = false;
         if (typeof options.onEnded === "function") {
           audio.addEventListener("ended", () => {
-            options.onEnded(tag);
+            options.onEnded(name);
           });
         }
         getContainer().appendChild(audio);
-        streams[tag] = {
+        streams[name] = {
           audio,
           fadeInterval: null
         };
       },
-      play(tag, { fadeInMs = 0, targetVolume = 100, callback = null } = {}) {
-        const s = streams[tag];
+      play(name, { fadeInMs = 0, targetVolume = 100, callback = null } = {}) {
+        const s = streams[name];
         if (!s) return;
         if (typeof callback === "function") {
           audio.addEventListener("ended", () => {
-            callback(tag);
+            callback(name);
           });
         }
         const audio = s.audio;
         if (fadeInMs > 0) {
           audio.volume = 0;
           audio.play();
-          fade(tag, targetVolume, fadeInMs);
+          fade(name, targetVolume, fadeInMs);
         } else {
           audio.volume = clampVolume(targetVolume) / 100;
           audio.play();
         }
       },
-      pause(tag) {
-        const s = streams[tag];
+      pause(name) {
+        const s = streams[name];
         if (!s) return;
-        clearFade(tag);
+        clearFade(name);
         s.audio.pause();
       },
-      stop(tag, { fadeOutMs = 0 } = {}) {
-        const s = streams[tag];
+      stop(name, { fadeOutMs = 0 } = {}) {
+        const s = streams[name];
         if (!s) return;
         if (fadeOutMs > 0) {
-          fade(tag, 0, fadeOutMs);
+          fade(name, 0, fadeOutMs);
           setTimeout(() => {
             s.audio.pause();
             s.audio.currentTime = 0;
           }, fadeOutMs);
         } else {
-          clearFade(tag);
+          clearFade(name);
           s.audio.pause();
           s.audio.currentTime = 0;
         }
       },
-      delete(tag, { fadeOutMs = 0 } = {}) {
-        const s = streams[tag];
+      delete(name, { fadeOutMs = 0 } = {}) {
+        const s = streams[name];
         if (!s) return;
         if (fadeOutMs > 0) {
-          fade(tag, 0, fadeOutMs);
+          fade(name, 0, fadeOutMs);
           setTimeout(() => {
             s.audio.pause();
             s.audio.remove();
-            delete streams[tag];
+            delete streams[name];
           }, fadeOutMs);
         } else {
-          clearFade(tag);
+          clearFade(name);
           s.audio.pause();
           s.audio.remove();
-          delete streams[tag];
+          delete streams[name];
         }
       },
-      setVolume(tag, volume, { fadeMs = 0 } = {}) {
-        const s = streams[tag];
+      setVolume(name, volume, { fadeMs = 0 } = {}) {
+        const s = streams[name];
         if (!s) return;
         if (fadeMs > 0) {
-          fade(tag, volume, fadeMs);
+          fade(name, volume, fadeMs);
         } else {
-          clearFade(tag);
+          clearFade(name);
           s.audio.volume = clampVolume(volume) / 100;
         }
       },
-      exists(tag) {
-        return !!streams[tag];
+      exists(name) {
+        return !!streams[name];
       },
       stopAll({ fadeOutMs = 0 } = {}) {
-        Object.keys(streams).forEach((tag) => {
-          this.stop(tag, { fadeOutMs });
+        Object.keys(streams).forEach((name) => {
+          this.stop(name, { fadeOutMs });
         });
       },
       deleteAll({ fadeOutMs = 0 } = {}) {
-        Object.keys(streams).forEach((tag) => {
-          this.delete(tag, { fadeOutMs });
+        Object.keys(streams).forEach((name) => {
+          this.delete(name, { fadeOutMs });
         });
       }
     };
@@ -2242,6 +2512,13 @@
       }
       return result;
     }
+    getSpriteName() {
+      let result = this.getWord();
+      if (result == "of") {
+        result = this.getWord();
+      }
+      return result;
+    }
     indexOfWord(target) {
       return this.words.indexOf(target);
     }
@@ -2251,6 +2528,23 @@
       } else {
         return this.words.slice(start, end);
       }
+    }
+    getTags() {
+      let result = [];
+      let needHash = true;
+      if (this.testWord("with") && this.testWord(["tag", "tags"])) {
+        needHash = false;
+      }
+      while (this.wordsLeft()) {
+        const candidate = this.getWord();
+        if (needHash) {
+          if (!candidate.charAt(0) == "#") {
+            continue;
+          }
+        }
+        result.push(candidate);
+      }
+      return result;
     }
     getWord(def = false) {
       let result = def;
@@ -2358,6 +2652,8 @@
       this.folder = "";
       this.spriteScene = this.name;
       this.varList = new VarList(this.name);
+      this.tags = new TagList();
+      this.defaultTags = [];
       this.timers = [];
       this.completionCallback = null;
       this.parameters = defaults_default.NOTFOUND;
@@ -2410,6 +2706,27 @@
       }
       return text;
     }
+    listSpriteTags(tag2) {
+      if (!Array.isArray(tag2)) {
+        tag2 = [tag2];
+      }
+      let result = "";
+      let first = true;
+      for (let i = 0; i < this.sprites.length; i++) {
+        for (let j = 0; j < tag2.length; j++) {
+          if (this.sprites[i].tags.hasTag(tag2[j])) {
+            if (first) {
+              first = false;
+            } else {
+              result += " ";
+            }
+            result += this.sprites[i].name;
+            break;
+          }
+        }
+      }
+      return result;
+    }
     listImages(verbose = true) {
       let text = verbose ? "Images in Scene " + this.spriteScene + "\n" : "";
       for (let i = 0; i < this.images.length; i++) {
@@ -2428,6 +2745,42 @@
         }
       }
       return text;
+    }
+    listImageTags(tag2) {
+      if (!Array.isArray(tag2)) {
+        tag2 = [tag2];
+      }
+      let result = "";
+      let first = true;
+      for (let i = 0; i < this.images.length; i++) {
+        for (let j = 0; j < tag2.length; j++) {
+          if (this.images[i].tags.hasTag(tag2[j])) {
+            if (first) {
+              first = false;
+            } else {
+              result += " ";
+            }
+            result += this.images[i].name;
+            break;
+          }
+        }
+      }
+      return result;
+    }
+    async getVariableFromURL(varName, url, callback) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          Globals.log.error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+          this.varList.setValue(varName, defaults_default.NOTFOUND);
+        } else {
+          this.varList.setValue(varName, await response.text());
+        }
+      } catch (error) {
+        Globals.log.error("Failed to fetch URL: " + error.message);
+        this.varList.setValue(varName, defaults_default.NOTFOUND);
+      }
+      callback("get");
     }
     stop(reset = false) {
       this.state = SCENE_STOPPED;
@@ -2619,7 +2972,7 @@
         Globals.log.report("> " + evaluatedText);
       }
       const wordList = new WordList(evaluatedText);
-      wordList.testWord("and");
+      wordList.testWord(["and", "set", "sprite"]);
       let command = wordList.getWord().toLowerCase();
       switch (command) {
         /**************************************************************************************************
@@ -2671,7 +3024,7 @@
         **************************************************************************************************/
         case "load":
         case "upload":
-          let tag = null;
+          let name = null;
           if (wordList.wordsLeft() < 1) {
             Globals.log.error("Missing filename at line " + action2.number);
             break;
@@ -2679,21 +3032,22 @@
           let filename = wordList.getWord();
           wordList.testWord(["named", "as"]);
           if (wordList.wordsLeft() > 0) {
-            tag = wordList.getWord();
+            name = wordList.getWord();
           } else {
             let slash = filename.lastIndexOf("/");
             let dot = filename.lastIndexOf(".");
-            tag = filename.slice(slash, dot);
+            name = filename.slice(slash, dot);
           }
           for (let j = 0; j < this.images.length; j++) {
-            if (this.images[j].tag == tag) {
+            if (this.images[j].name == name) {
               continue;
             }
           }
           if (filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".png")) {
-            const sg_image = new SGImage(this.folder + filename, tag);
-            this.images.push(sg_image);
-            sg_image.load_image();
+            const sgImage = new SGImage(this.folder + filename, name);
+            sgImage.tags.addTag(wordList.getTags());
+            this.images.push(sgImage);
+            sgImage.load_image();
           } else if (filename.endsWith(".wav") || filename.endsWith(".mp3")) {
             AudioManager.create(tag, this.folder + filename);
           }
@@ -2710,12 +3064,14 @@
         
         **************************************************************************************************/
         case "from":
-        case "using":
           if (wordList.wordsLeft() > 0) {
             this.folder = wordList.getWord() + "/";
           } else {
             Globals.log.error("Expected folder name at " + action2.number);
           }
+          break;
+        case "endfrom":
+          this.folder = "";
           break;
         /**************************************************************************************************
         
@@ -2749,11 +3105,21 @@
         
         **************************************************************************************************/
         case "with":
-          if (wordList.wordsLeft() > 0) {
-            this.spriteScene = wordList.getWord();
-          } else {
-            Globals.log.error("Expected folder name at " + action2.number);
+          {
+            let tags = [];
+            if (wordList.wordsLeft() > 0) {
+              wordList.testWord(["tag", "tags"]);
+              while (wordList.wordsLeft()) {
+                tags.push(wordList.getWord);
+              }
+              this.defaultTags = tags;
+            } else {
+              Globals.log.error("Expected tag name at " + action2.number);
+            }
           }
+          break;
+        case "endwith":
+          this.defaultTags = [];
           break;
         /**************************************************************************************************
         
@@ -2771,7 +3137,7 @@
             const reset_type = wordList.testWord(["sprite", "scene", "from", "with"], "scene");
             if (reset_type == "sprite") {
               if (wordList.wordsLeft() > 0) {
-                let spriteName2 = wordList.getWord();
+                let spriteName2 = wordList.getSpriteName();
                 let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
                 if (!sgSprite2) {
                   break;
@@ -2818,46 +3184,37 @@
             ######  ##        ##     ## ####    ##    ######## 
         
         **************************************************************************************************/
-        case "sprite":
+        case "create":
           if (wordList.wordsLeft() > 0) {
-            const sprite_command = wordList.getWord();
-            switch (sprite_command) {
-              // more to add here?
-              case "create":
-                {
-                  let spriteName2 = false;
-                  let groupName = null;
-                  if (wordList.testWord("named") || !wordList.testWord("from")) {
-                    spriteName2 = wordList.getWord();
-                  }
-                  const groupSprite = wordList.getGroup(this.spriteScene);
-                  wordList.testWord("from");
-                  let imageName = wordList.getWord();
-                  if (!spriteName2) {
-                    spriteName2 = imageName;
-                  }
-                  let sgSprite2 = new SGSprite(imageName, spriteName2);
-                  if (groupSprite) {
-                    sgSprite2.sgParent = groupSprite;
-                  }
-                  if (wordList.testWord("view")) {
-                    const x = wordList.getInt(0);
-                    const y = wordList.getInt(0);
-                    const w = wordList.getInt(0);
-                    const h = wordList.getInt(0);
-                    if (w > 0 && h > 0) {
-                      sgSprite2.setView(x, y, w, h, "in", 0, now, null);
-                      sgSprite2.sizeX.setTargetValue(w);
-                      sgSprite2.sizeY.setTargetValue(h);
-                    }
-                  }
-                  sgSprite2.setVisibility(false);
-                  this.sprites.push(sgSprite2);
-                }
-                break;
-              default:
-                Globals.log.error("Unknown sprite command at line " + action2.number);
+            let spriteName2 = false;
+            let groupName = null;
+            if (wordList.testWord("named") || !wordList.testWord("from")) {
+              spriteName2 = wordList.getSpriteName();
             }
+            const groupSprite = wordList.getGroup(this.spriteScene);
+            wordList.testWord("from");
+            let imageName = wordList.getWord();
+            if (!spriteName2) {
+              spriteName2 = imageName;
+            }
+            let sgSprite2 = new SGSprite(imageName, spriteName2, SPRITE_IMAGE, this.defaultTags);
+            if (groupSprite) {
+              sgSprite2.sgParent = groupSprite;
+            }
+            if (wordList.testWord("view")) {
+              const x = wordList.getInt(0);
+              const y = wordList.getInt(0);
+              const w = wordList.getInt(0);
+              const h = wordList.getInt(0);
+              if (w > 0 && h > 0) {
+                sgSprite2.setView(x, y, w, h, "in", 0, now, null);
+                sgSprite2.sizeX.setTargetValue(w);
+                sgSprite2.sizeY.setTargetValue(h);
+              }
+            }
+            sgSprite2.setVisibility(false);
+            sgSprite2.tags.addTag(wordList.getTags());
+            this.sprites.push(sgSprite2);
           } else {
             Globals.log.error("Missing sprite data at line " + action2.number);
           }
@@ -2875,7 +3232,7 @@
         **************************************************************************************************/
         case "view":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -2918,7 +3275,7 @@
         **************************************************************************************************/
         case "scroll":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -2967,7 +3324,7 @@
         **************************************************************************************************/
         case "place":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -3019,7 +3376,7 @@
         **************************************************************************************************/
         case "replace":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             wordList.testWord("with");
             let imageName = wordList.getWord();
             let hidden = wordList.testWord("hidden");
@@ -3051,7 +3408,7 @@
         case "use":
           if (wordList.wordsLeft() > 0) {
             let imageName = wordList.getWord();
-            let spriteName2 = null;
+            let spriteName2 = false;
             if (wordList.testWord("named")) {
               spriteName2 = wordList.getWord(imageName);
             }
@@ -3072,10 +3429,10 @@
               Globals.log.error("Unknown role " + role + " at line " + action2.number);
               break;
             }
-            if (spriteName2 == null) {
+            if (spriteName2 == false) {
               spriteName2 = role;
             }
-            let sgSprite2 = new SGSprite(imageName, spriteName2);
+            let sgSprite2 = new SGSprite(imageName, spriteName2, SPRITE_IMAGE, this.defaultTags);
             sgSprite2.role = role;
             wordList.testWord(["as", "at"]);
             if (wordList.testWord("depth")) {
@@ -3083,6 +3440,7 @@
             } else {
               sgSprite2.depth = null;
             }
+            sgSprite2.tags.addTag(wordList.getTags());
             this.sprites.push(sgSprite2);
           } else {
             Globals.log.error("Missing put data at line " + action2.number);
@@ -3141,11 +3499,12 @@
                   sgSprite2.setVisibility(false);
                   sgSprite2.locX.forceValue(0);
                   sgSprite2.locY.forceValue(0);
+                  sgSprite2.tags.addTag(wordList.getTags());
                   this.sprites.push(sgSprite2);
                 }
                 break;
               case "add": {
-                const spriteName2 = wordList.getWord();
+                const spriteName2 = wordList.getSpriteName();
                 const sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
                 if (!sgSprite2) {
                   break;
@@ -3235,7 +3594,7 @@
             const textData = wordList.joinWords();
             let sgSprite2 = null;
             if (textCommand == "create") {
-              sgSprite2 = new SGSprite(null, textName, SPRITE_TEXT);
+              sgSprite2 = new SGSprite(null, textName, SPRITE_TEXT, this.defaultTags);
               const textSprite = new PIXI.Text({
                 text: textData,
                 style: {
@@ -3256,6 +3615,7 @@
               } else {
                 Globals.root.addChild(textSprite);
               }
+              sgSprite2.tags.addTag(wordList.getTags());
               this.sprites.push(sgSprite2);
               break;
             }
@@ -3325,7 +3685,7 @@
             const graphicCommand = wordList.getWord();
             switch (graphicCommand) {
               case "create": {
-                const graphicTag = wordList.getWord();
+                const graphicname = wordList.getWord();
                 const groupSprite = wordList.getGroup(this.spriteScene);
                 wordList.testWord("as");
                 const graphicType = wordList.getWord();
@@ -3411,7 +3771,7 @@
                 }
                 if (graphic2 != null) {
                   graphic2.fill(this.graphicFill).stroke({ width: this.graphicStrokeWidth, color: this.graphicStroke });
-                  const sgSprite2 = new SGSprite(null, graphicTag, SPRITE_GRAPHIC);
+                  const sgSprite2 = new SGSprite(null, graphicname, SPRITE_GRAPHIC, this.defaultTags);
                   if (groupSprite) {
                     sgSprite2.sgParent = groupSprite;
                     groupSprite.piSprite.addChild(graphic2);
@@ -3422,6 +3782,7 @@
                   sgSprite2.setVisibility(false);
                   sgSprite2.sizeX.setTargetValue(graphic2.width);
                   sgSprite2.sizeY.setTargetValue(graphic2.height);
+                  sgSprite2.tags.addTag(wordList.getTags());
                   this.sprites.push(sgSprite2);
                 } else {
                   Globals.log.error("Invalid graphic arguments at " + action2.number);
@@ -3464,7 +3825,7 @@
         **************************************************************************************************/
         case "move":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             const direction = wordList.testWord(["horizontally", "hor", "h", "vertically", "vert", "v"]);
             let delta = 0;
             let x = 0;
@@ -3518,7 +3879,7 @@
         **************************************************************************************************/
         case "pivot":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             wordList.testWord(["around", "from"]);
             let x = wordList.getInt(0);
             let y = wordList.getInt(0);
@@ -3544,7 +3905,7 @@
         
         **************************************************************************************************/
         case "speed":
-          let spriteName = wordList.getWord();
+          let spriteName = wordList.getSpriteName();
           wordList.testWord("to");
           let speed = wordList.getInt(0) * Globals.scriptScaleX;
           let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
@@ -3564,7 +3925,7 @@
         case "raise":
         case "lower":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let depth_type = wordList.getWord(["to", "by"]);
             if (depth_type === false) {
               Globals.log.error("Expected to or by on line " + action2.number);
@@ -3595,7 +3956,7 @@
         **************************************************************************************************/
         case "resize":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let toOrBy = wordList.getWord(["to", "by", "reset"]);
             if (toOrBy === false) {
               Globals.log.error("Expected to or by on line " + action2.number);
@@ -3642,7 +4003,7 @@
         case "shrink":
         case "grow":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             const toOrBy = wordList.testWord(["to", "by", "reset"]);
             let w = wordList.getInt(0);
             let h = wordList.getInt(w);
@@ -3683,8 +4044,9 @@
         
         **************************************************************************************************/
         case "align":
+        case "alignment":
           if (wordList.wordsLeft() > 2) {
-            const spriteName2 = wordList.getWord();
+            const spriteName2 = wordList.getSpriteName();
             const type2 = wordList.testWord(["top", "bottom", "left", "right"]);
             wordList.testWord("to");
             const location = wordList.getInt(0);
@@ -3794,9 +4156,10 @@
         
         **************************************************************************************************/
         case "rotate":
+        case "rotation":
         case "turn":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let turn_type = wordList.testWord(["to", "by", "at"], "to");
             let value2 = wordList.getInt(0);
             let dur_type = wordList.testWord(["in", "per"], "in");
@@ -3824,7 +4187,7 @@
         case "skew":
         case "twist":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let skew_type = wordList.testWord(["to", "by", "at"], "to");
             let skewX = wordList.getInt(0);
             let skewY = wordList.getInt(0);
@@ -3841,6 +4204,40 @@
           break;
         /**************************************************************************************************
         
+           ##      ##    ###    ########  ########  
+           ##  ##  ##   ## ##   ##     ## ##     ## 
+           ##  ##  ##  ##   ##  ##     ## ##     ## 
+           ##  ##  ## ##     ## ########  ########  
+           ##  ##  ## ######### ##   ##   ##        
+           ##  ##  ## ##     ## ##    ##  ##        
+            ###  ###  ##     ## ##     ## ##        
+        
+        **************************************************************************************************/
+        case "warp":
+          if (wordList.wordsLeft() > 0) {
+            let spriteName2 = wordList.getSpriteName();
+            let warpType = wordList.testWord(["to", "by", "reset"], "to");
+            let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
+            if (!sgSprite2) {
+              break;
+            }
+            if (warpType == "reset") {
+              sgSprite2.clearWarp();
+              break;
+            }
+            const points = [];
+            for (let i = 0; i < 4; i++) {
+              points.push(wordList.getFloat(0) * Globals.scriptScaleX);
+              points.push(wordList.getFloat(0) * Globals.scriptScaleY);
+            }
+            let duration2 = wordList.getDuration(0);
+            sgSprite2.setWarp(points, warpType, duration2, now, makeCompletionCallback(actionGroup));
+          } else {
+            Globals.log.error("Missing warp data at line " + action2.number);
+          }
+          break;
+        /**************************************************************************************************
+        
            ######## ##     ## ########   #######  ##      ## 
               ##    ##     ## ##     ## ##     ## ##  ##  ## 
               ##    ##     ## ##     ## ##     ## ##  ##  ## 
@@ -3853,7 +4250,7 @@
         case "throw":
         case "launch":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             const stop_or_at = wordList.testWord(["at", "stop"], "at");
             let angle = wordList.getInt(0);
             wordList.testWord(["deg", "degs", "degrees"]);
@@ -3886,7 +4283,7 @@
         **************************************************************************************************/
         case "drop":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -3913,7 +4310,7 @@
         **************************************************************************************************/
         case "flip":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -3921,7 +4318,7 @@
             let axis = wordList.getWord("h");
             sgSprite2.flip(axis.charAt(0));
           } else {
-            Globals.log.error("Missing sprite tag at line " + action2.number);
+            Globals.log.error("Missing sprite name at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -3939,7 +4336,7 @@
         case "hide":
         case "toggle":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -4111,6 +4508,7 @@
                   }
                 }
                 this.varList.setValue(varNames[i], value2);
+                this.varList.setTag(varNames[i], this.defaultTags);
               }
             }
           } else {
@@ -4139,6 +4537,7 @@
             let varName = wordList.getWord();
             wordList.testWord("from");
             this.varList.setValue(varName, wordList.randomWord());
+            this.varList.setTag(varName, this.defaultTags);
           } else {
             Globals.log.error("Missing variable name at line " + action2.number);
           }
@@ -4160,11 +4559,80 @@
                 } else {
                   const matches = wordList.matchWords(searchWord, anchor);
                   this.varList.setValue(varName, matches.length > 0 ? matches.join(" ") : defaults_default.NOTFOUND);
+                  this.varList.setTag(varName, this.defaultTags);
                 }
               }
             }
           } else {
             Globals.log.error("Missing values for match at line " + action2.number);
+          }
+          break;
+        case "get":
+          if (wordList.wordsLeft() > 2) {
+            const varName = wordList.getWord();
+            if (!wordList.testWord("from")) {
+              Globals.log.error("Missing get separator 'from' at line " + action2.number);
+            } else {
+              wordList.testWord("url");
+              const url = wordList.joinWords();
+              if (url.length < 1) {
+                Globals.log.error("Missing URL at line " + action2.number);
+              } else {
+                this.getVariableFromURL(varName, url, makeCompletionCallback(actionGroup));
+              }
+            }
+          } else {
+            Globals.log.error("Missing get parameters at line " + action2.number);
+          }
+          break;
+        /**************************************************************************************************
+        
+           ########    ###     ######   
+              ##      ## ##   ##    ##  
+              ##     ##   ##  ##        
+              ##    ##     ## ##   #### 
+              ##    ######### ##    ##  
+              ##    ##     ## ##    ##  
+              ##    ##     ##  ######   
+        
+        **************************************************************************************************/
+        case "tag":
+          if (wordList.wordsLeft() > 2) {
+            const what = wordList.testWord(["sprite", "variable", "var", "image"]);
+            const name2 = wordList.getWord();
+            wordList.testWord(["with", "as"]);
+            const value2 = wordList.getWord();
+            if (value2 === false) {
+              Globals.log.error("Missing tag value at line " + action2.number);
+              break;
+            }
+            switch (what) {
+              case "scene":
+                const scene = _Scene.find(name2);
+                if (scene) {
+                  scene.tags.addTag(value2);
+                }
+                break;
+              case "sprite":
+                const sgSprite2 = SGSprite.getSprite(this.spriteScene, name2);
+                if (sgSprite2) {
+                  sgSprite2.tags.addTag(value2);
+                }
+                break;
+              case "image":
+                const sgImage = SGImage.getImage(this.spriteScene, name2);
+                if (sgImage) {
+                  sgImage.tags.addTag(value2);
+                }
+                break;
+              case "variable":
+              case "var":
+              default:
+                this.varList.setTag(name2, value2);
+                break;
+            }
+          } else {
+            Globals.log.error("Missing tag parameters at line " + action2.number);
           }
           break;
         /**************************************************************************************************
@@ -4180,7 +4648,7 @@
         **************************************************************************************************/
         case "flicker":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -4414,7 +4882,7 @@
         case "blur":
         case "fuzz":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -4442,7 +4910,7 @@
         **************************************************************************************************/
         case "tint":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -4457,7 +4925,7 @@
         case "darken":
         case "lighten":
           if (wordList.wordsLeft() > 0) {
-            let spriteName2 = wordList.getWord();
+            let spriteName2 = wordList.getSpriteName();
             let sgSprite2 = SGSprite.getSprite(this.spriteScene, spriteName2);
             if (!sgSprite2) {
               break;
@@ -4761,6 +5229,18 @@
               Globals.scenes.push(holding);
             }
             holding = new Scene2(argument);
+            let index = 3;
+            if (words.length > 3) {
+              if (words[3] == "with") {
+                index = 4;
+              }
+              if (words.length > 4) {
+                if (words[4] == "tag" || words[4] == "tags") {
+                  index = 5;
+                }
+              }
+              holding.tags.addTag(words.slice(index));
+            }
           }
         } else if (command == "end") {
           if (argument == "file") {
@@ -4772,8 +5252,15 @@
             } else {
               Globals.log.error(`no current scene at line ${lineCount}`);
             }
+          }
+        } else if (command == "endfile") {
+          break;
+        } else if (command == "endscene") {
+          if (holding != null) {
+            Globals.scenes.push(holding);
+            holding = null;
           } else {
-            Globals.log.error("end must be followed by file or scene");
+            Globals.log.error(`no current scene at line ${lineCount}`);
           }
         } else if (command == "display") {
           if (include) {

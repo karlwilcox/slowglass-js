@@ -91,10 +91,24 @@ class SlowGlass {
                         Globals.scenes.push(holding);
                     }
                     holding = new Scene(argument);
+                    // Any other content on the line is assumed to be tags
+                    let index = 3;
+                    if (words.length > 3) {
+                        if (words[3] == "with") {
+                            index = 4;
+                        }
+                        if (words.length > 4) {
+                            if (words[4] == "tag" || words[4] == "tags") {
+                                index = 5;
+                            }
+                        }
+                        holding.tags.addTag(words.slice(index));
+                    }
                 }
             // look for an explicit scene end
             } else if (command == 'end') {
                 if (argument == 'file') {
+                    // end processing (ignore rest of file)
                     break;
                 } else if (argument == 'scene') {
                     if (holding != null) {
@@ -103,10 +117,17 @@ class SlowGlass {
                     } else {
                         Globals.log.error(`no current scene at line ${lineCount}`);
                     }
-                } else {
-                    Globals.log.error("end must be followed by file or scene");
                 }
-            // end processing (ignore rest of file)
+                // alternative forms of the above
+            } else if (command == "endfile") {
+                break;
+            } else if (command == "endscene") {
+                if (holding != null) {
+                    Globals.scenes.push(holding);
+                    holding = null;
+                } else {
+                    Globals.log.error(`no current scene at line ${lineCount}`);
+                }
             } else if (command == "display") {
                 if (include) {
                     Globals.log.error('Directives in include will be ignored!');

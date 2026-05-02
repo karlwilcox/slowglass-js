@@ -18,6 +18,31 @@ on the line you can surround the name with curly braces { }.
 
 `echo $my_var ${my_var}suffix`
 
+## Understanding Variables
+
+It is best not to think of variables as just "something to hold a value"
+(which is what most programming languages require). In  Slow Glass a
+variable acts more like a "macro" in that the text content of the
+variable is inserted into the command, which will then be executed.
+
+Hence variables don't have "types" as such, they just hold text that will be
+inserted into the current command and the command processor itself will
+interpret the text as a number, variable name or whatever.
+
+Indeed you can put an entire command into a variable (if you seriously
+want to confuse yourself). Consider:
+
+`make command be echo hello world`
+
+`$command`
+
+These two lines are a roundabout way of printing "hello world" to the
+console.
+
+Finally note that variables are expanded into text **before** any expressions
+are evaluated, variables are NOT handled by the expression evaluator,
+which will just see the text content of the variable.
+
 ## Creating Variables
 
 You define variables with the let or make command
@@ -66,6 +91,16 @@ name and set the value to the matching items from the
 space-separated list, joined back together with spaces. If
 there are no matches then the value will be set to the
 default "not found" value.
+
+You can set a variable to the result of an HTTP GET request:
+
+`get {variable-name} from URL {url}`
+
+The variable will be set to the text content returned by the URL. If the
+request fails the variable is set to the default "not found" value.
+
+This command completes when the request has finished, so use a **then** trigger
+for actions that need the fetched value.
 
 ## Updating Variables
 

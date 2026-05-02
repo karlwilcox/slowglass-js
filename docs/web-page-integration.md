@@ -17,29 +17,38 @@ It also uses the
 [https://bugwheels94.github.io/math-expression-evaluator/](math expression evaluator)
 and a copy of the library is provided in the dist folder.
 
-SlowGlass will also attempt to determine the location of the browser - this is
-just to allow the correct assignment of the season (so we need to know which
-hemisphere we are in). If location services are not available then the
-northern hemisphere is assumed.
+SlowGlass will also attempt to determine the geographical location of the
+browser - this is just to allow the correct assignment of the season (hence we
+need to know which hemisphere we are in). If location services are not
+available then the northern hemisphere is assumed.
 
 ## The SlowGlass Object
 
 Slow Glass is provided as an ES6 module which can be found at
-https://karlwilcox.com/slow-glass/dist/slow-glass.js . This module instatiates
+https://karlwilcox.com/slow-glass/dist/slow-glass.js . This module instantiates
 an instance of the SlowGlass object called "slowGlass" and attaches it to the
 window object hence it is available to web page JavaScript through the name
 "slowGlass".
 
-## Properties
-
-slowGlass exposes a single static property, "sg_id" which should be set to the
-id attribute of the element that you wish to attach the animation to (as the
-only child). This **MUST** be done before any method is called, otherwise a
-default name of "body" will be used.
-
 ## Methods
 
-The object exposes three methods:
+The Slow Glass object exposes two methods to allow integration with the
+web page.
+
+### setDrawingParent(id)
+
+The element with the given id will be used as the parent of the drawing area
+(typically an empty "div"). It it is **not** called then the drawing area will
+be attached as a child of the "body" element.
+
+## setMessageParent(id)
+
+If you call this method the element with the given id will be used as the
+destination for console messages (so should typically be a read-only textbox).
+If this method is not called messages will instead be written to the JavaScript
+console.
+
+The object exposes three methods for script management:
 
 ### scriptFromText(text)
 

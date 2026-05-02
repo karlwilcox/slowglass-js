@@ -11,6 +11,8 @@ header:
 Slow Glass supports a number of system commands. Typically you won't need these but they may be
 useful for debugging or for advanced use.
 
+## Wait
+
 `wait {number} [{duration}]`
 
 This command starts a timer running for the specified duration.
@@ -34,17 +36,32 @@ then
 Hopefully this sequence of actions is fairly readable - drive the truck across the screen,
 after it arrives wait 3 seconds, then beep the horn!
 
-`(log | echo) {text}...`
+## Console Messages
+
+`(log | print) {text}...`
 
 The text is written to the JavaScript console.
 
 This command completes immediately.
+
+## Finish
 
 `Finish`
 
 Rather abruptly just stop the app.
 
 No further completion events happen.
+
+## Get
+
+`get {variable-name} from URL`
+
+The value of the given variable name will be set to the content returned
+by the HTTP GET method of the given URL, or to NONE if the URL is not
+available.
+
+For example, this could be used to query a Raspberry Pi equipped
+with sensors to get information such as the current temperature.
 
 ## Future Intentions
 

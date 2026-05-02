@@ -16,19 +16,19 @@ export const AudioManager = (function () {
         return Math.max(0, Math.min(100, vol));
     }
 
-    function clearFade(tag) {
-        const s = streams[tag];
+    function clearFade(name) {
+        const s = streams[name];
         if (s && s.fadeInterval) {
             clearInterval(s.fadeInterval);
             s.fadeInterval = null;
         }
     }
 
-    function fade(tag, targetVolume, durationMs) {
-        const s = streams[tag];
+    function fade(name, targetVolume, durationMs) {
+        const s = streams[name];
         if (!s) return;
 
-        clearFade(tag);
+        clearFade(name);
 
         const audio = s.audio;
         const startVolume = audio.volume;
@@ -51,7 +51,7 @@ export const AudioManager = (function () {
 
             if (currentStep >= steps) {
                 audio.volume = endVolume;
-                clearFade(tag);
+                clearFade(name);
             }
         }, stepTime);
     }
@@ -59,9 +59,9 @@ export const AudioManager = (function () {
     return {
 
         // Create a new audio stream
-        create(tag, url, options = {}) {
-            if (streams[tag]) {
-                throw new Error(`Stream with tag "${tag}" already exists`);
+        create(name, url, options = {}) {
+            if (streams[name]) {
+                throw new Error(`Stream with name "${name}" already exists`);
             }
 
             const audio = document.createElement("audio");
@@ -72,26 +72,26 @@ export const AudioManager = (function () {
             // optional callback
             if (typeof options.onEnded === "function") {
                 audio.addEventListener("ended", () => {
-                    options.onEnded(tag);
+                    options.onEnded(name);
                 });
             }
 
             getContainer().appendChild(audio);
 
-            streams[tag] = {
+            streams[name] = {
                 audio,
                 fadeInterval: null
             };
         },
 
-        play(tag, { fadeInMs = 0, targetVolume = 100, callback = null } = {}) {
-            const s = streams[tag];
+        play(name, { fadeInMs = 0, targetVolume = 100, callback = null } = {}) {
+            const s = streams[name];
             if (!s) return;
 
             // optional callback
             if (typeof callback === "function") {
                 audio.addEventListener("ended", () => {
-                    callback(tag);
+                    callback(name);
                 });
             }
 
@@ -100,84 +100,84 @@ export const AudioManager = (function () {
             if (fadeInMs > 0) {
                 audio.volume = 0;
                 audio.play();
-                fade(tag, targetVolume, fadeInMs);
+                fade(name, targetVolume, fadeInMs);
             } else {
                 audio.volume = clampVolume(targetVolume) / 100;
                 audio.play();
             }
         },
 
-        pause(tag) {
-            const s = streams[tag];
+        pause(name) {
+            const s = streams[name];
             if (!s) return;
 
-            clearFade(tag);
+            clearFade(name);
             s.audio.pause();
         },
 
-        stop(tag, { fadeOutMs = 0 } = {}) {
-            const s = streams[tag];
+        stop(name, { fadeOutMs = 0 } = {}) {
+            const s = streams[name];
             if (!s) return;
 
             if (fadeOutMs > 0) {
-                fade(tag, 0, fadeOutMs);
+                fade(name, 0, fadeOutMs);
 
                 setTimeout(() => {
                     s.audio.pause();
                     s.audio.currentTime = 0;
                 }, fadeOutMs);
             } else {
-                clearFade(tag);
+                clearFade(name);
                 s.audio.pause();
                 s.audio.currentTime = 0;
             }
         },
 
-        delete(tag, { fadeOutMs = 0 } = {}) {
-            const s = streams[tag];
+        delete(name, { fadeOutMs = 0 } = {}) {
+            const s = streams[name];
             if (!s) return;
 
             if (fadeOutMs > 0) {
-                fade(tag, 0, fadeOutMs);
+                fade(name, 0, fadeOutMs);
 
                 setTimeout(() => {
                     s.audio.pause();
                     s.audio.remove();
-                    delete streams[tag];
+                    delete streams[name];
                 }, fadeOutMs);
             } else {
-                clearFade(tag);
+                clearFade(name);
                 s.audio.pause();
                 s.audio.remove();
-                delete streams[tag];
+                delete streams[name];
             }
         },
 
-        setVolume(tag, volume, { fadeMs = 0 } = {}) {
-            const s = streams[tag];
+        setVolume(name, volume, { fadeMs = 0 } = {}) {
+            const s = streams[name];
             if (!s) return;
 
             if (fadeMs > 0) {
-                fade(tag, volume, fadeMs);
+                fade(name, volume, fadeMs);
             } else {
-                clearFade(tag);
+                clearFade(name);
                 s.audio.volume = clampVolume(volume) / 100;
             }
         },
 
-        exists(tag) {
-            return !!streams[tag];
+        exists(name) {
+            return !!streams[name];
         },
 
         stopAll({ fadeOutMs = 0 } = {}) {
-            Object.keys(streams).forEach(tag => {
-                this.stop(tag, { fadeOutMs });
+            Object.keys(streams).forEach(name => {
+                this.stop(name, { fadeOutMs });
             });
         },
 
        deleteAll({ fadeOutMs = 0 } = {}) {
-            Object.keys(streams).forEach(tag => {
-                this.delete(tag, { fadeOutMs });
+            Object.keys(streams).forEach(name => {
+                this.delete(name, { fadeOutMs });
             });
         }
     };

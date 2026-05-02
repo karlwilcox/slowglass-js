@@ -51,7 +51,7 @@ export class WordList {
             this.currentWord = this.words[0];
         }
     }
-
+    
     nextWord() {
         if (++this.index < this.words.length) {
             this.currentWord = this.words[this.index];
@@ -167,6 +167,14 @@ export class WordList {
         return result;
     }
 
+    getSpriteName() {
+        let result = this.getWord();
+        if (result == "of") {
+            result = this.getWord();
+        }
+        return result;
+    }
+
     indexOfWord(target) {
         return this.words.indexOf(target);
     }
@@ -179,6 +187,23 @@ export class WordList {
         }
     }
 
+    getTags() {
+        let result = [];
+        let needHash = true;
+        if (this.testWord("with") && this.testWord(["tag","tags"])) {
+            needHash = false;
+        }
+        while (this.wordsLeft()) {
+            const candidate = this.getWord();
+            if (needHash) {
+                if (!candidate.charAt(0) == '#') {
+                    continue;
+                }
+            }
+            result.push(candidate);
+        }
+        return result;
+    }
 
     getWord(def=false) {
         let result = def;

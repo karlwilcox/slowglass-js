@@ -3,46 +3,26 @@ import { Adjustable } from "./adjustable.js";
 import defaults from "./defaults.js";
 import { Globals } from "./globals.js";
 import * as constants from './constants.js';
-
-function getImage(scene, tag) {
-    let parts = tag.split(":");
-    if (parts.length > 1) {
-        scene = parts[0];
-        tag = parts[1];
-    }
-    for ( let i = 0; i < Globals.scenes.length; i++ ) {
-        if (Globals.scenes[i].name == scene) {
-            for ( let j = 0; j < Globals.scenes[i].images.length; j++ ) {
-                if (Globals.scenes[i].images[j].name == tag) {
-                    if (Globals.scenes[i].images[j].loading) {
-                        return("loading");
-                    } else {
-                        return(Globals.scenes[i].images[j]);
-                    }
-                }
-            }
-        }
-    }
-    Globals.log.error("No image found- " + scene + ":" + tag);
-    return(null);
-}
+import { TagList } from "./vars.js";
 
 /**************************************************************************************************
- #####   #####                                        
-#     # #     #         # #    #   ##    ####  ###### 
-#       #               # ##  ##  #  #  #    # #      
- #####  #  ####         # # ## # #    # #      #####  
-      # #     #         # #    # ###### #  ### #      
-#     # #     #         # #    # #    # #    # #      
- #####   #####          # #    # #    #  ####  ###### 
-                #######                               
+
+    ######   ######   #### ##     ##    ###     ######   ######## 
+   ##    ## ##    ##   ##  ###   ###   ## ##   ##    ##  ##       
+   ##       ##         ##  #### ####  ##   ##  ##        ##       
+    ######  ##   ####  ##  ## ### ## ##     ## ##   #### ######   
+         ## ##    ##   ##  ##     ## ######### ##    ##  ##       
+   ##    ## ##    ##   ##  ##     ## ##     ## ##    ##  ##       
+    ######   ######   #### ##     ## ##     ##  ######   ######## 
+
 **************************************************************************************************/
 
 export class SGImage {
-    constructor(data, tag) {
-        this.name = tag;
+    constructor(data, name) {
+        this.name = name;
         this.width = 0;
         this.height = 0;
+        this.tags = new TagList();
         if (typeof data === "string") {
             this.piImage = null;
             this.loading = true;
@@ -60,6 +40,29 @@ export class SGImage {
         this.width = this.piImage.width;
         this.height = this.piImage.height;
     }
+
+    static getImage(scene, name) {
+        let parts = name.split(":");
+        if (parts.length > 1) {
+            scene = parts[0];
+            name = parts[1];
+        }
+        for ( let i = 0; i < Globals.scenes.length; i++ ) {
+            if (Globals.scenes[i].name == scene) {
+                for ( let j = 0; j < Globals.scenes[i].images.length; j++ ) {
+                    if (Globals.scenes[i].images[j].name == name) {
+                        if (Globals.scenes[i].images[j].loading) {
+                            return("loading");
+                        } else {
+                            return(Globals.scenes[i].images[j]);
+                        }
+                    }
+                }
+            }
+        }
+        Globals.log.error("No image found- " + scene + ":" + name);
+        return(null);
+    }
 }
 
 /**************************************************************************************************
@@ -74,7 +77,7 @@ export class SGImage {
 **************************************************************************************************/
 
 export class SGSprite {
-    constructor(imageName, spriteName = imageName, type = constants.SPRITE_IMAGE) {
+    constructor(imageName, spriteName = imageName, type = constants.SPRITE_IMAGE, tags = []) {
         // We duplicated a lot of sprite properties so that we can manipulate independently
         // of whether the PI sprite has been created yet (e.g. waiting for the image to
         // load) and also in case we want to switch to a different rendering engine at a
@@ -83,6 +86,8 @@ export class SGSprite {
         this.type = type;
         this.imageName = imageName;
         this.name = spriteName
+        this.tags = new TagList();
+        this.tags.addTag(tags); // default tags
         this.sgParent = null;
         // created yet?
         this.piSprite = null;
@@ -165,7 +170,6 @@ export class SGSprite {
         ];
         // debugging
         // this.logged = false;
-
     }
 
     setPosition(x, y, depth = 0) {
@@ -612,7 +616,7 @@ export class SGSprite {
         // First, do we need to load an image (and can we?)
         if (this.type == constants.SPRITE_IMAGE && 
                 (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) { // no image loaded
-            let image = getImage(scene, this.imageName);
+            let image = SGImage.getImage(scene, this.imageName);
             if (image === null) { // doesn't exist, give up
                 this.enabled = false;
                 return;
@@ -928,45 +932,45 @@ export class SGSprite {
         }
     }
 
-    static getSprite(scene, tag, report = true) {
-        if (!tag) {
+    static getSprite(scene, name, report = true) {
+        if (!name) {
             Globals.log.error("bad sprite name - ");
             return false;
         }
-        let parts = tag.split(":");
+        let parts = name.split(":");
         if (parts.length > 1) {
             scene = parts[0];
-            tag = parts[1];
+            name = parts[1];
         }
         for ( let i = 0; i < Globals.scenes.length; i++ ) {
             if (Globals.scenes[i].name == scene) {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
                     // Only return sprites from scenes that are currently running
-                    if (!(Globals.scenes[i].state == constants.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == tag) {
+                    if (!(Globals.scenes[i].state == constants.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == name) {
                         return(Globals.scenes[i].sprites[j]);
                     }
                 }
             }
         }
         if (report) {
-            Globals.log.error("No sprite found- " + scene + ":" + tag);
+            Globals.log.error("No sprite found- " + scene + ":" + name);
         }
         return(false);
     }
 
-    static remove_sprite(scene, tag, report = false) {
-        if (!tag) {
+    static remove_sprite(scene, name, report = false) {
+        if (!name) {
             return false;
         }
-        let parts = tag.split(":");
+        let parts = name.split(":");
         if (parts.length > 1) {
             scene = parts[0];
-            tag = parts[1];
+            name = parts[1];
         }
         for ( let i = 0; i < Globals.scenes.length; i++ ) {
             if (Globals.scenes[i].name == scene) {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
-                    if (Globals.scenes[i].sprites[j].tag == tag) {
+                    if (Globals.scenes[i].sprites[j].name == name) {
                         Globals.scenes[i].sprites[j].piSprite.destroy();
                         Globals.scenes[i].sprites.splice(j,1);
                         return true;
@@ -975,7 +979,7 @@ export class SGSprite {
             }
         }
         if (report) {
-            Globals.log.error("No sprite found- " + scene + ":" + tag);
+            Globals.log.error("No sprite found- " + scene + ":" + name);
         }
         return false;
     }

@@ -8,8 +8,6 @@ header:
    image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
-{% include figure src="/slow-glass/cafe-at-night.gif" caption="Bringing the Cafe at Arles to life" align="centre" %}
-
 ## Slow Glass?
 
 The name "Slow Glass" was inspired by the famous Bob Shaw short story "The Light of Other Days". In the story a form of glass is invented which it takes light 20 or more years to travel through its thickness. A pane of such glass can be set up in some picturesque location, left for a few decades and then moved to a new location like the wall of your Manhattan apartment and you get the benefit of that pretty view for an equivalent length of time.

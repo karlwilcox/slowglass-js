@@ -6,10 +6,39 @@ import { SGSprite } from "./sgsprite.js";
 import { Scene } from "./scene.js";
 import * as constants from './constants.js';
 
+export class TagList {
+    constructor() {
+        this.tags = [];
+    }
+
+    addTag(tag) {
+        if (!Array.isArray(tag)) {
+            tag = [tag];
+        }
+        for (let i = 0; i < tag.length; i++ ) {
+            let cleanTag = tag[i];
+            if (cleanTag.charAt(0) == '#') {
+                cleanTag = cleanTag.slice(1);
+            }
+            if (!this.tags.includes(cleanTag)) { // don't allow duplicates
+                this.tags.push(cleanTag);
+            }
+        }
+    }
+
+    hasTag(tag) {
+        if (tag.charAt(0) == '#') {
+            tag = tag.slice(1);
+        }
+        return this.tags.includes(tag);
+    }
+}
+
 class Variable {
     constructor(name, value) {
         this.name = name;
         this.value = value;
+        this.tags = new TagList();
     }
 
     getValue() {
@@ -48,6 +77,46 @@ export class VarList {
             }
         }
     }
+
+
+    setTag(name, tag) {
+        if (Array.isArray(tag) && tag.length == 0) {
+            return;
+        }
+        if (this.built_in(name)) {
+            Globals.log.error("Cannot tag built-in variable " + name);
+        } else if (name.match(/[\.:]/)) {
+            Globals.log.error("Cannot tag variable with dot or colon in name " + name);
+        } else {
+            const index = this.find(name);
+            if (index !== false) {
+                this.variables[index].tags.addTag(tag);
+            }
+        }
+    }
+
+    listTags(tags) {
+        if (!Array.isArray(tags)) {
+            tags = [tags];
+        }
+        let result = "";
+        let first = true;
+        for (let i = 0; i < this.variables.length; i++ ) {
+            for (let j = 0; j < tags.length; j++) {
+                if (this.variables[i].tags.hasTag(tags[j])) {
+                    if (first) {
+                        first = false;
+                    } else {
+                        result += " ";
+                    }
+                    result += this.variables[i].name;
+                    break; // don't need to check the rest of tags
+                }
+            }
+        }
+        return result;
+    }
+
 
     listNames() {
         let result = "";
@@ -184,9 +253,6 @@ export class VarList {
             case "MILLIS":
             case "MS":
                 return (Date.now() - Globals.startTime);
-            case "VARIABLES":
-            case "VARNAMES":
-                return this.listNames();
             default:
                 return false;
         }
@@ -226,16 +292,43 @@ export class VarList {
             value = defaults.NOTFOUND;
         }
         // Is this a list request?
-        switch(varName) {
+        let listName = varName;
+        let tagName = false;
+        if (varName.match(/#/)) {
+            const listParts = varName.split(/#/);
+            listName = listParts[0];
+            tagName = listParts[1];
+        }
+        switch(listName) {
+            case "VARIABLES":
+            case "VARNAMES":
+                if (tagName) {
+                    value = this.listTags(tagName);
+                } else {
+                    value = this.listNames();
+                }
+                break;
             case 'SPRITES':
-                value = scene.listSprites(false);
+                if (tagName) {
+                    value = scene.listSpriteTags(tagName);
+                } else {
+                    value = scene.listSprites(false);
+                }
                 break;
             case 'IMAGES':
             case 'IMGS':
-                value = scene.listImages(false);
+                if (tagName) {
+                    value = scene.listImageTags(tagName);
+                } else {
+                    value = scene.listImages(false);
+                }
                 break;
             case 'SCENES':
-                value = Globals.listScenes(false);
+                if (tagName) {
+                    value = Globals.listSceneTags(tagName);
+                } else {
+                    value = Globals.listScenes(false);
+                }
                 break;
             default:
                 break;
@@ -259,6 +352,14 @@ export class VarList {
                     case 'pos.y':
                     case 'position.y':
                         value = sgSprite.locY.value();
+                        break;
+                    case 'speed.x':
+                    case 'dx':
+                        value = sgSprite.locX.speed();
+                        break;
+                    case 'speed.y':
+                    case 'dy':
+                        value = sgSprite.locY.speed();
                         break;
                     case 'z':
                     case 'depth':
@@ -375,7 +476,7 @@ export class VarList {
                 } else {
                     // Case: $varName
                     const start = j;
-                    while (j < input.length && /[a-zA-Z0-9_:]/.test(input[j])) {
+                    while (j < input.length && /[a-zA-Z0-9_:#]/.test(input[j])) {
                         j++;
                     }
                     varName = input.slice(start, j);

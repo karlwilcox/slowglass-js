@@ -55,6 +55,28 @@ export class Globals {
         return text;
     }
 
+    static listSceneTags(tags) {
+        if (!Array.isArray(tag)) {
+            tags = [tags];
+        }
+        let result = "";
+        let first = true;
+        for (let i = 0; i < Globals.scenes.length; i++ ) {
+            for (let j = 0; j < tags.length; j++) {
+                if (Globals.scenes[i].tags.hasTag(tags[j])) {
+                    if (first) {
+                        first = false;
+                    } else {
+                        result += " ";
+                    }
+                    result += this.images[i].name;
+                    break; // don't need to check the rest of tags
+                }
+            }
+        }
+        return result;        // verbose version later
+    }
+
     static reset() {
         Globals.root = null;
         Globals.scenes = [];
