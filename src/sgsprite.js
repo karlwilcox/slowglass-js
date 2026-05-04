@@ -214,7 +214,7 @@ export class SGSprite {
         }
     }
 
-    move(newX, newY, to_or_by, in_or_at, duration, now, callback) {
+    move(newX, newY, to_or_by, in_or_at, duration, now, callback = false) {
         if (to_or_by == "by") {
             if (newX === false) {
                 newX = 0;
@@ -235,8 +235,12 @@ export class SGSprite {
         if (in_or_at == "at") {
             // to be done...
         }
+        // we set in motion up to two changes
+        if (callback) {
+            callback(2)
+        }
         this.locX.setTargetValue(newX, duration, now, callback);
-        this.locY.setTargetValue(newY, duration, now); // only need one callback
+        this.locY.setTargetValue(newY, duration, now, callback);
         this.enabled = true;
     }
 
@@ -494,8 +498,9 @@ export class SGSprite {
             scaleY = 1; // %
         }
         // convert percentages to float values
+        callback(2);
         this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
-        this.scaleY.setTargetValue(scaleY / 100);
+        this.scaleY.setTargetValue(scaleY / 100, duration, now, callback);
     }
 
     getDefaultWarpCorners() {

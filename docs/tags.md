@@ -1,11 +1,5 @@
 ---
-layout: page
-sidebar: slow-glass
 title               : "Slow Glass Tags"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
 ## Note

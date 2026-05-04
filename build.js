@@ -6,6 +6,6 @@ esbuild.build({
   bundle: true,
   minify: true,
   sourcemap: true,
-  outfile: 'dist/bundle.js',
+  outfile: 'js/slowglass.js',
   target: ['es2018'],
 }).catch(() => process.exit(1));

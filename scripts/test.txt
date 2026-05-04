@@ -16,7 +16,7 @@ after 5 minutes
 
 scene drive-truck
     begin
-        with /slow-glass/assets/vehicles
+        with /assets/vehicles
         load refuse-truck-rtol.png as refuse-truck
         load truckdriveby.wav as truck-noise
         sprite refuse-truck

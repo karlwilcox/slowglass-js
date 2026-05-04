@@ -1,11 +1,5 @@
 ---
-layout: page
-sidebar: slow-glass
 title               : "Slow Glass Sprite Creation Actions"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
 Sprites are created from images, a sequence of images or from text using the following commands:

@@ -1,10 +1,5 @@
 ---
-layout: "page-fullwidth"
 title               : "Slow Glass Animation System"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
     <div id="sg_div" style="min-height: 600px;"></div>
@@ -33,17 +28,15 @@ header:
             &nbsp;
         </p>
     </div>
-
-
-    <div class="container-fluid">
+    <div class="container-fluid" style="min-height: 320px;">
         <div class="row">
-            <div class="medium-6 columns">
+            <div class="col-lg-6 col-md-12">
                 <p>Script Input Area</p>
-                <textarea id="sg_script" name="sg_script" class="w-75" rows="10" style="height: 100%;" autocomplete="off"></textarea>
+                <textarea id="sg_script" name="sg_script" class="w-100 p-3 h-100" autocomplete="off"></textarea>
             </div>
-            <div class="medium-6 columns">
+            <div class="col-lg-6 col-md-12">
                 <p>Message Area</p>
-                <textarea id="sg_messages" name="sg_messages" class="w-75" rows="10" style="height: 100%;" readonly></textarea>
+                <textarea id="sg_messages" name="sg_messages" class="w-100 p-3 h-100" rows="8" readonly></textarea>
             </div>
         </div>
     </div>
@@ -51,8 +44,8 @@ header:
     <div id="audio"></div>
 
     <script src="https://pixijs.download/release/pixi.min.js"></script>
-    <script type="module" src="/slow-glass/dist/math-expression-evaluator.min.js";></script>
-    <script type="module" src="/slow-glass/dist/slow-glass.js";></script>
+    <script type="module" src="/js/math-expression-evaluator.min.js";></script>
+    <script type="module" src="/js/slowglass.js";></script>
     <script>
         document.getElementById("run_button").addEventListener("click",loadFromTextArea);
         document.getElementById("url_button").addEventListener("click",loadFromURL);

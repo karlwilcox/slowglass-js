@@ -1,6 +1,6 @@
 # Fireworks demo
 # All images created by Affinty App generative AI
-# call from URL /slow-glass/scripts/fireworks.txt
+# call from URL /scripts/fireworks.txt
 
 display width 800
 display height 450
@@ -8,7 +8,7 @@ gravity 50
 
 begin
     # Create our stage...
-    with /slow-glass/assets/fireworks
+    with /assets/fireworks
     load starry-sky.png as starry-sky
     use starry-sky as background
     load crowd-of-people.png as crowd
@@ -34,7 +34,7 @@ every 3 seconds
 
 scene firework1
    begin
-        with /slow-glass/assets/fireworks
+        with /assets/fireworks
         load firework1-1.png as firework1
         make launch-site be (600 * $CHANCE)
         # launch from anywhere between 100 and 600 but tend to point towards the centre

@@ -1,6 +1,6 @@
 # Swiss clock scene
 # Clock face from https://commons.wikimedia.org/wiki/File:Swiss_railway_clock_1.svg
-# Call from URL /slow-glass/scripts/swiss-clock.txt
+# Call from URL /scripts/swiss-clock.txt
 
 display width 800
 display height 450
@@ -13,7 +13,7 @@ scene swiss-clock
         group create clock 200 200
         group create hours in group clock size 200 200
         group create minutes in group clock size 200 200
-        load /slow-glass/assets/clock/swiss-railway-clock.png named clockface
+        load /assets/clock/swiss-railway-clock.png named clockface
         sprite create face in group clock from clockface
         place face at 100 100 size 200 200
         graphic create hourhand in group hours as rect 10 80

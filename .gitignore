@@ -7,3 +7,5 @@ _site
 .jekyll-cache
 .jekyll-metadata
 vendor
+js/slowglass.js
+js/slowglass.js.map

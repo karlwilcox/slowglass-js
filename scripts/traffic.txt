@@ -1,19 +1,19 @@
 # Traffic demo
 # All images created by Affinty App generative AI
-# call from URL /slow-glass/scripts/traffic.txt
+# call from URL /scripts/traffic.txt
 
 
 display width 800
 display height 450
 
 begin
-    load /slow-glass/assets/vehicles/city-street.png as street
+    load /assets/vehicles/city-street.png as street
     use street as background
-    load /slow-glass/assets/vehicles/clouds.png as clouds
+    load /assets/vehicles/clouds.png as clouds
     sprite create cloudscape from clouds view 0 0 800 300
     place cloudscape at $CENTREX 150 10
     scroll cloudscape at 1 0.1
-    load /slow-glass/assets/vehicles/vehicles.png as vehicles
+    load /assets/vehicles/vehicles.png as vehicles
     make near_reduction be 75
     make near_roadheight be 380
     make far_reduction be 80

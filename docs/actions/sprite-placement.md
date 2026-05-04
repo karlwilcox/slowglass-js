@@ -1,11 +1,5 @@
 ---
-layout: page
-sidebar: slow-glass
 title               : "Slow Glass Sprite Placement Actions"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
 ## Sprite Initial Placement

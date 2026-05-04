@@ -24,6 +24,7 @@ export class Globals {
     static lastKey = null;
     static key = null;
     static highestZ = 0;
+    static hemisphere = defaults.HEMISPHERE;
 
     constructor() {
     }

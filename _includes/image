@@ -1,0 +1,11 @@
+{%- comment -%}
+* include an image 
+*
+* usage:
+*
+*  image src="URL" caption="CAPTION" align=left|right|centre link="URL"
+*
+{%- endcomment -%}
+
+<img src="{{ include.src }}" alt="{{ include.caption }}" class="img-fluid"/>
+

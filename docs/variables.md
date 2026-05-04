@@ -1,11 +1,5 @@
 ---
-layout: page
-sidebar: slow-glass
 title               : "Slow Glass Variables"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
 The Slow Glass scripting language supports the use of variables to

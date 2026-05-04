@@ -1,0 +1,17 @@
+{%- if include.type == "dark" -%}
+<div class="card bg-primary text-white w-80 h-100">
+{%- else -%}
+<div class="card border-primary w-80 h-100">
+{%- endif -%}
+<div class="card-body d-flex flex-column align-items-start">
+	<h4 class="card-title text-primary">{{ include.title }}</h4>
+	<p class="card-text">{{ include.text }}</p>
+	 {%- if include.linkURL -%}
+		{%- if include.type == "dark" -%}
+		<a href="{{ include.linkURL }}" class="btn btn-primary border-white mt-auto">{{ include.linkText }}</a>
+		{%- else -%}
+		<a href="{{ include.linkURL }}" class="btn btn-primary mt-auto">{{ include.linkText }}</a>
+		{%- endif -%}
+    {%- endif -%}
+</div>
+</div>

@@ -1,11 +1,5 @@
 ---
-layout: page
-sidebar: slow-glass
 title               : "Slow Glass Directives"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
 Directives are instructions that affect the operation of Slow Glass as a whole, or help
@@ -72,10 +66,6 @@ Note that if you are using script scaling, both gravity and ground level will
 be assumed to be given in script coordinates and will be scaled appropriately
 for the actual display.
 
-## include
-
-This is not implemented yet but reserved for a future development.
-
 ## end file
 
 `end file`
@@ -106,6 +96,23 @@ considered to be in the "top level" scene, which is given the name "\_MAIN\_".
 There _must_ be at least one trigger and one action in the top level scene
 otherwise nothing will happen! Typically you will have several named scenes
 which are started and stopped by actions in the top level scene.
+
+## Documentation
+
+Documentation is always a good thing! Slow Glass gives you a lot of flexibility
+in documenting your code. In addition to the different commenting styles
+discussed below you can include a longer section of descriptive text anywhere
+in your script file, introduced by the directive:
+
+`description`
+
+All content lines after this directive will be completely ignored by the command
+processor, until it finds the corresponding directive:
+
+`end description`
+
+You can have as many description sections as you like, of any length, although
+putting one at the top of each file might be useful!
 
 ## Comments
 

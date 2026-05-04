@@ -15,6 +15,7 @@ class SlowGlass {
     static clean = true;
 
     constructor() {
+        Utils.getHemisphere();
     }
 /**************************************************************************************************
 
@@ -33,29 +34,36 @@ class SlowGlass {
         const count = script.length;
         const top = new Scene(constants.MAIN_NAME);
         let holding = null;
-        let in_comment = false;
+        let inComment = false;
+        let inDescription = false;
         for(let i = 0; i < script.length; i++ ) {
             let lineCount = i + 1;
             let currentLine = script[i].trim();
+            if (inDescription) {
+                if (currentLine.match(/^end ?description/)) {
+                    inDescription = false;
+                }
+                continue;
+            }
             // handle 'C' style comments
             // remove all within single line
             currentLine = currentLine.replace(/\/\*[\s\S]*?\*\//g, '');
             // Now deal with multi-line comments
-            if (in_comment) {
+            if (inComment) {
                 if (currentLine.match(/\*\//)) {
-                    let end_pos = currentLine.search(/\*\//);
+                    let endPos = currentLine.search(/\*\//);
                     // discard up to comment end
-                    currentLine = currentLine.substr(end_pos + 1);
-                    in_comment = false;
+                    currentLine = currentLine.substr(endPos + 1);
+                    inComment = false;
                 } else {
                     continue; // discard whole line
                 }
             }
             if (currentLine.match(/\/\*/)) {
-                let start_pos = currentLine.search(/\/\*/);
+                let startPos = currentLine.search(/\/\*/);
                 // discard from the start comment onwards
-                currentLine = currentLine.substr(0, start_pos);
-                in_comment = true;
+                currentLine = currentLine.substr(0, startPos);
+                inComment = true;
             }
             /* discard single line comments, empty lines etc.  */
             currentLine.replace(/\/\/.*$/,'');
@@ -74,6 +82,10 @@ class SlowGlass {
             }
             // Handle scene management commands
             let command = words[0];
+            if (command == "description") {
+                inDescription = true;
+                continue;
+            }
             let argument = "";
             let argument2 = "";
             if (words.length > 1) {
@@ -221,7 +233,11 @@ class SlowGlass {
             // scenes have already been added, we may have some top level commands
             top.name = "_INCLUDE_";
             top.start();
-            Globals.scenes.push(top);
+            // Globals.scenes.push(top);
+            // merge it with the existing top scene
+            const mainScene = Scene.find(constants.MAIN_NAME, false);
+            mainScene.merge(top);
+            // top can now be discarded
         } else {
             if (top.content.length < 1) {
                 Globals.log.error('No top level actions, nothing will happen!');

@@ -3,6 +3,7 @@
 import { Globals } from "./globals.js";
 import { VarList } from "./vars.js";
 import * as constants from './constants.js';
+import defaults from "./defaults";
 
 /**************************************************************************************************
 #                     
@@ -15,8 +16,9 @@ import * as constants from './constants.js';
                       
 **************************************************************************************************/
 
-import defaults from "./defaults";
-
+console.error = function(message) {
+    Globals.log.error(message);
+};
 
 export class Log {
     constructor(debug_on) {
@@ -121,6 +123,7 @@ export class StackFrame {
 
 export class ActionGroup {
     constructor() {
+        this.triggered = false;
         this.triggers = [];
         this.actions = [];
         this.anyTrigger = true;
@@ -128,11 +131,6 @@ export class ActionGroup {
         this.stack = [];
         this.nextAction = 0; // for looping
         this.failedIfCount = 0; // for nesting if statements
-    }
-
-
-    complete_action(action) {
-        this.unfinishedCount -= 1;
     }
 
     addAction(action) {
@@ -144,10 +142,15 @@ export class ActionGroup {
     }
 
     isFinished() {
-        return (this.unfinishedCount < 1);
+        if (this.triggered && this.unfinishedCount == 0) {
+            this.triggered = false;
+            return true;
+        } // else
+        return false;
     }
 
-    resetUnfinishedt() {
+    startCounting() {
+        this.triggered = true;
         this.unfinishedCount = 0;
     }
 
@@ -165,9 +168,8 @@ export class ActionGroup {
 }
 
 export function makeCompletionCallback(object) {
-    object.unfinishedCount += 1; // Mark an action unfinished
-    return function(action) {
-        object.unfinishedCount -= 1; // clear it when done
+    return function(delta) {
+        object.unfinishedCount += delta;
     }
 }
 
@@ -323,12 +325,9 @@ export class Timer {
 }
 
 export function getHemisphere(callback) {
-    // Default to northern hemisphere
-    const DEFAULT = "northern";
-
     // Check browser support
     if (!("geolocation" in navigator)) {
-        callback(DEFAULT);
+        callback(defaults.HEMISPHERE);
         return;
     }
 
@@ -337,14 +336,14 @@ export function getHemisphere(callback) {
             const lat = position.coords.latitude;
 
             if (lat < 0) {
-                VarList.hemisphere = "southern";
+                Globals.hemisphere = "southern";
             } else {
-                VarList.hemisphere = "northern";
+                Globals.hemisphere = "northern";
             }
         },
         (error) => {
             // Permission denied or other failure → default
-            VarList.hemisphere = DEFAULT;
+            Globals.hemisphere = defaults.HEMISPHERE;
         },
         {
             timeout: 5000 // optional safeguard

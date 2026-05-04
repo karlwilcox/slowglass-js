@@ -137,8 +137,8 @@ export class Adjustable {
         if (seconds == 0) {
             this.currentValue = target;
             this.deltaValue = 0;
-            if ( this.callback != null ) {
-                this.positionCallback("adjustable");
+            if (this.positionCallback != null) {
+                this.positionCallback(-1);
             }
         } else {
             this.deltaValue = (this.targetValue - this.currentValue) / (seconds * 1000);
@@ -191,12 +191,12 @@ export class Adjustable {
         // Are we there yet?
         if (((this.deltaValue < 0) && (this.currentValue < this.targetValue)) // undershot
             || ((this.deltaValue > 0) && (this.currentValue > this.targetValue)) // overshot
-            || (Math.abs(this.currentValue - this.targetValue) < this.deltaValue)) { // almost there
+            || (Math.abs(this.currentValue - this.targetValue) <= this.deltaValue)) { // almost there
             this.currentValue = this.targetValue;
             this.deltaValue = 0;
             this.changing = false;
-            if (this.callback != null) {
-                this.positionCallback("adjustable");
+            if (this.positionCallback != null) {
+                this.positionCallback(-1);
             }
         } else {
             this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);

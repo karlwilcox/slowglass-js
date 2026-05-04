@@ -1,11 +1,5 @@
 ---
-layout: page
-sidebar: slow-glass
 title               : "Slow Glass Web Page Integration"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
 ---
 
 ## Required Libraries
@@ -25,7 +19,7 @@ available then the northern hemisphere is assumed.
 ## The SlowGlass Object
 
 Slow Glass is provided as an ES6 module which can be found at
-https://karlwilcox.com/slow-glass/dist/slow-glass.js . This module instantiates
+https://slowglass.net/js/slowglass.js . This module instantiates
 an instance of the SlowGlass object called "slowGlass" and attaches it to the
 window object hence it is available to web page JavaScript through the name
 "slowGlass".
@@ -38,7 +32,7 @@ web page.
 ### setDrawingParent(id)
 
 The element with the given id will be used as the parent of the drawing area
-(typically an empty "div"). It it is **not** called then the drawing area will
+(typically an empty "div"). If it is **not** called then the drawing area will
 be attached as a child of the "body" element.
 
 ## setMessageParent(id)
@@ -78,12 +72,12 @@ You may also wish to provide a means of turning on the audio for the page
 A minimal HTML fragment is shown below:
 
 ```html
-<div id="sg-id" style="min-height: 600px;"></div>
-<script type="module" src="/slow-glass/dist/math-expression-evaluator.min.js";></script>
+<div id="sg-canvas" style="min-height: 600px;"></div>
+<script type="module" src="https://slowglass.net/js/math-expression-evaluator.min.js";></script>
 <script src="https://pixijs.download/release/pixi.min.js"></script>
-<script type="module" src="https://karlwilcox.com/slow-glass/web/dist/slow-glass.js";></script>
+<script type="module" src="https://slowglass.net/js/slowglass.js"></script>
 <script>
-    slowGlass.canvas_id = "sg_canvas";
-    slowGlass.scriptFromUrl("https://karlwilcox.com/slow-glass/web/scripts/cafe.txt");
+    slowGlass.setDrawingParent("sg_canvas");
+    slowGlass.scriptFromUrl("https://slowglass.net/scripts/cafe/cafe.txt");
 </script>
 ```

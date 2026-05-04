@@ -1,11 +1,12 @@
-# Traffic demo
-# All images created by Affinty App generative AI
-# call from URL /slow-glass/scripts/vehicles.txt
-
+description
+    Traffic demo
+    All images created by Affinty App generative AI
+    call from URL /scripts/vehicles.txt
+end description
 
 scene road_users
     begin
-        load /slow-glass/assets/vehicles/vehicles.png as vehicles
+        load /assets/vehicles/vehicles.png as vehicles
         make near_reduction be 75
         make near_roadheight be 380
         make far_reduction be 80

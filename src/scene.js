@@ -48,6 +48,39 @@ export class Scene {
         return false;
     }
 
+    appendNew(original, additional) {
+        let origNames = [];
+        for (let j = 0; j < original.length; j++) {
+            origNames.push(original[i].name);
+        }
+        for (let i = 0; i < additional.length; i++) {
+            if (!origNames.includes(additional[i].name)) {
+                original.push(additional[i]);
+            }
+        }
+    }
+
+    merge(other) {
+        // if (other.state != constants.SCENE_STOPPED) {
+        //     Globals.log.error("Can only merged with a stopped scene");
+        //     return;
+        // }
+        // content is simply appended
+        this.content = this.content.concat(other.content);
+        // Images are merged but existing named items are NOT overwritten
+        this.images = this.appendNew(this.images, other.images);
+        // same for sprites
+        this.sprites = this.appendNew(this.sprites, other.sprites);
+        // And action groups (only if the other scene is running)
+        this.actionGroups = this.appendNew(this.actionGroups, other.actionGroups);
+        // just append the default tags (duplicates don't matter)
+        this.defaultTags = this.defaultTags.concat(other.defaultTags);
+        // same for our own, actual tags
+        this.TagList.addTag(other.TagList.tags);
+        // but don't overwrite variables
+        this.varList.variables = merge(this.varList.variables, other.varList.variables);
+    }
+
     showSceneData() {
         let text = "Scene: " + this.name + "\n";
         text += "State: " + this.state + "\n";
@@ -333,9 +366,9 @@ export class Scene {
 
     runGroup(index, now) {
         let actionGroup = this.actionGroups[index];
-        actionGroup.resetUnfinishedt();
         let actions = actionGroup.actions;
         actionGroup.nextAction = 0; // start at the top
+        actionGroup.startCounting();
         do {
             this.runAction(actionGroup.nextAction, actionGroup, now);
         } while (actionGroup.nextAction < actions.length );
@@ -1317,19 +1350,23 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
+                    let callback = false;
+                    if (duration > 1) {
+                        callback = Utils.makeCompletionCallback(actionGroup);
+                    }
                     switch ( direction ) {
                         case "horizontally":
                         case "hor":
                         case "h":
-                            sgSprite.move(delta, false, byOrTo, inOrAt, duration, now, Utils.makeCompletionCallback(actionGroup));
+                            sgSprite.move(delta, false, byOrTo, inOrAt, duration, now, callback);
                             break;
                         case "vertically":
                         case "vert":
                         case "v":
-                            sgSprite.move(false, delta, byOrTo, inOrAt, duration, now, Utils.makeCompletionCallback(actionGroup));
+                            sgSprite.move(false, delta, byOrTo, inOrAt, duration, now, callback);
                             break;
                         default:
-                            sgSprite.move(x, y, byOrTo, inOrAt, duration, now, Utils.makeCompletionCallback(actionGroup));
+                            sgSprite.move(x, y, byOrTo, inOrAt, duration, now, callback);
                             break;
                     }
                 } else {

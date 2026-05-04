@@ -1,78 +1,93 @@
 ---
-layout: page
-sidebar: slow-glass
-title               : "Slow Glass Animation System"
-subtitle         : ""
-teaser              : ""
-header:
-   image_fullwidth  : "headers/slow-glass.jpg"
+title:    "Slow Glass Animation System"
+banner:   "big"
 ---
 
 ## Slow Glass?
 
-The name "Slow Glass" was inspired by the famous Bob Shaw short story "The Light of Other Days". In the story a form of glass is invented which it takes light 20 or more years to travel through its thickness. A pane of such glass can be set up in some picturesque location, left for a few decades and then moved to a new location like the wall of your Manhattan apartment and you get the benefit of that pretty view for an equivalent length of time.
+The name "Slow Glass" was inspired by the famous Bob Shaw short story "The
+Light of Other Days". In the story a form of glass is invented which it takes
+light 20 or more years to travel through its thickness. A pane of such glass
+can be set up in some picturesque location, left for a few decades and then
+moved to a new location like the wall of your Manhattan apartment and you get
+the benefit of that pretty view for an equivalent length of time.
 
-The Slow Glass project aims to provide a similar experience but without the long wait!
+The Slow Glass project aims to provide a similar experience but without the
+long wait! Watch some the demos available from the drop down at the top of the
+page to see what sorts of things Slow Glass is capable of.
+
+{% capture disclaimer %}
+I first read the story more than 40 years ago and it has stuck with me ever since.
+The use of the Slow Glass concept is intended as an homage to the author and
+without any intention to claim ownership or infringe any copyrights.
+{% endcapture %}
+
+{% include card title="Disclaimer" text=disclaimer %}
 
 ## Key Features
 
-* Scripted: Slow glass is controlled by a script file in a fairly readable structured English (not complex code)
-* Animated: Moving images and sounds are catered for (2D sprite based for now, perhaps 3D later)
-* Long-running: The expectation is that a device such as a Raspberry Pi is attached to a flat panel display and left to run for extended periods
-* Event driven: Things happen in response to a wide variety of events:
-  1. At regular intervals: "every five minutes"
-  1. At fixed times: "each *:30:00" (on the half hour)
-  1. At specific times: "at 12:00:00"
-  1. In response to user actions ("onclick...", "on key...")
-  1. Randomly
-  1. Arbitrarily: "when &lt;expression&gt;"
+The idea for Slow Glass originated with the desire to have a flat panel display
+at the end of a street of Lego Creator buildings making it appear that a busy street
+receeded into the background. With that in mind I wanted something:
 
-## Requirements
+* Scripted: driven by a text file with readable structured English
+* Animated: Moving images with simple effects and sounds
+* Long-running: Non-repeating action over many hours, hence-
+* Event driven: Things happen in response to random or timed events
+* Calendar aware: Different from day to day and season to season
 
-Slow Glass is written in JavaScript, initially targetted at the browser environment. It will ask for
-location but this is only to determine the hemisphere so the season variables work correctly.
+{% capture warning %}
+Slow Glass is very new and much untested! It should be regarded as an Alpha
+release at best. It contains many bugs and the documentation should be taken
+as "aspirational" rather than accurate(!) The details of the language
+are also subject to change if I find a better way to do things, but please
+give it a go and if you find a bug or have ideas for improvements just
+let me know.
+{% endcapture %}
 
-(Slow glass was originally written in Python 3 using the Pygame-ce library, this code is still available.)
+{% include card title="Warning!" text=warning type="dark" linkURL="/contact.html" linkText="Contact" %}
 
-## Guide to the Documentation
+## Design Goals
 
-The best place to start is probably the [tutorial](/slow-glass/tutorial/).
+In designing the scripting language for Slow Glass I had the following goals in mind
 
-### Documentation Conventions
+### Readbility
 
-When documenting the language the following conventions are used:
+The language should look like English and work like English, so verbs make
+things happen and nouns represent things. Prepositions make sense in their
+context, so `move to` and `move by` retain their normal English meanings. Even
+a reader completely new to Slow Glass should be able to make a reasonable guess
+at what they will be seeing just by reading the scripting and interpreting it
+as normal English.
 
-* Words in ordinary text are REQUIRED as part of the command
-* Words in curly brackets are supplied by the user (usually names)
-* (EXCEPT where the examples is discussing variable names, where the curly brackets mark the limits of the variable name)
-* Words in square brackets are OPTIONAL and can be used to help readability - this is encouraged but not required
-* Words in round brackets separated by vertical bars indicate options
-* Words followed by ellipsis (...) can be repeated any number of times
+### Graded Complexity
 
-### Naming Conventions
+Simple things should be easy - loading an image, placing it on the screen and
+making it move can each be done with a single, clearly written command.
 
-Where you are asked to supply a name it is best to assume that all names should
-be unique, i.e. they all share the same namespace. So do not have a scene, a
-sprite and a sound all using the same name. Although this will work in most
-cases, the **stop** command cannot tell these apart for example. This may change
-in a future version but why make things difficult for yourself!
+More complex things should be possible but might require some knowledge of very
+basic programming concepts like simple loops and the use of variables.
 
-It is probably also best to avoid using the language keywords as names, so don't call you scene "scene"!
+Very complex things are out of scope. This is **not** a game engine, most
+things happen on a timescale of around 1 second and fancy graphical effects are
+not supported (even if the underlying graphics engine allows for it).
 
-### Specifying Duration
+### Progamming Concepts
 
-Where are duration is required an integer number will be searched, followed by an optional time unit. Units can be "seconds", "minutes", or "hours" (or common abbreviations of those) and the default is seconds.
+As noted above, to do somewhat more complex things some programming concepts
+are needed. These should be as simple as possible while still being familiar to
+anyone who has written in a high level language before. The number of
+programming concepts used has been kept to a minimum, which may sometimes
+require more verbose code but keeps the actual language quite simple.
 
-### Command Completion
+## Get Me Started!
 
-In the documentation of the action commands, it is always stated when, and
-under what circumstances the command "completes". This is relevant to the
-trigger word **then**. This trigger will be succesful when all the immediately
-preceding commands have "completed". Many commands complete as soon as they are
-encountered, but others complete when whatever action has been requested has
-completed, for example when moving a sprite to a specific location the command
-completes when the sprite reaches the location or the script sends a **stop**
-command to the sprite.
+The tutorials are probably the best place to start to gain an understanding of the scripting language, which is all fully documented in the links shown at the top of the page.
 
-See also the **wait** command discussed in [/slow-glass/actions/system/]{the system commands} page.
+The demos show the sorts of things that are possible, and the demo source code is provided at the bottom of each demo page, so study these listing to see how they work.
 
+There is also a "playground" page where you can load scripts and run commands interactively to see what they do, and also debug your scripts with a visible message console.
+
+### Assets
+
+In the course of creating and testing Slow Glass I've created a number of graphic objects (largely with the assistance of the Affinity App Canva AI image generator) and you are free to use these as you wish.
