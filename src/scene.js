@@ -9,11 +9,12 @@ import { WordList } from "./wordlist.js";
 import * as constants from './constants.js';
 
 export class Scene {
-    constructor(sceneName) {
+    constructor(sceneName, URLFolder) {
         this.name = sceneName;
         this.state = constants.SCENE_STOPPED;
         this.content = [];
         this.interactive_index = 0;
+        this.URLFolder = URLFolder; // where were we loaded from?
         this.reset();
     }
 
@@ -21,7 +22,7 @@ export class Scene {
         this.actionGroups = [];
         this.images = [];
         this.sprites = [];
-        this.folder = '';
+        this.folder = ''; // where should we load from?
         this.spriteScene = this.name;
         this.varList = new VarList(this.name);
         this.tags = new TagList();
@@ -493,17 +494,30 @@ export class Scene {
                         continue; // move on to next action
                     }
                 }
+                // Folder logic:
+                // if filename looks like an absolute URL, use as is
+                // else if this.folder is set, use that
+                // else use scene.URLFolder
+                let prefix = "";
+                if (filename.startsWith("http:") || filename.startsWith("https:")
+                    || filename.startsWith(".") || filename.startsWith('/')) {
+                    prefix = "";
+                } else if (this.folder != "") {
+                    prefix = this.folder;
+                } else {
+                    prefix = this.URLFolder + "/";
+                }
                 // determine file type
                 if (filename.endsWith(".jpg") ||
                     filename.endsWith(".jpeg") ||
                     filename.endsWith(".png")) {
-                    const sgImage = new SGImage(this.folder + filename, name);
+                    const sgImage = new SGImage(prefix + filename, name);
                     sgImage.tags.addTag(wordList.getTags());
                     this.images.push(sgImage);
                     sgImage.load_image();
                 } else if (filename.endsWith(".wav") ||
                     filename.endsWith(".mp3")) {
-                    AudioManager.create(tag, this.folder + filename);
+                    AudioManager.create(tag, prefix + filename);
                 } // else check for other resource types
                 break;
 
@@ -2022,7 +2036,7 @@ export class Scene {
 
             case "assign":
                 if (wordList.wordsLeft() > 0) {
-                    const assignIndex = wordList.indexOf("as");
+                    const assignIndex = wordList.indexOfWord("as");
                     if (assignIndex < 1) {
                         Globals.log.error("Missing assign separator 'as' at line " + action.number);
                     } else {

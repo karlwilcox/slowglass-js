@@ -1,44 +1,70 @@
 ---
-title               : "Slow Glass Animation System"
+title               : "Slow Glass Playground"
 ---
 
     <div id="sg_div" style="min-height: 600px;"></div>
 
-    <div class="form-outline">
-        <p>
-            <button class="btn btn-primary" type="button" id="sound_button">Enable Audio</button>
-            &nbsp;
-            <button class="btn btn-primary" type="button" id="url_button">Run URL</button>
-            &nbsp;
-            <button class="btn btn-primary" type="button" id="interactive_button">Run Action</button>
-            &nbsp;
-            <button class="btn btn-primary" type="button" id="demo1_button">Demo 1</button>
-            &nbsp;
-            <button class="btn btn-primary" type="button" id="demo2_button">Demo 2</button>
-            &nbsp;
-            <label class="form-label" for="input_line">URL or action</label>
-            <input type="text" id="input_line" class="form-control" autocomplete="off"/>
-        </p>
-        <p>
-            <button class="btn btn-primary" type="button" id="run_button">Run Script</button>
-            &nbsp;
-            <button class="btn btn-secondary" type="button" id="stop_button">Stop</button>
-            &nbsp;
-            <button class="btn btn-secondary" type="button" id="clear_button">Clear Messages</button>
-            &nbsp;
-        </p>
-    </div>
-    <div class="container-fluid" style="min-height: 320px;">
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-lg-6 col-md-12">
-                <p>Script Input Area</p>
-                <textarea id="sg_script" name="sg_script" class="w-100 p-3 h-100" autocomplete="off"></textarea>
+            <div class="col-lg-6 col-md-12 form-group">
+                <p>URL Input Area</p>
+                <p>
+                    <button class="btn btn-primary" type="button" id="url_button">Run URL</button>
+                    &nbsp;
+                    <button class="btn btn-primary" type="button" id="sound_button">Enable Audio</button>
+                </p>
+                <p><input type="text" id="url_input" class="form-control" autocomplete="off"/></p>
             </div>
-            <div class="col-lg-6 col-md-12">
-                <p>Message Area</p>
-                <textarea id="sg_messages" name="sg_messages" class="w-100 p-3 h-100" rows="8" readonly></textarea>
+            <div class="col-lg-6 col-md-12 form-group">
+                <p>Action Input Area</p>
+                <p>
+                    <button class="btn btn-primary" type="button" id="interactive_button">Run Action</button>
+                    &nbsp;
+                    <button class="btn btn-primary" type="button" id="interactive_clear">Clear Action</button>
+                </p>
+                <p><input type="text" id="action_input" class="form-control" autocomplete="off"/></p>
             </div>
         </div>
+        <div class="row">
+            <div class="col-lg-6 col-md-12 form-group">
+                <p>Script Input Area</p>
+                <p>
+                    <button class="btn btn-primary" type="button" id="run_button">Run Script</button>
+                    &nbsp;
+                    <button class="btn btn-primary" type="button" id="script_clear">Clear Script</button>
+                </p>
+                <textarea id="sg_script" name="sg_script" class="form-control p-3" autocomplete="off" rows="10"></textarea>
+            </div>
+            <div class="col-lg-6 col-md-12 form-group">
+                <p>Message Area</p>
+                <p>
+                    <button class="btn btn-secondary" type="button" id="stop_button">Stop</button>
+                    &nbsp;
+                    <button class="btn btn-secondary" type="button" id="clear_button">Clear Messages</button>
+                </p>
+                <textarea id="sg_messages" name="sg_messages" class="form-control p-3" rows="10" readonly></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="jumbotron w-100 py-5 mx-auto">
+	<h1>Slow Glass Playground</h1>
+	<h4>How to use this page</h4>
+	<p class="lead">
+        Run scripts loaded from a URL: - enter the full URL into the URL input area and click **Run URL**. The script itself
+        will be copied to the script input area and can be modified there if needed.
+	</p>
+	<p class="lead">
+        Run scripts entered locally: - copy or type your script into the Script Input Area and click **Run Script**.
+    </p>
+    <p class="lead">
+        Run actions interactively: - once a script is running (either from a URL or the script input) you can issue
+        interactive actions by typing them into the actions input and clicking **Run Action** or pressing enter. Actions
+        are run as if they are part of the top level scene that is currently running so you will need to prefix any names
+        with the owning scenes if you want to modify them.
+    </p>
+    <p class="lead">Other actions: - Stop any running script with the **Stop** button, hear any sounds that are
+        playing by clicking **Enable Audio** as this will be disabled by default.
+    </p>
     </div>
 
     <div id="audio"></div>
@@ -49,11 +75,13 @@ title               : "Slow Glass Animation System"
     <script>
         document.getElementById("run_button").addEventListener("click",loadFromTextArea);
         document.getElementById("url_button").addEventListener("click",loadFromURL);
+        document.getElementById("interactive_clear").addEventListener("click",clearAction);
         document.getElementById("interactive_button").addEventListener("click",runAction);
+        document.getElementById("script_clear").addEventListener("click",clearScript);
         document.getElementById("stop_button").addEventListener("click",clean_up);
         document.getElementById("clear_button").addEventListener("click",clearMsgs);
         document.getElementById("sound_button").addEventListener("click",unlockAudio);
-        input_line = document.getElementById("input_line");
+        input_line = document.getElementById("action_input");
         input_line.addEventListener("keypress",function(event) {
         // If the user presses the "Enter" key on the keyboard
         if (event.key === "Enter") {
@@ -77,7 +105,7 @@ title               : "Slow Glass Animation System"
 
         function loadFromURL() {
             clearMsgs();
-            const url = document.getElementById("input_line").value;
+            const url = document.getElementById("url_input").value;
             slowGlass.scriptFromURL(url);
             fetch(url)
             .then(response => response.text())
@@ -88,8 +116,15 @@ title               : "Slow Glass Animation System"
         }
 
         function runAction() {
-            slowGlass.interactiveAction(document.getElementById("input_line").value);
-            document.getElementById("input_line").value = "";
+            slowGlass.interactiveAction(document.getElementById("action_input").value);
+        }
+
+        function clearScript() {
+            document.getElementById("url_input").value = "";
+        }
+
+        function clearAction() {
+            document.getElementById("action_input").value = "";
         }
 
         function loadFromTextArea() {

@@ -15,7 +15,6 @@ class SlowGlass {
     static clean = true;
 
     constructor() {
-        Utils.getHemisphere();
     }
 /**************************************************************************************************
 
@@ -29,10 +28,10 @@ class SlowGlass {
 
 **************************************************************************************************/
 
-    readFromText(text, include = false) {
+    readFromText(text, include = false, URLFolder = "") {
         const script = text.split(/\r?\n/);
         const count = script.length;
-        const top = new Scene(constants.MAIN_NAME);
+        const top = new Scene(constants.MAIN_NAME, URLFolder);
         let holding = null;
         let inComment = false;
         let inDescription = false;
@@ -66,7 +65,7 @@ class SlowGlass {
                 inComment = true;
             }
             /* discard single line comments, empty lines etc.  */
-            currentLine.replace(/\/\/.*$/,'');
+            currentLine = currentLine.replace(/\/\/.*$/,'');
             if (currentLine.length < 2 || currentLine.startsWith('#')) { // we have no short commands etc.
                 continue;
             }
@@ -102,7 +101,7 @@ class SlowGlass {
                     if (holding != null) {
                         Globals.scenes.push(holding);
                     }
-                    holding = new Scene(argument);
+                    holding = new Scene(argument, URLFolder);
                     // Any other content on the line is assumed to be tags
                     let index = 3;
                     if (words.length > 3) {
@@ -140,7 +139,7 @@ class SlowGlass {
                 } else {
                     Globals.log.error(`no current scene at line ${lineCount}`);
                 }
-            } else if (command == "display") {
+            } else if (command == "display" || command == "canvas") {
                 if (include) {
                     Globals.log.error('Directives in include will be ignored!');
                     continue;
@@ -265,6 +264,18 @@ class SlowGlass {
         return true;
     }
 
+/**************************************************************************************************
+
+   ########  ##     ## ##    ## 
+   ##     ## ##     ## ###   ## 
+   ##     ## ##     ## ####  ## 
+   ########  ##     ## ## ## ## 
+   ##   ##   ##     ## ##  #### 
+   ##    ##  ##     ## ##   ### 
+   ##     ##  #######  ##    ## 
+
+**************************************************************************************************/
+
     async run() {
         this.clean = false;
         // Initialise renderer (Pixi v8 requirement)
@@ -293,6 +304,18 @@ class SlowGlass {
         // window.addEventListener("resize", () => {
         // });
     }
+
+/**************************************************************************************************
+
+   ##     ## ########  ########     ###    ######## ######## 
+   ##     ## ##     ## ##     ##   ## ##      ##    ##       
+   ##     ## ##     ## ##     ##  ##   ##     ##    ##       
+   ##     ## ########  ##     ## ##     ##    ##    ######   
+   ##     ## ##        ##     ## #########    ##    ##       
+   ##     ## ##        ##     ## ##     ##    ##    ##       
+    #######  ##        ########  ##     ##    ##    ######## 
+
+**************************************************************************************************/
 
     update(ticker) {
         // Action granularity is only 1 second, so only update every 0.5 seconds
@@ -365,6 +388,18 @@ class SlowGlass {
         }
     }
 
+/**************************************************************************************************
+
+   ######## ##    ## ######## ########  ##    ##    ########   #######  #### ##    ## ########  ######  
+   ##       ###   ##    ##    ##     ##  ##  ##     ##     ## ##     ##  ##  ###   ##    ##    ##    ## 
+   ##       ####  ##    ##    ##     ##   ####      ##     ## ##     ##  ##  ####  ##    ##    ##       
+   ######   ## ## ##    ##    ########     ##       ########  ##     ##  ##  ## ## ##    ##     ######  
+   ##       ##  ####    ##    ##   ##      ##       ##        ##     ##  ##  ##  ####    ##          ## 
+   ##       ##   ###    ##    ##    ##     ##       ##        ##     ##  ##  ##   ###    ##    ##    ## 
+   ######## ##    ##    ##    ##     ##    ##       ##         #######  #### ##    ##    ##     ######  
+
+**************************************************************************************************/
+
     async scriptFromURL(url, include = false) {
         if (include) {
             Globals.log.report("Including script from " + url);
@@ -377,7 +412,7 @@ class SlowGlass {
             Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
         const text = await response.text();
-        if (this.readFromText(text, include)) {
+        if (this.readFromText(text, include, url.slice(0,url.lastIndexOf('/')))) {
             if (!include) {
                 this.run();
             } // include file just adds scenes to the existing list
@@ -409,6 +444,20 @@ class SlowGlass {
 
     setMessageParent(elementID) {
         Globals.log.messageParent(elementID);
+    }
+
+    setOption(optionName, optionValue) {
+        switch(optionName.toLowerCase()) {
+            case "latitude":
+                Globals.location.setLat(optionValue);
+                break;
+            case "longitude":
+                Globals.location.setLon(optionValue);
+                break;
+            case "city":
+                Globals.location.setCity(optionValue);
+                break;
+        }
     }
 
     cleanUp() {

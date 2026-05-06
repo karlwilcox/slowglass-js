@@ -51,7 +51,7 @@ let me know.
 
 In designing the scripting language for Slow Glass I had the following goals in mind
 
-### Readbility
+### Readability
 
 The language should look like English and work like English, so verbs make
 things happen and nouns represent things. Prepositions make sense in their

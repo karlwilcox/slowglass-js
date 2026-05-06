@@ -1,0 +1,22 @@
+# Map of /assets/vehicles/air/aircraft.png
+
+with tag aircraft
+	make airliner_1 be 6 6 882 290
+	make airliner_2 be 934 42 800 290
+	make airliner_3 be 1756 76 858 246
+	make airliner_4 be 2620 46 872 274
+	make balloon_1 be 14 398 510 566
+	make balloon_2 be 574 398 630 808
+	make balloon_3 be 1242 374 630 808
+	make balloon_4 be 2128 464 554 700
+	make balloon_5 be 2616 404 592 770
+	make heli_private_1 be 6 1168 974 424
+	make heli_private_2 be 1000 1268 768 360
+	make heli_headon_1 be 1798 1284 832 354
+	make heli_headon_2 be 2650 1278 832 354
+	make heli_police_1 be 34 1642 876 486
+	make heli_police_2 be 854 2000 1044 454
+	make heli_police_3 be 1688 1616 884 424
+	make heli_police_4 be 2462 1976 984 424
+endwith
+

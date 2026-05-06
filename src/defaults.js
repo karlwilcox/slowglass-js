@@ -2,7 +2,6 @@
 export default {
     DISPLAY_HEIGHT: 600,
     DISPLAY_WIDTH: 800,
-    HEMISPHERE: "northern",   // to give the correct calendar season
     DEBUG: true,
     LOCALE: "en-GB",
     TRIGGER_RATE: 500,  // milliseconds between trigger tests
@@ -20,4 +19,7 @@ export default {
     DEPTH_FOREGROUND: 400,
     DEPTH_FRAME: 1000,
     LOOP_MAXIMUM: 1000, // greatest number of times we allow a loop to run
+    CITY: "London",
+    LAT: 52,
+    LON: 0,
 };

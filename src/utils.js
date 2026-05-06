@@ -5,6 +5,10 @@ import { VarList } from "./vars.js";
 import * as constants from './constants.js';
 import defaults from "./defaults";
 
+export function boolAsString(value) {
+    return value ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+}
+
 /**************************************************************************************************
 #                     
 #        ####   ####  
@@ -324,37 +328,6 @@ export class Timer {
     }
 }
 
-export function getHemisphere(callback) {
-    // Check browser support
-    if (!("geolocation" in navigator)) {
-        callback(defaults.HEMISPHERE);
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-
-            if (lat < 0) {
-                Globals.hemisphere = "southern";
-            } else {
-                Globals.hemisphere = "northern";
-            }
-        },
-        (error) => {
-            // Permission denied or other failure → default
-            Globals.hemisphere = defaults.HEMISPHERE;
-        },
-        {
-            timeout: 5000 // optional safeguard
-        }
-    );
-}
-
-export function boolAsString(value) {
-    return value ? constants.TRUE_VALUE : defaults.FALSEVALUE;
-}
-
 
 /**************************************************************************************************
 
@@ -379,4 +352,115 @@ export class  Reporter {
         Globals.log.report(scene.dump());
     }
 
+}
+
+
+/**************************************************************************************************
+
+   ##        #######   ######     ###    ######## ####  #######  ##    ## 
+   ##       ##     ## ##    ##   ## ##      ##     ##  ##     ## ###   ## 
+   ##       ##     ## ##        ##   ##     ##     ##  ##     ## ####  ## 
+   ##       ##     ## ##       ##     ##    ##     ##  ##     ## ## ## ## 
+   ##       ##     ## ##       #########    ##     ##  ##     ## ##  #### 
+   ##       ##     ## ##    ## ##     ##    ##     ##  ##     ## ##   ### 
+   ########  #######   ######  ##     ##    ##    ####  #######  ##    ## 
+
+**************************************************************************************************/
+
+export class Location {
+
+    constructor() {
+        this.city = defaults.CITY;
+        this.lat = defaults.LAT;
+        this.lon = defaults.LON;
+    }
+
+    hemisphere() {
+        return this.lat >= 0 ? "northern" : "southern";
+    }
+
+    season() {
+        const date = new Date();
+        switch (date.getMonth() + 1) {
+            case 12:
+            case 1:
+            case 2:
+                return this.lat >= 0 ?  "winter" : "summer";
+            case 3:
+            case 4:
+            case 5:
+                return this.this >= 0 ?  "spring" : "autumn";
+            case 6:
+            case 7:
+            case 8:
+                return this.this >= 0 ?  "summer" : "winter";
+            case 9:
+            case 10:
+            case 11:
+                return this.this >= 0 ?  "autumn" : "spring";
+        }
+    }
+
+    isWinter() {
+        const date = new Date();
+        const month = date.getMonth() + 1;
+        return Utils.boolAsString((this.lat >= 0 && (month >= 12 || month <= 2)) ||
+                            (this.lat < 0 && (month >= 6 && month <= 8)));
+    }
+
+    isSpring() {
+        const date = new Date();
+        const month = date.getMonth() + 1;
+        return Utils.boolAsString((this.lat >= 0 && (month >= 3 && month <= 5)) ||
+                            (this.lat < 0 && (month >= 9 && month <= 11)));
+    }
+
+    isSummer() {
+        const date = new Date();
+        const month = date.getMonth() + 1;
+        return Utils.boolAsString((this.lat >= 0 && (month >= 6 && month <= 8)) ||
+                            (this.lat < 0 && (month >= 12 || month <= 2)))
+    }
+
+    isAutumn() {
+        const date = new Date();
+        const month = date.getMonth() + 1;
+        return Utils.boolAsString((this.lat >= 0 && (month >= 9 && month <= 11)) ||
+                            (this.lat < 0 && (month >= 3 && month <= 5)));
+    }
+
+    sunAngle(N, timeHours, latDeg, lonDeg) {
+        const date = new Date();
+        const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+        const deg2rad = Math.PI / 180;
+        let delta = -23.44 * Math.cos(deg2rad * (360/365) * (dayOfYear + 10));
+        let Ts = date.getHours() + this.lon / 15;
+        let H = 15 * (Ts - 12);
+        let phi = this.lat * deg2rad;
+        let d = delta * deg2rad;
+        let h = Math.asin(
+            Math.sin(phi) * Math.sin(d) +
+            Math.cos(phi) * Math.cos(d) * Math.cos(H * deg2rad)
+        );
+
+        return Math.floor(h / deg2rad); // degrees
+    }
+
+    setLat(input) {
+        const digits = input.match(/[0-9]+/);
+        let lat = parseInt(digits[0]);
+        if ((input.includes("s") || input.includes("S")) && lat > 0) {
+            lat *= -1;
+        }
+        this.lat = lat;
+    }
+
+    setLon(input) {
+        const digits = input.match(/[0-9]+/);
+        let lon = parseInt(digits[0]);
+        if ((input.includes("w") || input.includes("W")) && lon > 0) {
+            lon *= -1;
+        }
+        this.lon = lon;
+    }
 }

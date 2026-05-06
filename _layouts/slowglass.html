@@ -38,7 +38,7 @@
                         <div class="dropdown-menu" aria-labelledby="demosdd">
                             
                             
-                            <a class="dropdown-item px-2 " href="../signal">Signal</a>
+                            <a class="dropdown-item px-2 " href="/demo/swiss-clock.html">Swiss Clock</a>
                             
                             <a class="dropdown-item px-2 active" href="../greyson">Greyson</a>
                             
@@ -146,6 +146,14 @@
                 </div>
             </div>
             {%- endif -%}
+            {%- if page.demo -%}
+            <div id="sg_div" style="min-height: 600px;"></div>
+            <div class="sg_script">
+                <pre>
+                    {%- include_relative {{ page.demo }} -%}
+                </pre>
+            </div>
+            {%- endif -%}
             {{ content }}
         </div>
     </main>
@@ -166,11 +174,20 @@
                     </ul>
                 </div>
                 <div class="col-6 col-md-6 col-lg-3 mb-2">
+                    <h6 class="text-uppercase">Asset Sources</h6>
+                    <ul class="nav flex-column">
+                        <li><a class="text-white" target="_new"
+                            href="https://pixabay.com" title="Royalty Free Sounds">Sounds - Pixabay</a></li>
+                        <li><a class="text-white" target="_new" title="Canva AI Image Generator" 
+                            href="https://canva.com">Sprite Images - Canva AI</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-6 col-lg-3 mb-2">
                     <h6 class="text-uppercase">Related</h6>
                     <ul class="nav flex-column">
                         <li><a class="text-white" target="_new" 
                             href="https://karlwilcox.com" title="Author's website">Author's Website</a></li>
-                        <li><a class="text-white" target="_new" 
+                        <li><a class="text-white" target="_new" title="DrawShield Heraldry Suite"
                             href="https://drawshield.net">DrawShield.net</a></li>
                     </ul>
                 </div>
@@ -188,5 +205,13 @@
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/popper.js/1.13.0/umd/popper.min.js"></script>
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    {%- if page.demo -%}
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
+    <script type="module" src="/js/math-expression-evaluator.min.js";></script>
+    <script type="module" src="/js/slowglass.js";></script>
+    <script>
+    window.onload = function() { slowGlass.setDrawingParent("sg_div"); slowGlass.scriptFromURL("/demo/{{ page.demo }}"); };
+    </script>
+    {%- endif -%}
 </body>
 </html>

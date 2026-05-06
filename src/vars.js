@@ -60,7 +60,6 @@ export class VarList {
         this.variables = [];
         this.trigger = null;
         this.sceneName = sceneName;
-        Utils.getHemisphere();
     }
 
     setValue(name, value) {
@@ -132,6 +131,20 @@ export class VarList {
         return result;
     }
 
+    sunAngle(N, timeHours, latDeg, lonDeg) {
+        const deg2rad = Math.PI / 180;
+        let delta = -23.44 * Math.cos(deg2rad * (360/365) * (N + 10));
+        let Ts = timeHours + lonDeg / 15;
+        let H = 15 * (Ts - 12);
+        let phi = latDeg * deg2rad;
+        let d = delta * deg2rad;
+        let h = Math.asin(
+            Math.sin(phi) * Math.sin(d) +
+            Math.cos(phi) * Math.cos(d) * Math.cos(H * deg2rad)
+        );
+        return h / deg2rad; // degrees
+    }
+
 /**************************************************************************************************
 
    ########  ##     ## #### ##       ########         #### ##    ##  ######  
@@ -147,6 +160,7 @@ export class VarList {
     built_in(name) {
         const date = new Date();
         const month = date.getMonth() + 1;
+        const dayOfYear = date => Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
         switch (name) {
             case "SECONDS":
             case "SECOND":
@@ -159,6 +173,8 @@ export class VarList {
                 return new Intl.DateTimeFormat(defaults.LOCALE, { hour: "numeric" }).format(date);
             case "DAYOFWEEK":
                 return date.getDay() + 1; // Sunday = 1
+            case "DAYOFYEAR":
+                return Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
             case "DAYNAME":
                 return new Intl.DateTimeFormat(defaults.LOCALE, { weekday: "long" }).format(date);
             case "MONTH":
@@ -167,40 +183,23 @@ export class VarList {
                 return new Intl.DateTimeFormat(defaults.LOCALE, { month: "long" }).format(date);
             case "YEAR":
                 return date.getFullYear();
+            case "TIMEZONE":
+                return new Intl.DateTimeFormat.resolvedOptions().timezone;
             case "HEMISPHERE":
-                return this.hemisphere;
+                return Globals.location.hemisphere();
             case "SEASON":
-                switch (month) {
-                    case 12:
-                    case 1:
-                    case 2:
-                        return this.hemisphere == "northern" ?  "winter" : "summer";
-                    case 3:
-                    case 4:
-                    case 5:
-                        return this.hemisphere == "northern" ?  "spring" : "autumn";
-                    case 6:
-                    case 7:
-                    case 8:
-                        return this.hemisphere == "northern" ?  "summer" : "winter";
-                    case 9:
-                    case 10:
-                    case 11:
-                        return this.hemisphere == "northern" ?  "autumn" : "spring";
-                }
+                return Globals.location.season();
                 break;
             case "WINTER":
-                return ((this.hemisphere == "northern" && (month >= 12 || month <= 2)) ||
-                            (this.hemisphere == "southern" && (month >= 6 && month <= 8))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Globals.location.isWinter();
             case "SPRING":
-                return ((this.hemisphere == "northern" && (month >= 3 && month <= 5)) ||
-                            (this.hemisphere == "southern" && (month >= 9 && month <= 11))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Globals.location.isSpring();
             case "SUMMER":
-                return ((this.hemisphere == "northern" && (month >= 6 && month <= 8)) ||
-                            (this.hemisphere == "southern" && (month >= 12 || month <= 2))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Globals.location.isSummer();
             case "AUTUMN":
-                return ((this.hemisphere == "northern" && (month >= 9 && month <= 11)) ||
-                            (this.hemisphere == "southern" && (month >= 3 && month <= 5))) ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Globals.location.isAutumn();
+            case "SUNANGLE":
+                return Globals.location.sunAngle();
             case "WIDTH":
                 return Globals.app.screen.width;
             case "HEIGHT":
