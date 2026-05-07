@@ -2,7 +2,6 @@
 import * as Utils from "./utils.js";
 import * as constants from './constants.js';
 import defaults from "./defaults.js";
-import * as lexpjs from "./lexp.js";
 
 export class Globals {
     static startTime = Date.now();
@@ -13,7 +12,7 @@ export class Globals {
     static reporter = new Utils.Reporter();
     static evaluator = null;
     static basicEvaluator = null;
-    static advancedEvaluator = lexpjs;
+    static advancedEvaluator = null;
     static currentTrigger = "";
     static displayWidth = defaults.DISPLAY_WIDTH;
     static displayHeight = defaults.DISPLAY_HEIGHT;
@@ -28,18 +27,7 @@ export class Globals {
     static location = new Utils.Location();
 
     constructor() {
-        Globals.evaluator = advancedEvaluator;
-        let missing = "";
-        if (typeof Mexp !== "undefined") {
-            Globals.basicEvaluator = new Mexp();
-            Globals.evaluator = Globals.basicEvaluator;
-        } else {
-            missing += "Simple Evaluator (Mexp)";
-        }
-        // provision for other evaluators
-        if (missing.length) {
-            Globals.log.report("Missing Library: " + missing);
-        }
+
     }
 
     static nextZ(depth) {
@@ -107,6 +95,24 @@ export class Globals {
         Globals.lastKey = null;
         Globals.key = null;
         Globals.highestZ = 0;
+        let missing = "";
+        // Put these in reverse order of your preferred evaluator
+        if (typeof lexp !== "undefined") {
+            Globals.advancedEvaluator = lexp;
+            Globals.evaluator = "advanced";
+        } else {
+            missing += "Advanced Evaluator (lexpjs)";
+        }
+        if (typeof Mexp !== "undefined") {
+            Globals.basicEvaluator = new Mexp();
+            Globals.evaluator = "basic";
+        } else {
+            missing += "Simple Evaluator (Mexp)";
+        }
+        // provision for other evaluators
+        if (missing.length) {
+            Globals.log.report("Missing Library: " + missing);
+        }
     }
 
     static event(type, data) {

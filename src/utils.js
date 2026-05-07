@@ -215,7 +215,13 @@ export function evaluate(input) {
             if (char == ')') {
                 if (--brackets == 0) { // matched brackets
                     // Globals.log.report("Found: " + expr);
-                    str += Globals.evaluator.eval(expr);
+                    if (Globals.evaluator == "basic") {
+                        str += Globals.basicEvaluator.eval(expr);
+                    } else if (Globals.evaluator == "advanced") { 
+                        str += Globals.advancedEvaluator.evaluate(expr);
+                    } else {
+                        Globals.log.error("unknown evaluator option");
+                    } // provision for others...
                     expr = "";
                 } else {
                     expr += char;

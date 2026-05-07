@@ -208,6 +208,7 @@
     {%- if page.demo -%}
     <script src="https://pixijs.download/release/pixi.min.js"></script>
     <script type="module" src="/js/math-expression-evaluator.min.js";></script>
+    <script type="module" src="/js/lexp.js";></script>
     <script type="module" src="/js/slowglass.js";></script>
     <script>
     window.onload = function() { slowGlass.setDrawingParent("sg_div"); slowGlass.scriptFromURL("/demo/{{ page.demo }}"); };
