@@ -2,6 +2,7 @@
 import * as Utils from "./utils.js";
 import * as constants from './constants.js';
 import defaults from "./defaults.js";
+import * as lexpjs from "./lexp.js";
 
 export class Globals {
     static startTime = Date.now();
@@ -10,7 +11,9 @@ export class Globals {
     static app = null;
     static log = new Utils.Log(defaults.DEBUG);
     static reporter = new Utils.Reporter();
-    static evaluator = new Mexp();
+    static evaluator = null;
+    static basicEvaluator = null;
+    static advancedEvaluator = lexpjs;
     static currentTrigger = "";
     static displayWidth = defaults.DISPLAY_WIDTH;
     static displayHeight = defaults.DISPLAY_HEIGHT;
@@ -19,14 +22,24 @@ export class Globals {
     static scriptScaleType = constants.SCALE_NONE;
     static scriptScaleX = 1;
     static scriptScaleY = 1;
-    static gravity = defaults.GRAVITY_PS2;
-    static ground_level = defaults.DISPLAY_HEIGHT;
     static lastKey = null;
     static key = null;
     static highestZ = 0;
     static location = new Utils.Location();
 
     constructor() {
+        Globals.evaluator = advancedEvaluator;
+        let missing = "";
+        if (typeof Mexp !== "undefined") {
+            Globals.basicEvaluator = new Mexp();
+            Globals.evaluator = Globals.basicEvaluator;
+        } else {
+            missing += "Simple Evaluator (Mexp)";
+        }
+        // provision for other evaluators
+        if (missing.length) {
+            Globals.log.report("Missing Library: " + missing);
+        }
     }
 
     static nextZ(depth) {

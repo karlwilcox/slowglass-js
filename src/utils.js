@@ -169,11 +169,14 @@ export class ActionGroup {
         }
         return text;
     }
-}
 
-export function makeCompletionCallback(object) {
-    return function(delta) {
-        object.unfinishedCount += delta;
+    updateCount(delta) {
+        this.unfinishedCount += delta;
+        // Globals.log.report("Unfinished is now " + this.unfinishedCount);
+    }
+
+    callback() {
+        return (delta) => this.updateCount(delta);
     }
 }
 

@@ -35,6 +35,8 @@ export class Scene {
         this.graphicStroke = "black";
         this.graphicStrokeWidth = 1;
         this.echo = false;
+        this.gravity = defaults.GRAVITY_PS2;
+        this.ground_level = false;
     }
 
     static find(scene_name, report = true) {
@@ -473,7 +475,7 @@ export class Scene {
                 let name = null;
                 // Look for a filename
                 if (wordList.wordsLeft() < 1) {
-                    Globals.log.error("Missing filename" + " at line " + action.number);
+                    Globals.log.error("Missing filename at line " + action.number);
                     break;
                 }
                 let filename = wordList.getWord();
@@ -731,12 +733,12 @@ export class Scene {
                     let duration = wordList.getDuration(0);
                     if (w > 0 && h > 0) {
                         sgSprite.setView(x, y, w, h, inOrAt, duration, now, 
-                            Utils.makeCompletionCallback(actionGroup));
+                            actionGroup.callback());
                     } else {
-                        Globals.log.error("Not sensible view data" + " at line " + action.number);
+                        Globals.log.error("Not sensible view data at line " + action.number);
                     }
                 } else {
-                    Globals.log.error("Missing view data" + " at line " + action.number);
+                    Globals.log.error("Missing view data at line " + action.number);
                 }
                 break;
 
@@ -846,7 +848,7 @@ export class Scene {
                         sgSprite.sgParent.sizeY.forceValue(sgSprite.sgParent.piSprite.height);
                     }
                 } else {
-                    Globals.log.error("Missing place data" + " at line " + action.number);
+                    Globals.log.error("Missing place data at line " + action.number);
                 }
                 break;
 
@@ -879,7 +881,7 @@ export class Scene {
                     sgSprite.imageName = imageName;
                     sgSprite.piSprite.texture = PIXI.Texture.EMPTY;
                 } else {
-                    Globals.log.error("Missing replace data" + " at line " + action.number);
+                    Globals.log.error("Missing replace data at line " + action.number);
                 }
                 break;
 
@@ -938,7 +940,7 @@ export class Scene {
                     sgSprite.tags.addTag(wordList.getTags());
                     this.sprites.push(sgSprite);
                 } else {
-                        Globals.log.error("Missing put data" + " at line " + action.number);
+                        Globals.log.error("Missing put data at line " + action.number);
                 }
                 break;
 
@@ -1366,7 +1368,7 @@ export class Scene {
                     }
                     let callback = false;
                     if (duration > 1) {
-                        callback = Utils.makeCompletionCallback(actionGroup);
+                        callback = actionGroup.callback()
                     }
                     switch ( direction ) {
                         case "horizontally":
@@ -1384,7 +1386,7 @@ export class Scene {
                             break;
                     }
                 } else {
-                    Globals.log.error("Missing move data" + " at line " + action.number);
+                    Globals.log.error("Missing move data at line " + action.number);
                 }
                 break;
 
@@ -1411,7 +1413,7 @@ export class Scene {
                     if (!sgSprite) {
                         break;
                     }
-                    sgSprite.pivotPoint(x, y, duration, now, Utils.makeCompletionCallback(actionGroup));
+                    sgSprite.pivotPoint(x, y, duration, now, actionGroup.callback());
                 } else {
                     Globals.log.error("Missing pivot data at line " + action.number);
                 }
@@ -1505,7 +1507,7 @@ export class Scene {
                         sgSprite.resetSize();
                     } else {
                         sgSprite.resize( w, h, toOrBy, inOrAt, duration, now,
-                            Utils.makeCompletionCallback(actionGroup));
+                            actionGroup.callback());
                     }
                 } else {
                     Globals.log.error("Missing resize data at line " + action.number);
@@ -1543,7 +1545,7 @@ export class Scene {
                         sgSprite.scaleY.setTargetValue(100);
                     } else if (w != 0 || h != 0) {
                         sgSprite.setScale( w, h, command, toOrBy, duration, now,
-                            Utils.makeCompletionCallback(actionGroup));
+                            actionGroup.callback());
                     } else {
                         Globals.log.error("Invalid scale data at line " + action.number);
                     }
@@ -1598,7 +1600,7 @@ export class Scene {
                             break;
                     }
                     sgSprite.move(newX, newY, "to", "in", duration, now, 
-                            Utils.makeCompletionCallback(actionGroup));
+                            actionGroup.callback());
                 } else {
                     Globals.log.error("Missing alignment at line " + action.number);
                 }
@@ -1687,9 +1689,9 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
-                    sgSprite.rotate(turn_type, value, dur_type, duration, now, Utils.makeCompletionCallback(actionGroup));
+                    sgSprite.rotate(turn_type, value, dur_type, duration, now, actionGroup.callback());
                 } else {
-                    Globals.log.error("Missing rotate data" + " at line " + action.number);
+                    Globals.log.error("Missing rotate data at line " + action.number);
                 }
                 break;
 
@@ -1719,9 +1721,9 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
-                    sgSprite.setSkew(skewX, skewY, skew_type, duration, now, Utils.makeCompletionCallback(actionGroup));
+                    sgSprite.setSkew(skewX, skewY, skew_type, duration, now, actionGroup.callback());
                 } else {
-                    Globals.log.error("Missing skew data" + " at line " + action.number);
+                    Globals.log.error("Missing skew data at line " + action.number);
                 }
                 break;
 
@@ -1755,9 +1757,9 @@ export class Scene {
                         points.push(wordList.getFloat(0) * Globals.scriptScaleY);
                     }
                     let duration = wordList.getDuration(0);
-                    sgSprite.setWarp(points, warpType, duration, now, Utils.makeCompletionCallback(actionGroup));
+                    sgSprite.setWarp(points, warpType, duration, now, actionGroup.callback());
                 } else {
-                    Globals.log.error("Missing warp data" + " at line " + action.number);
+                    Globals.log.error("Missing warp data at line " + action.number);
                 }
                 break;
 
@@ -1791,12 +1793,29 @@ export class Scene {
                     if (stop_or_at == "stop") {
                         sgSprite.throw("stop");
                     } else {
-                        sgSprite.throw(angle, initialVelocity, now, Utils.makeCompletionCallback(actionGroup));
+                        sgSprite.throw(angle, initialVelocity, now, actionGroup.callback());
                     }
                 } else {
-                    Globals.log.error("Missing throw data" + " at line " + action.number);
+                    Globals.log.error("Missing throw data at line " + action.number);
                 }
                 break;
+
+            case "gravity":
+                if (wordList.wordsLeft() > 0) {
+                    this.gravity = wordList.getFloat(defaults.GRAVITY_PS2);
+                } else {
+                    Globals.log.error("Missing gravity value at line " + action.number);
+                } 
+                break;
+
+            case "ground":
+                if (wordList.wordsLeft() > 0) {
+                    this.ground_level = wordList.getFloat(Globals.displayHeight);
+                } else {
+                    Globals.log.error("Missing ground value at line " + action.number);
+                } 
+                break;
+
 
 /**************************************************************************************************
 
@@ -1820,10 +1839,10 @@ export class Scene {
                     if (wordList.testWord( "stop")) {
                         sgSprite.throw("stop");
                     } else {
-                        sgSprite.throw(180, 0, now,Utils.makeCompletionCallback(actionGroup));
+                        sgSprite.throw(180, 0, now,actionGroup.callback());
                     }
                 } else {
-                    Globals.log.error("Missing drop data" + " at line " + action.number);
+                    Globals.log.error("Missing drop data at line " + action.number);
                 }
                 break;
 
@@ -1847,7 +1866,7 @@ export class Scene {
                     let axis = wordList.getWord("h");
                     sgSprite.flip(axis.charAt(0));
                 } else {
-                    Globals.log.error("Missing sprite name" + " at line " + action.number);
+                    Globals.log.error("Missing sprite name at line " + action.number);
                 }
                 break;
 
@@ -1879,7 +1898,7 @@ export class Scene {
                         sgSprite.setVisibility("toggle");
                     }
                 } else {
-                    Globals.log.error("Missing sprite tag" + " at line " + action.number);
+                    Globals.log.error("Missing sprite tag at line " + action.number);
                 }
                 break;
 
@@ -1902,11 +1921,11 @@ export class Scene {
                     const scene_name = wordList.getWord();
                     const scene = Scene.find(scene_name);
                     if (scene !== false) {
-                        this.completionCallback = Utils.makeCompletionCallback(actionGroup);
+                        this.completionCallback = actionGroup.callback();
                         scene.start(wordList.joinWords());
                     }
                 } else {
-                    Globals.log.error("Missing scene name" + " at line " + action.number);
+                    Globals.log.error("Missing scene name at line " + action.number);
                 }
                 break;
 
@@ -1948,7 +1967,7 @@ export class Scene {
                     // but can do others if we ever want to preserve variable states etc...?
                     Globals.scenes.push(new_scene);
                 } else {
-                    Globals.log.error("Missing scene name" + " at line " + action.number);
+                    Globals.log.error("Missing scene name at line " + action.number);
                 }
                 break;
 
@@ -1970,7 +1989,7 @@ export class Scene {
                     Globals.log.error("Nothing to stop on line " + action.number);
                     break;
                 }
-                this.completionCallback = Utils.makeCompletionCallback(actionGroup);
+                this.completionCallback = actionGroup.callback();
                 while (wordList.wordsLeft() > 0) {
                     const stop_type = wordList.testWord( ["scene", "audio", "sound", "track", "sprite"]);
                     const item = wordList.getWord();
@@ -2127,7 +2146,7 @@ export class Scene {
                         if (url.length < 1) {
                             Globals.log.error("Missing URL at line " + action.number);
                         } else {
-                            this.getVariableFromURL(varName, url, Utils.makeCompletionCallback(actionGroup));
+                            this.getVariableFromURL(varName, url, actionGroup.callback());
                         }
                     }
                 } else {
@@ -2377,7 +2396,7 @@ export class Scene {
                     let value = wordList.getInt(100);
                     let duration = wordList.getDuration(0);
                     if (sgSprite) {
-                        sgSprite.setTransparency(value, duration, fade_type, now, Utils.makeCompletionCallback(actionGroup));
+                        sgSprite.setTransparency(value, duration, fade_type, now, actionGroup.callback());
                     }
                 } else {
                     Globals.log.error("Missing fade parameters");
@@ -2452,7 +2471,7 @@ export class Scene {
                     let value = wordList.getInt(100);
                     let duration = wordList.getDuration(0);
                     if (sgSprite) {
-                        sgSprite.setBlur(value, duration, blur_type, now, Utils.makeCompletionCallback(actionGroup));
+                        sgSprite.setBlur(value, duration, blur_type, now, actionGroup.callback());
                     }
                 } else {
                     Globals.log.error("Missing fade parameters");
@@ -2498,7 +2517,7 @@ export class Scene {
                         value = 100 - value;
                     }
                     let duration = wordList.getDuration(0);
-                    sgSprite.setTint(value, duration, now, Utils.makeCompletionCallback(actionGroup));
+                    sgSprite.setTint(value, duration, now, actionGroup.callback());
                 } else {
                     Globals.log.error("Missing " + command + " parameters");
                 }
@@ -2651,7 +2670,7 @@ export class Scene {
 
             case 'wait':
                 let duration = wordList.getDuration(5);
-                this.timers.push(new Utils.Timer(now, duration, Utils.makeCompletionCallback(actionGroup)));
+                this.timers.push(new Utils.Timer(now, duration, actionGroup.callback()));
                 break;
 
 /**************************************************************************************************

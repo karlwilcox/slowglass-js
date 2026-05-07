@@ -164,13 +164,13 @@ export class VarList {
         switch (name) {
             case "SECONDS":
             case "SECOND":
-                return new Intl.DateTimeFormat(defaults.LOCALE, { second: "numeric" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { second: "numeric" }).format(date).padStart(2,'0');
             case "MINUTES":
             case "MINUTE":
-                return new Intl.DateTimeFormat(defaults.LOCALE, { minute: "numeric" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { minute: "numeric" }).format(date).padStart(2,'0');
             case "HOUR":
             case "HOURS":
-                return new Intl.DateTimeFormat(defaults.LOCALE, { hour: "numeric" }).format(date);
+                return new Intl.DateTimeFormat(defaults.LOCALE, { hour: "numeric" }).format(date).padStart(2,'0');
             case "DAYOFWEEK":
                 return date.getDay() + 1; // Sunday = 1
             case "DAYOFYEAR":
@@ -200,6 +200,13 @@ export class VarList {
                 return Globals.location.isAutumn();
             case "SUNANGLE":
                 return Globals.location.sunAngle();
+            case "LAT":
+            case "LATITUDE":
+                return Globals.location.lat;
+            case "LON":
+            case "LONG":
+            case "LONGITUDE":
+                return Globals.location.lon;
             case "WIDTH":
                 return Globals.app.screen.width;
             case "HEIGHT":

@@ -193,13 +193,17 @@ export class SGSprite {
         }
     }
 
-    setSkew(newX, newY, to_or_by, duration, now, callback) {
+    setSkew(newX, newY, to_or_by, duration, now, callback = false) {
          if (to_or_by == "by") {
             newX += this.skewX.value();
             newY += this.skewY.value();
         }       
+        // we set in motion up to two changes
+        if (callback) {
+            callback(2)
+        }
         this.skewX.setTargetValue(newX, duration, now, callback);
-        this.skewY.setTargetValue(newY, duration, now);
+        this.skewY.setTargetValue(newY, duration, now, callback);
     }
 
     setStyle() {
@@ -244,7 +248,7 @@ export class SGSprite {
         this.enabled = true;
     }
 
-    setView(x, y, w, h, dur_type, duration, now, callback) {
+    setView(x, y, w, h, dur_type, duration, now, callback = false) {
         if (dur_type == "stop") {
             this.windowed = false;
             this.viewX.forceValue(this.viewX.value());
@@ -253,10 +257,14 @@ export class SGSprite {
             this.viewHeight.forceValue(this.viewHeight.value());
         } else {
             this.windowed = true;
+        // we set in motion up to two changes
+        if (callback) {
+            callback(4)
+        }
             this.viewX.setTargetValue(x, duration, now, callback);
-            this.viewY.setTargetValue(y, duration, now);
-            this.viewWidth.setTargetValue(w, duration, now);
-            this.viewHeight.setTargetValue(h, duration, now);
+            this.viewY.setTargetValue(y, duration, now, callback);
+            this.viewWidth.setTargetValue(w, duration, now, callback);
+            this.viewHeight.setTargetValue(h, duration, now, callback);
         }
     }
 
@@ -265,13 +273,16 @@ export class SGSprite {
         this.scrollY = dy;
     }
 
-    rotate(turn_type, value, dur_type, duration, now, callback) {
+    rotate(turn_type, value, dur_type, duration, now, callback = false) {
         let newValue = 0;
         if (turn_type == "to") {
             newValue = value;
         } else if (turn_type == "by") {
             newValue = this.angle.value() + value;
         } // add "at"
+        if (callback) {
+            callback(1)
+        }
         if (dur_type == "in") {
             this.angle.setTargetValue(newValue, duration, now, callback);
         } else {
@@ -279,12 +290,15 @@ export class SGSprite {
         }
     }
 
-    pivotPoint(pivotX, pivotY, duration, now, callback) {
+    pivotPoint(pivotX, pivotY, duration, now, callback = false) {
+        if (callback) {
+            callback(2)
+        }
         this.pivotX.setTargetValue(pivotX, duration, now, callback);
-        this.pivotY.setTargetValue(pivotY, duration, now); // only need one callback
+        this.pivotY.setTargetValue(pivotY, duration, now, callback); 
     }
 
-    setTransparency(target, duration, fade_type, now, callback) {
+    setTransparency(target, duration, fade_type, now, callback = false) {
         switch (fade_type) {
             case "by":
             case "down":
@@ -297,10 +311,13 @@ export class SGSprite {
             default:
                 break;
         }
+        if (callback) {
+            callback(1)
+        }
         this.transparency.setTargetValue(target, duration, now, callback);
     }
 
-    setBlur(target, duration, blur_type, now, callback) {
+    setBlur(target, duration, blur_type, now, callback = false) {
         switch (blur_type) {
             case "by":
             case "down":
@@ -320,11 +337,17 @@ export class SGSprite {
         } else {
             this.blurFilter = null;
         }
+        if (callback) {
+            callback(1)
+        }
         this.bluriness.setTargetValue(target, duration, now, callback);
     }
 
-    setTint(target, duration, now, callback) {
+    setTint(target, duration, now, callback = false) {
         if (arguments.length == 1) {
+        if (callback) {
+            callback(1)
+        }
             if (target == "stop") {
                 this.tintColour = null;
                 this.tintValue.setTargetValue(100, 0, now, callback);
@@ -395,8 +418,9 @@ export class SGSprite {
         }
     }
 
-    throw(angle, initialVelocity, now, callback) {
-        if (arguments.length > 3) {
+    throw(angle, initialVelocity, now, callback = false) {
+        if (callback) {
+            callback(1)
             this.throwCallback = callback;
         }
         if (angle == "stop") {
@@ -448,7 +472,7 @@ export class SGSprite {
         }
     }
 
-    resize(new_w, newH, to_or_by, in_or_at, duration, now, callback) {
+    resize(new_w, newH, to_or_by, in_or_at, duration, now, callback = false) {
         if (to_or_by == "by") {
             new_w += this.sizeX.value();
             newH += this.sizeY.value();
@@ -456,8 +480,12 @@ export class SGSprite {
         if (in_or_at == "at") {
             // (future: rate-based resizing)
         }
+        // we set in motion up to two changes
+        if (callback) {
+            callback(2)
+        }
         this.sizeX.setTargetValue(new_w, duration, now, callback);
-        this.sizeY.setTargetValue(newH, duration, now);
+        this.sizeY.setTargetValue(newH, duration, now, callback);
     }
 
     resetSize() {
@@ -498,7 +526,10 @@ export class SGSprite {
             scaleY = 1; // %
         }
         // convert percentages to float values
-        callback(2);
+        // we set in motion up to two changes
+        if (callback) {
+            callback(2)
+        }
         this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
         this.scaleY.setTargetValue(scaleY / 100, duration, now, callback);
     }
@@ -530,7 +561,7 @@ export class SGSprite {
         return points;
     }
 
-    setWarp(points, toOrBy, duration, now, callback) {
+    setWarp(points, toOrBy, duration, now, callback = false) {
         if (points.length != 8) {
             return;
         }
@@ -542,8 +573,11 @@ export class SGSprite {
         const centerX = (targetPoints[0] + targetPoints[2] + targetPoints[4] + targetPoints[6]) / 4;
         const centerY = (targetPoints[1] + targetPoints[3] + targetPoints[5] + targetPoints[7]) / 4;
         this.warped = true;
+        if (callback) {
+            callback(2);
+        }
         this.locX.setTargetValue(centerX, duration, now, callback);
-        this.locY.setTargetValue(centerY, duration, now);
+        this.locY.setTargetValue(centerY, duration, now, callback);
         for (let i = 0; i < targetPoints.length; i += 2) {
             this.warpCorners[i].setTargetValue(targetPoints[i] - centerX, duration, now);
             this.warpCorners[i + 1].setTargetValue(targetPoints[i + 1] - centerY, duration, now);
@@ -800,9 +834,9 @@ export class SGSprite {
             const fallingTime = (now - this.throwTime) / 1000; // elapsed time in seconds
             const deltaX = this.thrownVx * fallingTime * Globals.scriptScaleX;
             // gravity is negative because y grows downwards on a canvas
-            const deltaY = ((this.thrownVy * fallingTime) - (0.5 * Globals.gravity * -1 * fallingTime * fallingTime)) * Globals.scriptScaleY;
+            const deltaY = ((this.thrownVy * fallingTime) - (0.5 * scene.gravity * -1 * fallingTime * fallingTime)) * Globals.scriptScaleY;
             if (((Math.abs(deltaX) > Globals.app.screen.width * 2) || (Math.abs(deltaY) > Globals.app.screen.height * 2)) ||
-                (Globals.ground_level > 0 && this.locY.value + deltaY > Globals.ground_level)) {
+                (scene.ground_level && this.locY.value + deltaY > scene.ground_level)) {
                 this.falling = false; // gone off the edge of the world or hit the ground
                 this.visible = false; 
                 this.enabled = false;

@@ -193,27 +193,31 @@ class SlowGlass {
                             Globals.scriptScaleType = constants.SCALE_STRETCH;
                             break;
                     }
+                } else if (command == "option") {
+                    switch(argument) {
+                        case "lat":
+                        case "latitude":
+                            Globals.location.setLat(argument2);
+                            break;
+                        case "lon":
+                        case "long":
+                        case "longitude":
+                            Globals.location.setLon(argument2);
+                            break;
+                        case "evaluator":
+                            if (argument2 == "basic" && Globals.basicEvaluator) {
+                                Globals.evaluator = Globals.basicEvaluator;
+                            } else if (argument2 == "advanced") {
+                                Globals.evaluator = Globals.advancedEvaluator;
+                            } else {
+                                Globals.log.error("Unknown evaluator - " + argument2);
+                            }
+                            break;
+                        default:
+                            Globals.log.error("Unknown option - " + argument);
+                            break;
+                    }
                 }
-            } else if (command == 'gravity') {
-                if (include) {
-                    Globals.log.error('Directives in include will be ignored!');
-                    continue;
-                }
-                let gravity = parseFloat(argument);
-                if (gravity <= 0) {
-                    Globals.log.error("silly gravity setting");
-                    gravity = defaults.GRAVITY_PS2;
-                }
-                Globals.gravity_ps2 = gravity; // NOTE, not scaled, scale on use
-            } else if (command == "ground") {
-                if (include) {
-                    Globals.log.error('Directives in include will be ignored!');
-                    continue;
-                }
-                if (argument == "level") {
-                    argument = argument2;
-                }
-                Globals.ground_level = parseInt(argument);
             } else {
                 // must be an action, trigger or condition
                 const line = new Utils.Line(lineCount, currentLine);

@@ -26,18 +26,68 @@ scene, and possibly also making them visible depending on need.
 
 ## After
 
+`after {number} {duration}`
+
 ## Every
 
-## AtTime
+`every {number} {duration}`
+
+## At
+
+`at hh:mm`
+
+`at hh:mm:ss`
+
+This trigger activates once daily, at the specified time. If seconds
+are not given it will activate at 0 seconds into the minute.
+
+## Each
+
+`each hh:mm`
+
+`each hh:mm:ss`
+
+This works similar to the **at** trigger but allows for one or more
+of the digits in the time to be replaced be an asterisk ('*') character.
+This means "any value", so for example:
+
+`each **:15:00` will trigger at 15 minutes past each hour of the day
+(so 24 times per day). Be careful with your asterisks, the pattern:
+
+`each **:15:**` will trigger 24 * 60 times - once for each second during
+the 15th minute of each hour.
+
+You can use multiple triggers for the same actions, so for example:
+
+```
+each **:15
+each **:30
+each **:45
+    play church-bells-quarter-hour
+each **:00
+    start church-bells $HOURS
+```
+
+How does `each **:*0` differ from `every 10 minutes`? The former happens
+every tenth minute according to the clock time; the latter first happens
+10 minutes after its scene is started, and every 10 minutes after that.
+
+## Then
+
+This takes no arguments. It triggers when all(*) of the actions in the
+immediately preceeding group have completed. Some actions complete
+as soon as they are encountered, others start a process that may
+end some time later. This trigger will be activated when all of
+those processes have finished.
+
+(*) some actions start on-going activities that don't have a defined "end",
+these actions are deemed to have completed as soon as they start
+and don't contribute towards the **then** trigger. In the documentation
+for actions the completion event is shown for each action.
 
 ## OnKey
 
 (To be added)
 
-## OnGpio
-
-## OnIR
-
-## OnI2C
-
+## 
 

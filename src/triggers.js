@@ -148,63 +148,64 @@ export class IfWhile extends Trigger {
         let result = false;
         // use the raw parameters and expand on *every* use
         let expanded = this.expandAll(this.params);
-        let inverted = false;
-        if (expanded[0] == "not") {
-            expanded.shift();
-            inverted = true;
-        }
-        if (expanded.length == 0) { // no arguments, just return something
-            result = !inverted;
-        } else if (expanded.length == 1) { // check it for truthiness / falseiness
-            if (expanded[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
-                result = !(Math.abs(parseFloat(expanded[0])) < 0.001); // zero is false, all else true
-            } else if ( ["false","no","n","none"].includes(expanded[0].toLowerCase())) {
-                result = false;
-            } else {
-                result = true;
-            }
-        } else if (expanded.length == 2) { // string compare the two things
-            result = expanded[0].toLowerCase == expanded[1].toLowerCase;
-        } else if (expanded.length > 2) { // middle thing is a logical comparison
-            let lvalue = expanded[0].toLowerCase();
-            let rvalue = expanded[2].toLowerCase();
-            let comparison = expanded[1].toLowerCase();
-            switch(comparison) {
-                case "is":
-                case "equals":
-                case "=":
-                case "==":
-                    value = lvalue == rvalue;
-                    break;
-                case "not":
-                case "!=":
-                case "!==":
-                    value = lvalue != rvalue;
-                    break;
-                case ">":
-                    value = lvalue > rvalue;
-                    break;
-                case "<":
-                    value = lvalue < rvalue;
-                    break;
-                case ">=":
-                    value = lvalue >= rvalue;
-                    break;
-                case "<=":
-                    value = lvalue <= rvalue;
-                    break;
-                default:
-                    Globals.log.error("Unknown comparison - " + comparison);
-                    break;
-            }
-        }
+        result = Utils.logical(expanded);
+        // let inverted = false;
+        // if (expanded[0] == "not") {
+        //     expanded.shift();
+        //     inverted = true;
+        // }
+        // if (expanded.length == 0) { // no arguments, just return something
+        //     result = !inverted;
+        // } else if (expanded.length == 1) { // check it for truthiness / falseiness
+        //     if (expanded[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
+        //         result = !(Math.abs(parseFloat(expanded[0])) < 0.001); // zero is false, all else true
+        //     } else if ( ["false","no","n","none"].includes(expanded[0].toLowerCase())) {
+        //         result = false;
+        //     } else {
+        //         result = true;
+        //     }
+        // } else if (expanded.length == 2) { // string compare the two things
+        //     result = expanded[0].toLowerCase == expanded[1].toLowerCase;
+        // } else if (expanded.length > 2) { // middle thing is a logical comparison
+        //     let lvalue = expanded[0].toLowerCase();
+        //     let rvalue = expanded[2].toLowerCase();
+        //     let comparison = expanded[1].toLowerCase();
+        //     switch(comparison) {
+        //         case "is":
+        //         case "equals":
+        //         case "=":
+        //         case "==":
+        //             value = lvalue == rvalue;
+        //             break;
+        //         case "not":
+        //         case "!=":
+        //         case "!==":
+        //             value = lvalue != rvalue;
+        //             break;
+        //         case ">":
+        //             value = lvalue > rvalue;
+        //             break;
+        //         case "<":
+        //             value = lvalue < rvalue;
+        //             break;
+        //         case ">=":
+        //             value = lvalue >= rvalue;
+        //             break;
+        //         case "<=":
+        //             value = lvalue <= rvalue;
+        //             break;
+        //         default:
+        //             Globals.log.error("Unknown comparison - " + comparison);
+        //             break;
+        //     }
+        // }
 
         if (result) {
             this.triggered = true;
             if (this.keyword == "if") {
                 this.expired = true; 
             }
-            return inverted ? !result : result;
+            return true
         } // else
         this.triggered = false;
         return false;
@@ -328,43 +329,51 @@ export class ThenClass extends Trigger {
 export class Each extends Trigger {
     constructor(scene, timestamp, params) {
         super(scene, timestamp, params);
-        this.minutes = null;
-        this.hours = null;
-        this.seconds = 0;
+        this.matchString = "**:**:**";
+        this.nextCheck = 0;
     }
 
     fired(timestamp) {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
+            let temp;
             if (this.expanded.length > 0) {
-                const timeofDay = this.expanded[0];
-                if (timeofDay.match(/^([0-9]+|\*):([0-9]+|\*)(:([0-9]+|\*))?$/)) { // HH:MM:SS
-                    const parts = timeofDay.split(":");
-                    this.hours = parts[0] == '*' ? '*' : parseInt(parts[0]);
-                    this.minutes = parts[1] == '*' ? '*' : parseInt(parts[1]);
-                    if (parts.length > 2) {
-                        this.seconds = parts[2] == '*' ? '*' : parseInt(parts[2]);
-                    }
+                const candidate = this.expanded[0];
+                if (!candidate.match(/^[*0-2][*0-9]:[*0-5][*0-9](:[*0-5][*0-9])?$/)) {
+                    Globals.log.error("Incorrect time format- " + candidate);
+                    return false;
+                }
+                if (candidate.length == 5) {
+                    this.matchString = candidate + ":00";
                 } else {
-                    Globals.log.error("Incorrect time format " + timeofDay);
+                    this.matchString = candidate;
                 }
             } else {
-                Globals.log.error("Missing time for at ");
+                Globals.log.error("Missing time for each ");
             }
         }
-        const d = new Date();
-        d.setTime(timestamp);
+        // Do we need to run yet?
+        if (this.nextCheck > timestamp) {
+            return false;
+        }
+        // Now check for a match
+        const d = new Date(timestamp);
+        const timeString = d.toTimeString();
         let matched = true;
-        if (this.hours != '*' && this.hours != d.getHours()) {
-            matched = false;
+        for (let i = 0; i < this.matchString.length; i++ ) {
+            let match = this.matchString.charAt(i);
+            if (match == "*") {
+                continue;
+            }
+            if (match != timeString.charAt(i)) {
+                matched = false;
+                break;
+            }
         }
-        if (this.minutes != '*' && this.minutes != d.getMinutes()) {
-            matched = false;
-        }
-        if (this.seconds != '*' && this.seconds != d.getSeconds()) {
-            matched = false;
-        }
+        // check again in another second
+        this.nextCheck = timestamp + 1000;
+
         return matched;
     }
 }
