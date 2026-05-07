@@ -123,88 +123,42 @@ export class Every extends Trigger {
     }
 }
 
+
 /**************************************************************************************************
 
-   #### ######## ##      ## ##     ## #### ##       ######## 
-    ##  ##       ##  ##  ## ##     ##  ##  ##       ##       
-    ##  ##       ##  ##  ## ##     ##  ##  ##       ##       
-    ##  ######   ##  ##  ## #########  ##  ##       ######   
-    ##  ##       ##  ##  ## ##     ##  ##  ##       ##       
-    ##  ##       ##  ##  ## ##     ##  ##  ##       ##       
-   #### ##        ###  ###  ##     ## #### ######## ######## 
+   ##      ## ##     ## ######## ##    ## 
+   ##  ##  ## ##     ## ##       ###   ## 
+   ##  ##  ## ##     ## ##       ####  ## 
+   ##  ##  ## ######### ######   ## ## ## 
+   ##  ##  ## ##     ## ##       ##  #### 
+   ##  ##  ## ##     ## ##       ##   ### 
+    ###  ###  ##     ## ######## ##    ## 
 
 **************************************************************************************************/
 
-export class IfWhile extends Trigger {
-    constructor(scene, timestamp, params, keyword) {
+export class When extends Trigger {
+    constructor(scene, timestamp, params) {
         super(scene, timestamp, params);
-        this.keyword = keyword;
+        this.nextCheck = 0;
     }
 
     fired(timestamp) {
-        if (this.expired) {
-            return false;
+        if (this.triggered)  {
+            if (this.nextCheck > timestamp) {
+                // we have triggered recently, come back later
+                return false;
+            } else {
+                // OK, start checking again
+                this.triggered = false;
+            }
         }
         let result = false;
         // use the raw parameters and expand on *every* use
         let expanded = this.expandAll(this.params);
         result = Utils.logical(expanded);
-        // let inverted = false;
-        // if (expanded[0] == "not") {
-        //     expanded.shift();
-        //     inverted = true;
-        // }
-        // if (expanded.length == 0) { // no arguments, just return something
-        //     result = !inverted;
-        // } else if (expanded.length == 1) { // check it for truthiness / falseiness
-        //     if (expanded[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
-        //         result = !(Math.abs(parseFloat(expanded[0])) < 0.001); // zero is false, all else true
-        //     } else if ( ["false","no","n","none"].includes(expanded[0].toLowerCase())) {
-        //         result = false;
-        //     } else {
-        //         result = true;
-        //     }
-        // } else if (expanded.length == 2) { // string compare the two things
-        //     result = expanded[0].toLowerCase == expanded[1].toLowerCase;
-        // } else if (expanded.length > 2) { // middle thing is a logical comparison
-        //     let lvalue = expanded[0].toLowerCase();
-        //     let rvalue = expanded[2].toLowerCase();
-        //     let comparison = expanded[1].toLowerCase();
-        //     switch(comparison) {
-        //         case "is":
-        //         case "equals":
-        //         case "=":
-        //         case "==":
-        //             value = lvalue == rvalue;
-        //             break;
-        //         case "not":
-        //         case "!=":
-        //         case "!==":
-        //             value = lvalue != rvalue;
-        //             break;
-        //         case ">":
-        //             value = lvalue > rvalue;
-        //             break;
-        //         case "<":
-        //             value = lvalue < rvalue;
-        //             break;
-        //         case ">=":
-        //             value = lvalue >= rvalue;
-        //             break;
-        //         case "<=":
-        //             value = lvalue <= rvalue;
-        //             break;
-        //         default:
-        //             Globals.log.error("Unknown comparison - " + comparison);
-        //             break;
-        //     }
-        // }
-
         if (result) {
             this.triggered = true;
-            if (this.keyword == "if") {
-                this.expired = true; 
-            }
+            this.nextCheck = timestamp + (1000 * 60);
             return true
         } // else
         this.triggered = false;
@@ -375,5 +329,36 @@ export class Each extends Trigger {
         this.nextCheck = timestamp + 1000;
 
         return matched;
+    }
+}
+
+/**************************************************************************************************
+
+      ###    ######## ######## ##    ## ########  
+     ## ##      ##    ##       ###   ## ##     ## 
+    ##   ##     ##    ##       ####  ## ##     ## 
+   ##     ##    ##    ######   ## ## ## ##     ## 
+   #########    ##    ##       ##  #### ##     ## 
+   ##     ##    ##    ##       ##   ### ##     ## 
+   ##     ##    ##    ######## ##    ## ########  
+
+**************************************************************************************************/
+
+export class AtEnd extends Trigger {
+    constructor(scene, timestamp, params) {
+        super(scene, timestamp, params);
+    }
+
+    fired(timestamp) {
+        if (this.expired) {
+            return false;
+        }
+        // triggered when the scene is stopped
+        if (this.scene.finished) {
+            this.expired = true;
+            this.scene.finished = false; // consume this event
+            return true;
+        } // else
+        return false;
     }
 }

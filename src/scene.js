@@ -37,6 +37,7 @@ export class Scene {
         this.echo = false;
         this.gravity = defaults.GRAVITY_PS2;
         this.ground_level = false;
+        this.finished = false;
     }
 
     static find(scene_name, report = true) {
@@ -218,6 +219,7 @@ export class Scene {
             this.completionCallback();
             this.completionCallback = null;
         }
+        this.finished = true;
     }
 
     pause() {
@@ -263,10 +265,12 @@ export class Scene {
             const keyword = wordList.getWord();
             // First look for triggers
             switch(keyword.toLowerCase()) {
-                case 'when':
+                case 'trigger':
+                case 'triggers':
+                    wordList.testWord("on");
                     const allOrAny = wordList.testWord(["all","any"]);
                     if (allOrAny == "all") {
-                        actionGroup.any_trigger = false;
+                        actionGroup.anyTrigger = false;
                     } else if (allOrAny == false) {
                         Globals.log.error("Unknown when condition - ");
                     } // else this is the default
@@ -282,6 +286,12 @@ export class Scene {
                     break;
                 case 'after':
                     trigger = new Triggers.After(this, timestamp, wordList.joinWords());
+                    break;
+                case 'when':
+                    trigger = new Triggers.When(this, timestamp, wordList.joinWords());
+                    break;
+                case 'atend':
+                    trigger = new Triggers.AtEnd(this, timestamp, wordList.joinWords());
                     break;
                 case 'on':
                     let on_word = wordList.getWord();
@@ -321,9 +331,6 @@ export class Scene {
                 case 'every':
                     trigger = new Triggers.Every(this, timestamp, wordList.joinWords());
                     break;
-                case 'triggers':
-                case 'trigger':
-                    // syntactic sugar, just move on to the next line
                     continue;
                 case 'action':
                 case 'actions':

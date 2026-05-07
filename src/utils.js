@@ -214,15 +214,19 @@ export function evaluate(input) {
         if (brackets > 0) { // we are in an expression
             if (char == ')') {
                 if (--brackets == 0) { // matched brackets
-                    // Globals.log.report("Found: " + expr);
-                    if (Globals.evaluator == "basic") {
-                        str += Globals.basicEvaluator.eval(expr);
-                    } else if (Globals.evaluator == "advanced") { 
-                        str += Globals.advancedEvaluator.evaluate(expr);
-                    } else {
-                        Globals.log.error("unknown evaluator option");
-                    } // provision for others...
-                    expr = "";
+                    try {
+                        if (Globals.evaluator == "basic") {
+                            str += Globals.basicEvaluator.eval(expr);
+                        } else if (Globals.evaluator == "advanced") { 
+                            str += Globals.advancedEvaluator.evaluate(expr);
+                        } else {
+                            Globals.log.error("unknown evaluator option");
+                        } // provision for others...
+                        expr = "";
+                    }
+                    catch(e) {
+                        Globals.log.error(e.message);
+                    }
                 } else {
                     expr += char;
                 }

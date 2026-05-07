@@ -1,5 +1,5 @@
 ---
-title               : "Slow Glass Scripting Language Overview"
+title               : "Slow Glass Scripting Language Introduction"
 ---
 
 ## Intentions

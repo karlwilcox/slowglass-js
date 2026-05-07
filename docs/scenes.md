@@ -133,3 +133,32 @@ resource tags from other scenes, for example we can say:
 
 from within the rainy-sky scene; although I recommend only very careful use of
 this - if the other scene isn't running its resources will not be accessible.
+
+## Scene Options
+
+There are some options that can be set specifically for each scene.
+
+`gravity {integer}`
+
+`ground [level] {integer}`
+
+These settings determine the behaviour of objects that are subject to the
+actions "throw", "launch" or "drop". 'gravity' sets the acceleration due to
+gravity, in pixels per second per second (the default is 100). Hence a sprite
+that is dropped from the top of the screen will start at rest but be travelling
+at 100 pixels per second after one second, 200 pixels per second after 2
+seconds and so on.
+
+Sprites under the influence of gravity are assumed to be "out of bounds" if any
+coordinate exceeds twice the actual display size. Hence if a sprite goes
+slightly out of frame at the top it may well come back into view, but a fast
+moving sprite may go out of bounds and stop being updated.
+
+Additionaly, sprites under the influence of gravity will also stop moving if
+they reach "ground level". Remember that the 'y' coordinate grows downwards so
+ground level cannot be assumed to be 0. You can set the actual level at which a
+sprite will stop "falling" with the ground level directive.
+
+Note that if you are using script scaling, both gravity and ground level will
+be assumed to be given in script coordinates and will be scaled appropriately
+for the actual display.

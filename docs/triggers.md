@@ -85,9 +85,22 @@ these actions are deemed to have completed as soon as they start
 and don't contribute towards the **then** trigger. In the documentation
 for actions the completion event is shown for each action.
 
+## When
+
+`when {logic-expression}`
+
+At least once per second the logic expression is tested and the trigger
+is activated if the expression evaluates to true. IMPORTANT - once the
+trigger has been activated the condition will not be checked for at least
+one minute.
+
 ## OnKey
 
 (To be added)
 
-## 
+## AtEnd
 
+This trigger is activated when the current scene is stopped (either
+by an action in the scene itself or from "outside"). It allows
+you to do any clean up or final actions. (This trigger will never be
+active for the top level scene as it cannot be stopped).
