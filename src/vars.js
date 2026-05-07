@@ -131,20 +131,6 @@ export class VarList {
         return result;
     }
 
-    sunAngle(N, timeHours, latDeg, lonDeg) {
-        const deg2rad = Math.PI / 180;
-        let delta = -23.44 * Math.cos(deg2rad * (360/365) * (N + 10));
-        let Ts = timeHours + lonDeg / 15;
-        let H = 15 * (Ts - 12);
-        let phi = latDeg * deg2rad;
-        let d = delta * deg2rad;
-        let h = Math.asin(
-            Math.sin(phi) * Math.sin(d) +
-            Math.cos(phi) * Math.cos(d) * Math.cos(H * deg2rad)
-        );
-        return h / deg2rad; // degrees
-    }
-
 /**************************************************************************************************
 
    ########  ##     ## #### ##       ########         #### ##    ##  ######  

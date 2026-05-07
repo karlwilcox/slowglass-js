@@ -442,7 +442,7 @@ export class Location {
                             (this.lat < 0 && (month >= 3 && month <= 5)));
     }
 
-    sunAngle(N, timeHours, latDeg, lonDeg) {
+    sunAngle() {
         const date = new Date();
         const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
         const deg2rad = Math.PI / 180;
