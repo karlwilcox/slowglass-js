@@ -7,14 +7,14 @@ title               : "Slow Glass Web Page Integration"
 SlowGlass uses Pixi.js and you will need to include the latest release in your
 web page, before using SlowGlass.
 
-It also uses the
-[https://bugwheels94.github.io/math-expression-evaluator/](math expression evaluator)
-and a copy of the library is provided in the dist folder.
+It also uses the basic
+[https://bugwheels94.github.io/math-expression-evaluator/](Mexp math expression evaluator)
+and a copy of the library is provided in the js folder.
 
-SlowGlass will also attempt to determine the geographical location of the
-browser - this is just to allow the correct assignment of the season (hence we
-need to know which hemisphere we are in). If location services are not
-available then the northern hemisphere is assumed.
+There is also support for an optional advanced evaluator,
+[https://github.com/toggledbits/lexpjs](Lexpjs evaluator). Again, a copy
+of this is available from the js folder. It can be omitted if the basic
+evaluator is sufficient.
 
 ## The SlowGlass Object
 
@@ -59,6 +59,19 @@ HTTP and execution will begin as soon as the file has been loaded and read.
 This removes the drawing surface and releases all resources. After this another
 script can be run on the same page if required.
 
+### setOption(name, value)
+
+This duplicates some of the script functionality but allows it to be set
+"externally". At present the available options are:
+
+- latitude {number}
+- longitude {number}
+- evaluator ("basic" | "advanced")
+
+You can use the browser "location" object to get the user's latitude and
+longitude, or use any values you wish. If you set the advanced evaluator
+option you need to make sure that the lexp object is available on the page.
+
 ## Interaction
 
 In order to respond to keyboard inputs you will need to give focus to the
@@ -78,6 +91,6 @@ A minimal HTML fragment is shown below:
 <script type="module" src="https://slowglass.net/js/slowglass.js"></script>
 <script>
     slowGlass.setDrawingParent("sg_canvas");
-    slowGlass.scriptFromUrl("https://slowglass.net/scripts/cafe/cafe.txt");
+    slowGlass.scriptFromUrl("https://slowglass.net/demo/cafe/cafe.txt");
 </script>
 ```

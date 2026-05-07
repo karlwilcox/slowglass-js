@@ -453,10 +453,16 @@ class SlowGlass {
     setOption(optionName, optionValue) {
         switch(optionName.toLowerCase()) {
             case "latitude":
+            case "lat":
                 Globals.location.setLat(optionValue);
                 break;
             case "longitude":
+            case "long":
+            case "lon":
                 Globals.location.setLon(optionValue);
+                break;
+            case "evaluator":
+                Globals.evaluator = optionValue;
                 break;
             case "city":
                 Globals.location.setCity(optionValue);
