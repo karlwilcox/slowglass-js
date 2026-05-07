@@ -54,6 +54,11 @@ class Variable {
         return `${arrayLength > 0 ? arrayLength : 1}`;
     }
 
+    getKeys() {
+        const keys = Object.keys(this.arrayValues);
+        return keys.length > 0 ? keys.join(" ") : defaults.NOTFOUND;
+    }
+
     setValue(value, key = false) {
         if (key !== false) {
             this.arrayValues[key] = value;
@@ -86,7 +91,7 @@ export class VarList {
     }
 
     parseArrayReference(name) {
-        const match = `${name}`.match(/^([a-zA-Z0-9_:#]+)(?:\[([^\]]+)\])?(?:\.(length))?$/);
+        const match = `${name}`.match(/^([a-zA-Z0-9_:#]+)(?:\[([^\]]+)\])?(?:\.(length|keys))?$/);
         if (!match) {
             return { name, key: false, property: false };
         }
@@ -465,6 +470,8 @@ export class VarList {
                 if (index !== false) {
                     if (reference.property == "length" && reference.key === false) {
                         value = this.variables[index].getLength();
+                    } else if (reference.property == "keys" && reference.key === false) {
+                        value = this.variables[index].getKeys();
                     } else if (reference.property === false) {
                         value = this.variables[index].getValue(reference.key);
                     }
@@ -556,9 +563,10 @@ export class VarList {
                     }
                 }
 
-                if (input.slice(j, j + 7) === ".length") {
-                    varName += ".length";
-                    j += 7;
+                const property = input.slice(j).match(/^\.(length|keys)(?![a-zA-Z0-9_])/);
+                if (property) {
+                    varName += property[0];
+                    j += property[0].length;
                 }
 
                 let replacement = this.getValue(varName);
