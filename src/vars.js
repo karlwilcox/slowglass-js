@@ -49,6 +49,11 @@ class Variable {
         return this.value === undefined ? false : this.value;
     }
 
+    getLength() {
+        const arrayLength = Object.keys(this.arrayValues).length;
+        return `${arrayLength > 0 ? arrayLength : 1}`;
+    }
+
     setValue(value, key = false) {
         if (key !== false) {
             this.arrayValues[key] = value;
@@ -81,13 +86,14 @@ export class VarList {
     }
 
     parseArrayReference(name) {
-        const match = `${name}`.match(/^([a-zA-Z0-9_:#]+)(?:\[([^\]]+)\])?$/);
+        const match = `${name}`.match(/^([a-zA-Z0-9_:#]+)(?:\[([^\]]+)\])?(?:\.(length))?$/);
         if (!match) {
-            return { name, key: false };
+            return { name, key: false, property: false };
         }
         return {
             name: match[1],
-            key: match[2] === undefined ? false : this.expandVars(match[2])
+            key: match[2] === undefined ? false : this.expandVars(match[2]),
+            property: match[3] === undefined ? false : match[3]
         };
     }
 
@@ -95,7 +101,7 @@ export class VarList {
         const reference = this.parseArrayReference(name);
         if (this.built_in(reference.name)) {
             Globals.log.error("Cannot create built-in variable " + name);
-        } else if (reference.name.match(/[\.:]/)) {
+        } else if (reference.name.match(/[\.:]/) || reference.property !== false) {
             Globals.log.error("Cannot create variable with dot or colon in name " + name);
         } else {
             const index = this.find(reference.name);
@@ -117,7 +123,7 @@ export class VarList {
         const reference = this.parseArrayReference(name);
         if (this.built_in(reference.name)) {
             Globals.log.error("Cannot tag built-in variable " + name);
-        } else if (reference.name.match(/[\.:]/)) {
+        } else if (reference.name.match(/[\.:]/) || reference.property !== false) {
             Globals.log.error("Cannot tag variable with dot or colon in name " + name);
         } else {
             const index = this.find(reference.name);
@@ -331,50 +337,52 @@ export class VarList {
         if (!scene) {
             value = defaults.NOTFOUND;
         }
-        // Is this a list request?
-        let listName = reference.name;
-        let tagName = false;
-        if (reference.name.match(/#/)) {
-            const listParts = reference.name.split(/#/);
-            listName = listParts[0];
-            tagName = listParts[1];
-        }
-        switch(listName) {
-            case "VARIABLES":
-            case "VARNAMES":
-                if (tagName) {
-                    value = this.listTags(tagName);
-                } else {
-                    value = this.listNames();
-                }
-                break;
-            case 'SPRITES':
-                if (tagName) {
-                    value = scene.listSpriteTags(tagName);
-                } else {
-                    value = scene.listSprites(false);
-                }
-                break;
-            case 'IMAGES':
-            case 'IMGS':
-                if (tagName) {
-                    value = scene.listImageTags(tagName);
-                } else {
-                    value = scene.listImages(false);
-                }
-                break;
-            case 'SCENES':
-                if (tagName) {
-                    value = Globals.listSceneTags(tagName);
-                } else {
-                    value = Globals.listScenes(false);
-                }
-                break;
-            default:
-                break;
+        if (reference.property === false) {
+            // Is this a list request?
+            let listName = reference.name;
+            let tagName = false;
+            if (reference.name.match(/#/)) {
+                const listParts = reference.name.split(/#/);
+                listName = listParts[0];
+                tagName = listParts[1];
+            }
+            switch(listName) {
+                case "VARIABLES":
+                case "VARNAMES":
+                    if (tagName) {
+                        value = this.listTags(tagName);
+                    } else {
+                        value = this.listNames();
+                    }
+                    break;
+                case 'SPRITES':
+                    if (tagName) {
+                        value = scene.listSpriteTags(tagName);
+                    } else {
+                        value = scene.listSprites(false);
+                    }
+                    break;
+                case 'IMAGES':
+                case 'IMGS':
+                    if (tagName) {
+                        value = scene.listImageTags(tagName);
+                    } else {
+                        value = scene.listImages(false);
+                    }
+                    break;
+                case 'SCENES':
+                    if (tagName) {
+                        value = Globals.listSceneTags(tagName);
+                    } else {
+                        value = Globals.listScenes(false);
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
         // Or is this is a sprite name?
-        if (value === false && varName.match(/\./)) { // should be a sprite name/property pair
+        if (value === false && reference.property === false && varName.match(/\./)) { // should be a sprite name/property pair
             const parts = reference.name.split(/\./, 2);
             const sgSprite = SGSprite.getSprite(sceneName, parts[0], false);
             if (sgSprite != null) {
@@ -444,7 +452,7 @@ export class VarList {
                 }
             }
         }
-        if (value === false) {
+        if (value === false && reference.property === false) {
             // Otherwise, Look for built-ins first
             value = this.built_in(reference.name);
         }
@@ -455,7 +463,11 @@ export class VarList {
             } else {
                 let index = this.findVariable(reference.name);
                 if (index !== false) {
-                    value = this.variables[index].getValue(reference.key);
+                    if (reference.property == "length" && reference.key === false) {
+                        value = this.variables[index].getLength();
+                    } else if (reference.property === false) {
+                        value = this.variables[index].getValue(reference.key);
+                    }
                 } 
             }
         }
@@ -542,6 +554,11 @@ export class VarList {
                         j++; // skip ']'
                         varName += input.slice(start, j);
                     }
+                }
+
+                if (input.slice(j, j + 7) === ".length") {
+                    varName += ".length";
+                    j += 7;
                 }
 
                 let replacement = this.getValue(varName);
