@@ -38,6 +38,15 @@ class SlowGlass {
         for(let i = 0; i < script.length; i++ ) {
             let lineCount = i + 1;
             let currentLine = script[i].trim();
+            while (currentLine.endsWith('\\')) {
+                // take off the backslash
+                currentLine = currentLine.slice(0,-1);
+                i += 1;
+                if (i < script.length) {
+                    // add in the new line
+                    currentLine += " " + script[i].trim();
+                }
+            }
             if (inDescription) {
                 if (currentLine.match(/^end ?description/)) {
                     inDescription = false;
