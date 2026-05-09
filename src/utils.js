@@ -330,11 +330,12 @@ export class Timer {
     constructor(startTime, duration, callback) {
         this.endtime = startTime + (1000 * duration);
         this.callback = callback;
+        callback(1);
     }
 
     expired(now) {
         if (now > this.endtime) {
-            this.callback("timer");
+            this.callback(-1);
             return true;
         } // else
         return false;
