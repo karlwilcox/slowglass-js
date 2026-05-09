@@ -1,0 +1,9 @@
+# Runner frame animation demonstration
+
+begin
+    canvas width 800
+    canvas height 600
+    load /demo/runner/runner.png as runner frames 5 by 2
+    sprite create pixie from runner
+    place pixie at 700 500
+

@@ -520,7 +520,11 @@ export class Scene {
                 if (filename.endsWith(".jpg") ||
                     filename.endsWith(".jpeg") ||
                     filename.endsWith(".png")) {
-                    const sgImage = new SGImage(prefix + filename, name);
+                    wordList.testWord(["cels","cells","frames"]);
+                    const cellX = wordList.getInt(0);
+                    wordList.testWord("by");
+                    const cellY = wordList.getInt(1);
+                    const sgImage = new SGImage(prefix + filename, name, cellX, cellY);
                     sgImage.tags.addTag(wordList.getTags());
                     this.images.push(sgImage);
                     sgImage.load_image();
@@ -797,6 +801,37 @@ export class Scene {
                     }
                 } else {
                     Globals.log.error("Missing scroll data at line " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
+      ###    ##    ## #### ##     ##    ###    ######## ######## 
+     ## ##   ###   ##  ##  ###   ###   ## ##      ##    ##       
+    ##   ##  ####  ##  ##  #### ####  ##   ##     ##    ##       
+   ##     ## ## ## ##  ##  ## ### ## ##     ##    ##    ######   
+   ######### ##  ####  ##  ##     ## #########    ##    ##       
+   ##     ## ##   ###  ##  ##     ## ##     ##    ##    ##       
+   ##     ## ##    ## #### ##     ## ##     ##    ##    ######## 
+
+**************************************************************************************************/
+
+            case "advance":
+                if (wordList.wordsLeft() > 0) {
+                    let spriteName = wordList.getSpriteName();
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) {
+                        break;
+                    }
+                    const byOrTo = wordList.testWord(["to", "by"],"by");
+                    const frame = wordList.getInt(1);
+                    if (byOrTo == "by") {
+                        sgSprite.currentFrame += frame;
+                    } else {
+                        sgSprite.currentFrame = frame;
+                    }
+                } else {
+                    Globals.log.error("Missing advance data at line " + action.number);
                 }
                 break;
 

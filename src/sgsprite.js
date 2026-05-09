@@ -18,10 +18,18 @@ import { TagList } from "./vars.js";
 **************************************************************************************************/
 
 export class SGImage {
-    constructor(data, name) {
+    constructor(data, name, cols = 0, rows = 0) {
         this.name = name;
         this.width = 0;
         this.height = 0;
+        // check for silly cell sizes
+        if (cols < 0) {
+            cols = 0;
+        } else if (rows < 1) {
+            rows = 1;
+        }
+        this.cols = cols; // animation frames
+        this.rows = rows;
         this.tags = new TagList();
         if (typeof data === "string") {
             this.piImage = null;
@@ -63,6 +71,29 @@ export class SGImage {
         Globals.log.error("No image found- " + scene + ":" + name);
         return(null);
     }
+
+    constrainFrame(frameNo) {
+        const numFrames = this.cols * this.rows;
+        if (frameNo > numFrames) {
+            frameNo = 1;
+        } else if (frameNo < 1) {
+            frameNo = numFrames - 1;
+        }
+        return frameNo;
+    }
+
+    makeCellRect(frameNo) {
+        const numFrames = this.cols * this.rows;
+        // const column = Math.floor(number / (this.columns + 1));
+        const column = ((frameNo - 1) % this.cols);
+        const row = Math.floor((frameNo -1) / this.cols)
+        const frameWidth = this.width / this.cols;
+        const frameHeight = this.height / this.rows;
+        const frameX = column * frameWidth;
+        const frameY = row * frameHeight;
+        Globals.log.report(`Frame ${frameNo} at ${frameX} ${frameY} size ${frameWidth} ${frameWidth}`);
+        return new PIXI.Rectangle(frameX, frameY, frameWidth, frameHeight);
+    }
 }
 
 /**************************************************************************************************
@@ -85,6 +116,7 @@ export class SGSprite {
         // Identification
         this.type = type;
         this.imageName = imageName;
+        this.image = null;
         this.name = spriteName
         this.tags = new TagList();
         this.tags.addTag(tags); // default tags
@@ -119,6 +151,9 @@ export class SGSprite {
         this.scrollY = 0;
         this.lastScrollX = 0;
         this.lastScrollY = 0;
+        // Frame based animation
+        this.currentFrame = 0;
+        this.lastFrame = 0;
         // rotation point
         this.pivotX = new Adjustable(50,0,100);
         this.pivotY = new Adjustable(50,0,100);
@@ -647,6 +682,18 @@ export class SGSprite {
         }
         this.piSprite.setCorners(...this.getWarpCorners());
     }
+
+/**************************************************************************************************
+
+   ##     ## ########  ########     ###    ######## ######## 
+   ##     ## ##     ## ##     ##   ## ##      ##    ##       
+   ##     ## ##     ## ##     ##  ##   ##     ##    ##       
+   ##     ## ########  ##     ## ##     ##    ##    ######   
+   ##     ## ##        ##     ## #########    ##    ##       
+   ##     ## ##        ##     ## ##     ##    ##    ##       
+    #######  ##        ########  ##     ##    ##    ######## 
+
+**************************************************************************************************/
         
     update(scene, now) {
         if (!this.enabled) {
@@ -661,7 +708,7 @@ export class SGSprite {
                 return;
             }
             if (image != "loading") { // now ready
-                const img_width = image.piImage.width;
+                const imgWidth = image.piImage.width;
                 const imgHeight = image.piImage.height;
                 // Are we in a specific location?
                 if (this.role != null) {
@@ -669,7 +716,7 @@ export class SGSprite {
                     const wdw_width = Globals.app.screen.width;
                     const wdwHeight = Globals.app.screen.height;
                     const aspectY = imgHeight / wdwHeight ;
-                    const aspectX = img_width / wdw_width ;
+                    const aspectX = imgWidth / wdw_width ;
                     let depth = null;
                     switch ( this.role ) {
                         case "background": // centre, and scale to window size
@@ -681,16 +728,16 @@ export class SGSprite {
                             depth = defaults.DEPTH_BACKGROUND;
                             break;
                         case "left":
-                            this.locX.setTargetValue(img_width / 2);
+                            this.locX.setTargetValue(imgWidth / 2);
                             this.locY.setTargetValue(wdwHeight / 2);
-                            this.sizeX.setTargetValue(aspectY * img_width);
+                            this.sizeX.setTargetValue(aspectY * imgWidth);
                             this.sizeY.setTargetValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_LEFT;
                             break;
                         case "right":
-                            this.locX.setTargetValue(wdw_width - (img_width / 2));
+                            this.locX.setTargetValue(wdw_width - (imgWidth / 2));
                             this.locY.setTargetValue(wdwHeight / 2);
-                            this.sizeX.setTargetValue(aspectY * img_width);
+                            this.sizeX.setTargetValue(aspectY * imgWidth);
                             this.sizeY.setTargetValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_RIGHT;
                             break;
@@ -698,7 +745,7 @@ export class SGSprite {
                         case "sky":
                             this.locX.setTargetValue(wdw_width / 2);
                             this.locY.setTargetValue(imgHeight / 2);
-                            this.sizeX.setTargetValue(aspectX * img_width);
+                            this.sizeX.setTargetValue(aspectX * imgWidth);
                             this.sizeY.setTargetValue(aspectX * imgHeight);
                             depth = defaults.DEPTH_SKY;
                             break;
@@ -707,7 +754,7 @@ export class SGSprite {
                         case "foreground":
                             this.locX.setTargetValue(wdw_width / 2);
                             this.locY.setTargetValue(wdwHeight - (imgHeight / 2));
-                            this.sizeX.setTargetValue(aspectX * img_width);
+                            this.sizeX.setTargetValue(aspectX * imgWidth);
                             this.sizeY.setTargetValue(aspectX * imgHeight);
                             depth = this.role == "ground" ? defaults.DEPTH_GROUND : defaults.DEPTH_FOREGROUND;
                             break;
@@ -717,7 +764,7 @@ export class SGSprite {
                     }
                 } else { // set size from the image, if not already set
                     if (this.sizeX.value() == 0) {
-                        this.sizeX.setTargetValue(img_width);
+                        this.sizeX.setTargetValue(imgWidth);
                     }
                     if (this.sizeY.value() == 0) {
                         this.sizeY.setTargetValue(imgHeight);
@@ -725,12 +772,24 @@ export class SGSprite {
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = null;
-                if (this.windowed) {
+                if (image.cols > 0) {
+                    const viewRectangle = image.makeCellRect(1);
+                    texture = new PIXI.Texture({
+                        source: fullTexture.source,
+                        frame: viewRectangle,
+                        dynamic: true,
+                        });
+                    texture.source.wrapMode = "repeat";
+                    this.sizeX.setTargetValue(imgWidth / image.cols);
+                    this.sizeY.setTargetValue(imgHeight / image.rows);
+                    this.currentFrame = 1;
+                } else if (this.windowed) {
                     const viewRectangle =  new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
                                     this.viewWidth.value(), this.viewHeight.value());
                     texture = new PIXI.Texture({
                         source: fullTexture.source,
                         frame: viewRectangle,
+                        dynamic: true,
                         });
                     texture.source.wrapMode = "mirror-repeat";
                     this.sizeX.setTargetValue(this.viewWidth.value());
@@ -775,6 +834,7 @@ export class SGSprite {
                 } else {
                     Globals.root.addChild(this.piSprite);
                 }
+                this.image = image;
             } // else, still loading, try again later
         }
         // Do we need to flip?
@@ -782,7 +842,20 @@ export class SGSprite {
             this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
             this.flipChange = false;
         }
-
+        // Do we need to update the frame?
+        if (this.currentFrame != this.lastFrame) {
+            if (this.image.cols < 1) {
+                Globals.log.error("Image has no frames in sprite " + this.name);
+            } else {
+                this.currentFrame = this.image.constrainFrame(this.currentFrame);
+                const viewRectangle = this.image.makeCellRect(this.currentFrame);
+                if (this.piSprite !== null) {
+                    this.piSprite.texture.frame = viewRectangle;
+                    this.piSprite.texture.update();
+                }
+            }
+            this.lastFrame = this.currentFrame;
+        }
         // Is our window moving?
         if (this.windowed) {
             let scrolled = false;
@@ -807,7 +880,7 @@ export class SGSprite {
                 if (this.piSprite !== null) {
                     this.piSprite.texture.frame = new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
                                     this.viewWidth.value(), this.viewHeight.value());
-                    this.piSprite.texture.updateUvs();
+                    this.piSprite.texture.update();
                     this.sizeX.setTargetValue(this.viewWidth.value());
                     this.sizeY.setTargetValue(this.viewHeight.value());
                 }
@@ -850,7 +923,6 @@ export class SGSprite {
                 this.piSprite.position.set(this.locX.value(), this.locY.value());
             }
         }
-
         // Update rotation angle
         const pivotOnX = this.pivotX.updateValue();
         const pivotOnY = this.pivotY.updateValue();

@@ -207,6 +207,9 @@ export class VarList {
                 return Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
             case "DAYNAME":
                 return new Intl.DateTimeFormat(defaults.LOCALE, { weekday: "long" }).format(date);
+            case "DAYOFMONTH":
+            case "DAY":
+                return new Intl.DateTimeFormat(defaults.LOCALE, { day: "numeric" }).format(date).padStart(2,'0');
             case "MONTH":
                 return month;
             case "MONTHNAME":
@@ -227,6 +230,7 @@ export class VarList {
             case "SUMMER":
                 return Globals.location.isSummer();
             case "AUTUMN":
+            case "FALL":
                 return Globals.location.isAutumn();
             case "SUNANGLE":
                 return Globals.location.sunAngle();
