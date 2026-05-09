@@ -157,10 +157,15 @@ export class WordList {
 
     getPercent(def = false) {
         let result = def;
-        const candidate = this.nextWord();
-        const digits = candidate.match(/[0-9]+/);
-        result = parseInt(digits[0]);
-        this.testWord(["%","percent"]);
+        if (this.wordsLeft()) {
+            const candidate = this.currentWord;
+            const digits = candidate.match(/[0-9]+/);
+            if (digits) {
+                result = parseInt(digits[0]);
+                this.nextWord();
+                this.testWord(["%","percent"]);
+            }
+        }
         return result;
     }
 

@@ -1,9 +1,28 @@
 # Runner frame animation demonstration
+# Forest background by Canva AI
+# Sorry, I can't remember where I found the runner
 
 begin
     canvas width 800
     canvas height 600
-    load /demo/runner/runner.png as runner frames 5 by 2
+    load forest.png as forest-bg
+    put forest-bg as background
+    load forest-foreground.png as forest-fg
+    put forest-fg as foreground
+    load runner.png as runner frames 5 by 2
     sprite create pixie from runner
-    place pixie at 700 500
+    scale pixie to 65%
+    animate pixie at 5
+
+every 25 seconds
+    place pixie at -100 300 200
+    move pixie to 900 360 in 10 seconds
+    then
+        wait 3 seconds
+    then
+        place pixie at 900 360 200
+        flip pixie horizontally
+        move pixie to -100 320 in 10 seconds
+    then
+        flip pixie horizontally
 

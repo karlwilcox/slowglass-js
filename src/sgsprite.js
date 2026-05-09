@@ -91,7 +91,6 @@ export class SGImage {
         const frameHeight = this.height / this.rows;
         const frameX = column * frameWidth;
         const frameY = row * frameHeight;
-        Globals.log.report(`Frame ${frameNo} at ${frameX} ${frameY} size ${frameWidth} ${frameWidth}`);
         return new PIXI.Rectangle(frameX, frameY, frameWidth, frameHeight);
     }
 }
@@ -154,6 +153,8 @@ export class SGSprite {
         // Frame based animation
         this.currentFrame = 0;
         this.lastFrame = 0;
+        this.animationRate = 0;
+        this.lastFrameChange = 0;
         // rotation point
         this.pivotX = new Adjustable(50,0,100);
         this.pivotY = new Adjustable(50,0,100);
@@ -837,13 +838,22 @@ export class SGSprite {
                 this.image = image;
             } // else, still loading, try again later
         }
+        // Flag later changes that they need to update as well
+        let forceUpdate = false;
         // Do we need to flip?
         if (this.piSprite !== null && this.flipChange) {
             this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
             this.flipChange = false;
         }
+        // Are we animated?
+        if (this.animationRate > 0) {
+            if ((now - this.lastFrameChange) > 1000 / this.animationRate) {
+                this.currentFrame += 1;
+                this.lastFrameChange = now;
+            }
+        }
         // Do we need to update the frame?
-        if (this.currentFrame != this.lastFrame) {
+        if (this.image != null && this.currentFrame != this.lastFrame) {
             if (this.image.cols < 1) {
                 Globals.log.error("Image has no frames in sprite " + this.name);
             } else {
@@ -852,6 +862,7 @@ export class SGSprite {
                 if (this.piSprite !== null) {
                     this.piSprite.texture.frame = viewRectangle;
                     this.piSprite.texture.update();
+                    forceUpdate = true;
                 }
             }
             this.lastFrame = this.currentFrame;
@@ -883,6 +894,7 @@ export class SGSprite {
                     this.piSprite.texture.update();
                     this.sizeX.setTargetValue(this.viewWidth.value());
                     this.sizeY.setTargetValue(this.viewHeight.value());
+                    forceUpdate = true;
                 }
             }
         }
@@ -982,7 +994,7 @@ export class SGSprite {
         // update size
         changeX = this.sizeX.updateValue();
         changeY = this.sizeY.updateValue();
-        if (changeSX || changeSY || changeX || changeY) {
+        if (forceUpdate || changeSX || changeSY || changeX || changeY) {
             if (this.piSprite !== null ) { // image has been loaded
                 if (this.warped) {
                     this.applyWarpCorners();

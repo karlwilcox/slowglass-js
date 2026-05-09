@@ -817,6 +817,7 @@ export class Scene {
 **************************************************************************************************/
 
             case "advance":
+            case "reverse":
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getSpriteName();
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
@@ -824,14 +825,36 @@ export class Scene {
                         break;
                     }
                     const byOrTo = wordList.testWord(["to", "by"],"by");
-                    const frame = wordList.getInt(1);
+                    let frame = wordList.getInt(1);
                     if (byOrTo == "by") {
+                        if (command == "reverse") {
+                            frame *= -1;
+                        }
                         sgSprite.currentFrame += frame;
                     } else {
                         sgSprite.currentFrame = frame;
                     }
                 } else {
                     Globals.log.error("Missing advance data at line " + action.number);
+                }
+                break;
+
+            case "animate":
+                if (wordList.wordsLeft() > 0) {
+                    let spriteName = wordList.getSpriteName();
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) {
+                        break;
+                    }
+                    const atOrStop = wordList.testWord(["at", "stop"],"at");
+                    if (atOrStop == "stop") {
+                        sgSprite.animationRate = 0;
+                        break;
+                    }
+                    const rate = wordList.getInt(1);
+                    sgSprite.animationRate = rate;
+                } else {
+                    Globals.log.error("Missing animation data at line " + action.number);
                 }
                 break;
 
@@ -1575,8 +1598,8 @@ export class Scene {
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getSpriteName();
                     const toOrBy = wordList.testWord( ["to", "by", "reset"]);
-                    let w = wordList.getInt(0);
-                    let h = wordList.getInt(w);
+                    let w = wordList.getPercent(0);
+                    let h = wordList.getPercent(w);
                     let duration = wordList.getDuration(0);
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 

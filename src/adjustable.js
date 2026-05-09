@@ -189,10 +189,9 @@ export class Adjustable {
             return updated;
         }
         // Are we there yet?
-        if ((this.currentValue != this.targetValue) && (
-            ((this.deltaValue < 0) && (this.currentValue < this.targetValue)) // undershot
+        if (((this.deltaValue < 0) && (this.currentValue < this.targetValue)) // undershot
             || ((this.deltaValue > 0) && (this.currentValue > this.targetValue)) // overshot
-            || (Math.abs(this.currentValue - this.targetValue) <= this.deltaValue))) { // almost there
+            || (Math.abs(this.currentValue - this.targetValue) <= this.deltaValue)) { // almost there
             this.currentValue = this.targetValue;
             this.deltaValue = 0;
             this.changing = false;
@@ -203,7 +202,6 @@ export class Adjustable {
             this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);
             this.lastAdjustment = thisAdjustment;
         }
-        this.changing = false;
         return true;
     }
 
