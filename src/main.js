@@ -353,33 +353,45 @@ class SlowGlass {
                         current.timers.splice(j,1);
                     }
                 }
+                let firstAction = 0;
                 // Found an active scene, now go through each action group
                 for ( let j = 0; j < current.actionGroups.length; j++ ) {
-                    // this implements the any/all condition. It is set by looking
-                    // at each trigger in turn. If the when condition is "any"
-                    // we immediately break out of the loop and run actions
-                    // If when is "all" we break out of the loop as soon as a
-                    // trigger fails. Hence the only way to get out of the loop
-                    // with do_run set to true is for all the triggers to succeed
                     let do_run = false;
-                    // check each trigger, if ANY is valid then execute actions
-                    let triggers = current.actionGroups[j].triggers;
-                    for ( let k = 0; k < triggers.length; k++) {
-                        if (triggers[k].fired(current_millis)) {
-                            current.varList.trigger = triggers[k].constructor.name;
+                    // Is this a suspended start that can be restarted?
+                    // Globals.log.report(`AG State ${current.actionGroups[j].suspended} ${current.actionGroups[j].unfinishedCount}`);
+                    if (current.actionGroups[j].suspended) {
+                        if (current.actionGroups[j].isFinished()) {
+                            firstAction = current.actionGroups[j].resume();
                             do_run = true;
-                            if (current.actionGroups[j].any_trigger) {
-                                break;
-                            }
                         } else {
-                            do_run = false;
-                            if (!current.actionGroups[j].any_trigger) {
-                                break;
+                            continue; // still suspended, go on to next group
+                        }
+                    }  else { // not suspended, test the triggers
+                        // this implements the any/all condition. It is set by looking
+                        // at each trigger in turn. If the when condition is "any"
+                        // we immediately break out of the loop and run actions
+                        // If when is "all" we break out of the loop as soon as a
+                        // trigger fails. Hence the only way to get out of the loop
+                        // with do_run set to true is for all the triggers to succeed
+                        // check each trigger, if ANY is valid then execute actions
+                        let triggers = current.actionGroups[j].triggers;
+                        for ( let k = 0; k < triggers.length; k++) {
+                            if (triggers[k].fired(current_millis)) {
+                                current.varList.trigger = triggers[k].constructor.name;
+                                do_run = true;
+                                if (current.actionGroups[j].any_trigger) {
+                                    break;
+                                }
+                            } else {
+                                do_run = false;
+                                if (!current.actionGroups[j].any_trigger) {
+                                    break;
+                                }
                             }
                         }
                     }
                     if (do_run) {
-                        current.runGroup(j, current_millis);
+                        current.runGroup(j, current_millis, firstAction);
                     }
                 }
             }

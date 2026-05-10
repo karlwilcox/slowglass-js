@@ -132,6 +132,7 @@ export class ActionGroup {
         this.actions = [];
         this.anyTrigger = true;
         this.unfinishedCount = 0;
+        this.suspended = false;
         this.stack = [];
         this.nextAction = 0; // for looping
         this.failedIfCount = 0; // for nesting if statements
@@ -146,12 +147,19 @@ export class ActionGroup {
     }
 
     isFinished() {
-        if (this.triggered && this.unfinishedCount == 0) {
-            this.triggered = false;
-            return true;
-        } // else
-        return false;
+        return (this.unfinishedCount == 0);
     }
+
+    suspend(action) {
+        this.suspended = action;
+    }
+
+    resume() {
+        const nextAction = this.suspended + 1;
+        this.suspended = false;
+        return nextAction;
+    }
+        
 
     startCounting() {
         this.triggered = true;
@@ -175,9 +183,7 @@ export class ActionGroup {
         // Globals.log.report("Unfinished is now " + this.unfinishedCount);
     }
 
-    callback() {
-        return (delta) => this.updateCount(delta);
-    }
+
 }
 
 /**************************************************************************************************
