@@ -239,37 +239,6 @@ export class AtClass extends Trigger {
 
 /**************************************************************************************************
 
-   ######## ##     ## ######## ##    ## 
-      ##    ##     ## ##       ###   ## 
-      ##    ##     ## ##       ####  ## 
-      ##    ######### ######   ## ## ## 
-      ##    ##     ## ##       ##  #### 
-      ##    ##     ## ##       ##   ### 
-      ##    ##     ## ######## ##    ## 
-
-**************************************************************************************************/
-
-// export class ThenClass extends Trigger {
-//     constructor(scene, timestamp, params, actionGroup) {
-//         super(scene, timestamp, params);
-//         this.actionGroup = actionGroup;
-//     }
-
-//     fired(timestamp) {
-//         if (this.expired) {
-//             return false;
-//         }
-//         // triggered when ALL actions in the actionGroup have completed
-//         if (this.actionGroup.isFinished()) {
-//             this.expired = true;
-//             return true;
-//         } // else
-//         return false;
-//     }
-// }
-
-/**************************************************************************************************
-
    ########    ###     ######  ##     ## 
    ##         ## ##   ##    ## ##     ## 
    ##        ##   ##  ##       ##     ## 

@@ -18,10 +18,11 @@ import { TagList } from "./vars.js";
 **************************************************************************************************/
 
 export class SGImage {
-    constructor(data, name, cols = 0, rows = 0) {
+    constructor(data, name, callback, cols = 0, rows = 0) {
         this.name = name;
         this.width = 0;
         this.height = 0;
+        this.callback = callback;
         // check for silly cell sizes
         if (cols < 0) {
             cols = 0;
@@ -33,6 +34,9 @@ export class SGImage {
         this.tags = new TagList();
         if (typeof data === "string") {
             this.piImage = null;
+            if (callback) {
+                callback(1);
+            }
             this.loading = true;
             this.url = data;
         } else { // must be text - careful if new types added!
@@ -45,6 +49,7 @@ export class SGImage {
     async load_image() {
         this.piImage = await PIXI.Assets.load(this.url);
         this.loading = false;
+        this.callback(-1);
         this.width = this.piImage.width;
         this.height = this.piImage.height;
     }
@@ -529,7 +534,7 @@ export class SGSprite {
         this.sizeY.setTargetValue(this.piImage.orig.height);
     }
 
-    setScale(scaleX, scaleY, command, toOrBy, duration, now, callback) {
+    setScale(scaleX, scaleY, command, toOrBy, duration, now, callback = false) {
         const currentX = this.scaleX.value() * 100;
         const currentY = this.scaleY.value() * 100;
         switch (command) {

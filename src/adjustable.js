@@ -28,8 +28,8 @@ export class Adjustable {
         this.accelerationRate = 0;
         this.accelerationTime = 0;
         // Callbacks
-        this.positionCallback = null;
-        this.accelerateCallback = null;
+        this.positionCallback = false;
+        this.accelerateCallback = false;
         // Swaying
         this.swayLimit = 0;
         this.swayStep = 0;
@@ -137,8 +137,9 @@ export class Adjustable {
         if (seconds == 0) {
             this.currentValue = target;
             this.deltaValue = 0;
-            if (this.positionCallback != null) {
+            if (this.positionCallback) {
                 this.positionCallback(-1);
+                this.positionCallback = false;
             }
         } else {
             this.deltaValue = (this.targetValue - this.currentValue) / (seconds * 1000);
@@ -195,8 +196,9 @@ export class Adjustable {
             this.currentValue = this.targetValue;
             this.deltaValue = 0;
             this.changing = false;
-            if (this.positionCallback != null) {
+            if (this.positionCallback) {
                 this.positionCallback(-1);
+                this.positionCallback = false;
             }
         } else {
             this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);

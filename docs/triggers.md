@@ -72,19 +72,6 @@ How does `each **:*0` differ from `every 10 minutes`? The former happens
 every tenth minute according to the clock time; the latter first happens
 10 minutes after its scene is started, and every 10 minutes after that.
 
-## Then
-
-This takes no arguments. It triggers when all(*) of the actions in the
-immediately preceeding group have completed. Some actions complete
-as soon as they are encountered, others start a process that may
-end some time later. This trigger will be activated when all of
-those processes have finished.
-
-(*) some actions start on-going activities that don't have a defined "end",
-these actions are deemed to have completed as soon as they start
-and don't contribute towards the **then** trigger. In the documentation
-for actions the completion event is shown for each action.
-
 ## When
 
 `when {logic-expression}`

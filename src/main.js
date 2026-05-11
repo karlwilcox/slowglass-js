@@ -7,6 +7,7 @@ import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
 import * as constants from './constants.js';
 import { Parser } from "./parser.js";
+import { WordList } from "./wordlist.js";
 
 class SlowGlass {
     static nextAction_run = 0;
@@ -291,6 +292,7 @@ class SlowGlass {
 
     async run() {
         this.clean = false;
+        Globals.startTime = Date.now();
         // Initialise renderer (Pixi v8 requirement)
         await Globals.app.init({
             // resizeTo: window,
@@ -348,21 +350,38 @@ class SlowGlass {
                     continue;
                 }
                 // First let's see if any local timers have expired
-                for (let j = 0; j < current.timers.length; j++ ) {
-                    if (current.timers[j].expired(current_millis)) {
-                        current.timers.splice(j,1);
-                    }
-                }
+                // for (let j = 0; j < current.timers.length; j++ ) {
+                //     if (current.timers[j].expired(current_millis)) {
+                //         current.timers.splice(j,1);
+                //     }
+                // }
                 let firstAction = 0;
                 // Found an active scene, now go through each action group
                 for ( let j = 0; j < current.actionGroups.length; j++ ) {
                     let do_run = false;
-                    // Is this a suspended start that can be restarted?
-                    // Globals.log.report(`AG State ${current.actionGroups[j].suspended} ${current.actionGroups[j].unfinishedCount}`);
-                    if (current.actionGroups[j].suspended) {
-                        if (current.actionGroups[j].isFinished()) {
-                            firstAction = current.actionGroups[j].resume();
-                            do_run = true;
+                    const actionGroup = current.actionGroups[j];
+                    // Is this a suspended group that can be restarted?
+                    if (actionGroup.suspended) {
+                        // What was the reason for the suspension?
+                        switch(actionGroup.waitType) {
+                            case "pause":
+                                do_run = current_millis > actionGroup.waitClause;
+                                break;
+                            case "then":
+                                do_run = actionGroup.isFinished();
+                                break;
+                            case "until":
+                            case "while":
+                                const expanded = current.varList.expandVars(actionGroup.waitClause);
+                                const evaluated = Utils.evaluate(expanded)
+                                do_run = Utils.logical(expanded.split(/ +/));
+                                if (actionGroup.waitType == "while") {
+                                    do_run = !do_run;
+                                }
+                                break;
+                        }
+                        if (do_run) {
+                            firstAction = actionGroup.resume();
                         } else {
                             continue; // still suspended, go on to next group
                         }
@@ -379,12 +398,12 @@ class SlowGlass {
                             if (triggers[k].fired(current_millis)) {
                                 current.varList.trigger = triggers[k].constructor.name;
                                 do_run = true;
-                                if (current.actionGroups[j].any_trigger) {
+                                if (actionGroup.any_trigger) {
                                     break;
                                 }
                             } else {
                                 do_run = false;
-                                if (!current.actionGroups[j].any_trigger) {
+                                if (!actionGroup.any_trigger) {
                                     break;
                                 }
                             }

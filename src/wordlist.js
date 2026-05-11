@@ -51,6 +51,10 @@ export class WordList {
             this.currentWord = this.words[0];
         }
     }
+
+    length() {
+        return this.words.length;
+    }
     
     nextWord() {
         if (++this.index < this.words.length) {

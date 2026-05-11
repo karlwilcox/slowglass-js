@@ -119,3 +119,20 @@ trigger is activated.
 Care should be taken with the **all** case to make sure that
 the triggers are not mutually exclusive and will never happen
 together!
+
+## Command Completion
+
+We also need to understand the concept of command completion.
+Some actions complete as soon as they are executed, for example
+the **place** command. Others commands start a process that may
+end some time later, for example the commands that change
+sprite location or appearance over time. This is an important
+concept for the timing commands discussed elsewhere.
+
+It should be noted that some actions start on-going activities that don't have
+a defined "end", these actions are deemed to have completed as soon as they
+start and don't contribute towards the various timing and synchronisation
+commands. In the documentation for actions the completion event is shown for
+each action.
+
+## When

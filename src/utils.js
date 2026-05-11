@@ -132,10 +132,12 @@ export class ActionGroup {
         this.actions = [];
         this.anyTrigger = true;
         this.unfinishedCount = 0;
-        this.suspended = false;
         this.stack = [];
+        this.suspended = false;
         this.nextAction = 0; // for looping
         this.failedIfCount = 0; // for nesting if statements
+        this.waitType = false;
+        this.waitClause = "";
     }
 
     addAction(action) {
@@ -147,11 +149,13 @@ export class ActionGroup {
     }
 
     isFinished() {
-        return (this.unfinishedCount == 0);
+        return (this.unfinishedCount <= 0);
     }
 
-    suspend(action) {
+    suspend(type, action, clause = "") {
+        this.waitType = type;
         this.suspended = action;
+        this.waitClause = clause;
     }
 
     resume() {
@@ -180,7 +184,12 @@ export class ActionGroup {
 
     updateCount(delta) {
         this.unfinishedCount += delta;
-        // Globals.log.report("Unfinished is now " + this.unfinishedCount);
+    }
+
+    callback() {
+        return (delta) => {
+            this.unfinishedCount += delta;
+        };
     }
 
 
@@ -336,12 +345,14 @@ export class Timer {
     constructor(startTime, duration, callback) {
         this.endtime = startTime + (1000 * duration);
         this.callback = callback;
+        this.running = true;
         callback(1);
     }
 
     expired(now) {
-        if (now > this.endtime) {
+        if (this.running && now > this.endtime) {
             this.callback(-1);
+            this.running = false;
             return true;
         } // else
         return false;

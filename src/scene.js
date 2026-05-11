@@ -320,14 +320,6 @@ export class Scene {
                     wordList.testWord("time");
                     trigger = new Triggers.Each(this, timestamp, wordList.joinWords());
                     break;
-                // case 'then':
-                //     if (state == "T") {
-                //         Globals.log.error("Then must be the only trigger in that group");
-                //     } else {
-                //         // we trigger on the current action, as then will start a new one
-                //         trigger = new Triggers.ThenClass(this, timestamp, wordList.joinWords(), actionGroup);
-                //     }
-                //     break;
                 case 'every':
                     trigger = new Triggers.Every(this, timestamp, wordList.joinWords());
                     break;
@@ -379,9 +371,9 @@ export class Scene {
         let actions = actionGroup.actions;
         actionGroup.nextAction = start; // start at the top
         actionGroup.startCounting();
-        do {
+        while (actionGroup.suspended == 0 && actionGroup.nextAction < actions.length ) {
             this.runAction(actionGroup.nextAction, actionGroup, now);
-        } while (actionGroup.suspended == 0 && actionGroup.nextAction < actions.length );
+        }
     }
 
 
@@ -448,6 +440,9 @@ export class Scene {
                         break;
                     case "off":
                         this.echo = false;
+                        break;
+                    default:
+                        Globals.log.error("echo on|off|flip only");
                         break;
                 }
                 break;
@@ -524,7 +519,7 @@ export class Scene {
                     const cellX = wordList.getInt(0);
                     wordList.testWord("by");
                     const cellY = wordList.getInt(1);
-                    const sgImage = new SGImage(prefix + filename, name, cellX, cellY);
+                    const sgImage = new SGImage(prefix + filename, name, actionGroup.callback(), cellX, cellY);
                     sgImage.tags.addTag(wordList.getTags());
                     this.images.push(sgImage);
                     sgImage.load_image();
@@ -2733,17 +2728,33 @@ export class Scene {
 
 **************************************************************************************************/
 
-            case 'wait':
+            case 'pause':
+                wordList.testWord("for");
                 let duration = wordList.getDuration(5);
-                this.timers.push(new Utils.Timer(now, duration, actionGroup.callback));
+                // this.timers.push(new Utils.Timer(now, duration, actionGroup.callback()));
+                actionGroup.suspend("pause", actionIndex, now + (1000 * duration));
                 break;
 
             case 'then':
-                Globals.log.report(`then state ${actionGroup.unfinishedCount} on action ${actionIndex}`);
                 if (!actionGroup.isFinished()) {
-                    actionGroup.suspend(actionIndex);
+                    actionGroup.suspend("then", actionIndex);
                 }
                 break;
+
+            case 'wait':
+                if (wordList.wordsLeft() > 0) { 
+                    const waitType = wordList.testWord(["until","while"]);
+                    if (!waitType) {
+                        Globals.log.error("Unknown wait condition at " + action.number);
+                        break;
+                    }
+                    let rawWords = action.text.split(/ +/).slice(2).join(' ');
+                    actionGroup.suspend(waitType, actionIndex, rawWords);
+                } else {
+                    Globals.log.error("Missing if condition at line " + action.number);
+                }
+                break;
+
 
 
 /**************************************************************************************************
