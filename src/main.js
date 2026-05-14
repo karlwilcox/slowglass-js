@@ -507,6 +507,10 @@ class SlowGlass {
             case "city":
                 Globals.location.setCity(optionValue);
                 break;
+            case "cors":
+            case "corsproxy":
+                Globals.corsProxy = optionValue;
+                break;
         }
     }
 

@@ -1,0 +1,42 @@
+# Scrolling text and live RSS data demo
+# Images by Canva AI
+# Headlines from New York Times world feed
+
+canvas width 800
+canvas height 600
+
+begin
+    load /demo/newsroom/newsroom.png as newsroom
+    put newsroom as background
+    start news
+    then 
+    for item in news:item1[title] news:item2[title] news:item3[title] news:item4[title] news:item5[title]
+        start scroller $$item
+        then
+            // do nothing
+    endfor
+
+every 5 minutes
+    start news
+
+scene news
+    begin
+        rssget item1 from https://rss.nytimes.com/services/xml/rss/nyt/World.xml item 1
+        rssget item2 from https://rss.nytimes.com/services/xml/rss/nyt/World.xml item 2
+        rssget item3 from https://rss.nytimes.com/services/xml/rss/nyt/World.xml item 3
+        rssget item4 from https://rss.nytimes.com/services/xml/rss/nyt/World.xml item 4
+        rssget item5 from https://rss.nytimes.com/services/xml/rss/nyt/World.xml item 5
+    stop scene
+end scene
+
+scene scroller
+    begin
+        text create chyron $PARAMS
+        text fontsize chyron 50
+        text colour chyron white
+        let halfwidth be (${chyron.sx} / 2)
+        place chyron at ($WIDTH + $halfwidth) 550 100
+        move chyron to -$WIDTH 550 at 100 pixels per second
+        remove sprite chyron
+        stop scene
+end scene

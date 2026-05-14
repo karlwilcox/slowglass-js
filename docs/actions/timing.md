@@ -69,6 +69,12 @@ evaluates to true.
 
 See the page on logic expressions for more examples of this.
 
+Note that the built-in variable $FINISHED also provides information
+about the status of previous tasks, hence the **then** command is
+exactly equivalent (but much shorter) to:
+
+`wait until $FINISHED`
+
 ## Timing Accuracy
 
 At present suspended actions are checked for updating at a minimum

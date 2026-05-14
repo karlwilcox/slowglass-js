@@ -23,7 +23,7 @@ No further completion events happen.
 
 ## Get
 
-`get {variable-name} from URL`
+`get {variable-name} from {URL}`
 
 The value of the given variable name will be set to the content returned
 by the HTTP GET method of the given URL, or to NONE if the URL is not
@@ -32,6 +32,18 @@ member of the variable, with the key being a numeric line number.
 
 For example, this could be used to query a Raspberry Pi equipped
 with sensors to get information such as the current temperature.
+
+## RSS Get
+
+`rssget {variable-name} from {URL} [item {number}]`
+
+Creates an array variable with the given name, populated with the following
+fields (array names): "description", "title", "link", "date" from the
+given RSS feed.
+
+Important note: either use CORS enabled RSS feeds or set your own
+CORS proxy in defaults.js or by setting the "corsproxy" option
+from the web page.
 
 ## Future Intentions
 

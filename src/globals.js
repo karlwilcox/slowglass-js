@@ -25,6 +25,7 @@ export class Globals {
     static key = null;
     static highestZ = 0;
     static location = new Utils.Location();
+    static corsProxy = defaults.CORS_PROXY;
 
     constructor() {
 

@@ -6,7 +6,7 @@ SHELL := /bin/bash
 sg:	
 	esbuild src/main.js --bundle --sourcemap --outfile=js/slowglass.js
 	bundle exec jekyll build
-	rsync --delete -e ssh -aP /Users/karlw/Sites/slowglass/ karlw@192.168.1.10:/home/karlw/sites/slowglass
+	rsync -q --delete -e ssh -aP /Users/karlw/Sites/slowglass/ karlw@192.168.1.10:/home/karlw/sites/slowglass
 
 # esbuild src/main.js --bundle --minify --sourcemap --outfile=js/slowglass.js
 # copy the distribution js to the test server in case we only changed the code

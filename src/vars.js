@@ -88,6 +88,7 @@ export class VarList {
         this.variables = [];
         this.trigger = null;
         this.sceneName = sceneName;
+        this.currentGroup = false;
     }
 
     parseArrayReference(name) {
@@ -263,15 +264,15 @@ export class VarList {
             case "TRIGGER":
                 return this.trigger;
             case "WEEKDAY":
-                return date.getDay() > 0 && date.getDay() < 6 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Utils.boolAsString(date.getDay() > 0 && date.getDay() < 6);
             case "WEEKEND":
-                return date.getDay() == 0 || date.getDay() == 6 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Utils.boolAsString(date.getDay() == 0 || date.getDay() == 6);
             case "MORNING":
-                return date.getHours() > 6 && date.getHour() < 13 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Utils.boolAsString(date.getHours() > 6 && date.getHour() < 13);
             case "AFTERNOON":
-                return date.getHours() > 11 && date.getHour() < 18 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Utils.boolAsString(date.getHours() > 11 && date.getHour() < 18);
             case "EVENING":
-                return date.getHours() > 18 && date.getHour() < 22 ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+                return Utils.boolAsString(date.getHours() > 18 && date.getHour() < 22);
             case "NIGHT":
                 return Utils.boolAsString(date.getHours() > 22 || date.getHour() < 6);
             case "KEY":
@@ -284,6 +285,8 @@ export class VarList {
                 return Globals.scriptScaleY;
             case "SCENENAME":
                 return this.sceneName;
+            case "FINISHED":
+                return Utils.boolAsString(this.currentGroup.isFinished());
             case "PARAMS":
             case "PARAMETERS":
                 const scene = Scene.find(this.sceneName);

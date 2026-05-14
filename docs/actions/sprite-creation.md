@@ -131,6 +131,8 @@ over-written with a new value.
 
 `(shape | graphic) create {sprite-name} [as] circle {radius}`
 
+`(shape | graphic) create {sprite-name} [as] polygon {radius} {sides}`
+
 `(shape | graphic) create {sprite-name} [as] ellipse {width-radius} {height-radius}`
 
 `(shape | graphic) create {sprite-name} [as] star {number-of-points} {outer-radius} [{inner-radius}]`
@@ -139,7 +141,7 @@ over-written with a new value.
 
 These commands create graphic elements using the previously set fill and
 stroke settings. There is some limited validation of the argument values.
-Star creation does not include the rotation option as you can do this
+Graphic creation does not include the rotation option as you can do this
 after placement with the **rotate** command, similarly with the rotation
 and position of the line, which will initially be drawn horizontally.
 

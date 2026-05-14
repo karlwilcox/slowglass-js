@@ -22,4 +22,7 @@ export default {
     CITY: "London",
     LAT: 52,
     LON: 0,
+    // If you provide a CORS proxy please include the arguments
+    // CORS_PROXY: 'https://cors-anywhere.herokuapp.com/corsdemo?',
+    CORS_PROXY: "",
 };

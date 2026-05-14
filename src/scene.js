@@ -20,6 +20,7 @@ export class Scene {
 
     reset() {
         this.actionGroups = [];
+        this.currentGroup = false;
         this.images = [];
         this.sprites = [];
         this.folder = ''; // where should we load from?
@@ -182,20 +183,57 @@ export class Scene {
         return result;
     }
 
-    async getVariableFromURL(varName, url, callback) {
+    async fetchRSSFeed(url) {
         try {
-            const response = await fetch(url);
+            const response = await fetch(`${defaults.CORS_PROXY}${url}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const rssText = await response.text();
+            return rssText;
+        } catch (error) {
+            console.error('Error fetching RSS feed:', error);
+        }
+    }
+
+    parseRSS(rssText) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(rssText, 'text/xml');
+        return xmlDoc;
+    }
+
+    async getVariableFromRSS(varName, url, item, callback) {
+        callback(1);
+        const rawData = await this.fetchRSSFeed(url);
+        const xmlDoc = this.parseRSS(rawData);
+        const items = xmlDoc.getElementsByTagName('item');
+        const thisItem = items[item - 1];
+        this.varList.setValue(`${varName}[title]`, thisItem.getElementsByTagName('title')[0].textContent);
+        this.varList.setValue(`${varName}[description]`, thisItem.getElementsByTagName('description')[0].textContent);
+        this.varList.setValue(`${varName}[link]`, thisItem.getElementsByTagName('link')[0].textContent);
+        this.varList.setValue(`${varName}[date]`, thisItem.getElementsByTagName('pubDate')[0].textContent);
+        callback(-1);
+    }
+
+    async getVariableFromURL(varName, url, callback) {
+        callback(1);
+        try {
+            const response = await fetch(`${defaults.CORS_PROXY}${url}`);
             if (!response.ok) {
                 Globals.log.error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
                 this.varList.setValue(varName, defaults.NOTFOUND);
             } else {
-                this.varList.setValue(varName, await response.text());
+                const text = await response.text();
+                const lines = text.split(/\r?\n/);
+                for (i = 0; i < lines.length; i++) {
+                    this.varList.setValue(`${varName}[${i}]`, lines[i]);
+                }
             }
         } catch (error) {
             Globals.log.error("Failed to fetch URL: " + error.message);
             this.varList.setValue(varName, defaults.NOTFOUND);
         }
-        callback("get");
+        callback(-1);
     }
 
 
@@ -278,8 +316,13 @@ export class Scene {
                 case 'do':
                     // syntactic sugar, marks beginning of actions
                     continue;
+                case 'setup':
+                case 'init':
+                    trigger = new Triggers.Start(this, timestamp, "");
+                    break;
+                case 'start':
                 case 'begin':
-                    trigger = new Triggers.Begin(this, timestamp, "");
+                    trigger = new Triggers.Setup(this, timestamp, "");
                     break;
                 case 'end':
                     trigger = new Triggers.Trigger("ATEND", "");
@@ -369,11 +412,13 @@ export class Scene {
     runGroup(index, now, start = 0) {
         let actionGroup = this.actionGroups[index];
         let actions = actionGroup.actions;
+        this.varList.currentGroup = actionGroup;
         actionGroup.nextAction = start; // start at the top
         actionGroup.startCounting();
         while (actionGroup.suspended == 0 && actionGroup.nextAction < actions.length ) {
             this.runAction(actionGroup.nextAction, actionGroup, now);
         }
+        // this.varList.currentGroup = false;
     }
 
 
@@ -431,15 +476,29 @@ export class Scene {
 
             case "echo":
                 const request = wordList.getWord("flip");
+                const sceneName = wordList.getWord();
+                const scene = Scene.find(sceneName);
                 switch (request) {
                     case "flip":
-                        this.echo = !this.echo;
+                        if (scene) {
+                            scene.echo = !scene.echo;
+                        } else {
+                            this.echo = !this.echo;
+                        }
                         break;
                     case "on":
-                        this.echo = true;
+                        if (scene) {
+                            scene.echo = true;
+                        } else {
+                            this.echo = true;
+                        }
                         break;
                     case "off":
-                        this.echo = false;
+                        if (scene) {
+                            scene.echo = false;
+                        } else {
+                            this.echo = false;
+                        }
                         break;
                     default:
                         Globals.log.error("echo on|off|flip only");
@@ -1288,6 +1347,15 @@ export class Scene {
                                             const r = wordList.getInt(0);
                                             if (r > 0) {
                                                 graphic = new PIXI.Graphics().circle(0, 0, r);
+                                            }
+                                        }
+                                        break;
+                                    case "polygon":
+                                        {
+                                            const s = wordList.getInt(0);
+                                            const r = wordList.getInt(0);
+                                            if (s > 2 && r > 0) {
+                                                graphic = new PIXI.Graphics().regularPoly(0, 0, r, s);
                                             }
                                         }
                                         break;
@@ -2208,6 +2276,28 @@ export class Scene {
                         } else {
                             this.getVariableFromURL(varName, url, actionGroup.callback());
                         }
+                    }
+                } else {
+                    Globals.log.error("Missing get parameters at line " + action.number);
+                }
+                break;
+
+            case "rssget":
+            case "getrss":
+                if (wordList.wordsLeft() > 2) {
+                    const varName = wordList.getWord();
+                    if (!wordList.testWord("from")) {
+                        Globals.log.error("Missing get separator 'from' at line " + action.number);
+                    } else {
+                        wordList.testWord("url");
+                        const url = wordList.getWord();
+                        if (url.length < 1) {
+                            Globals.log.error("Missing URL at line " + action.number);
+                            break;
+                        }
+                        wordList.testWord("item");
+                        const item = wordList.getInt(1);
+                        this.getVariableFromRSS(varName, url, item, actionGroup.callback());
                     }
                 } else {
                     Globals.log.error("Missing get parameters at line " + action.number);

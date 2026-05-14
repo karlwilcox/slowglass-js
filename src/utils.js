@@ -6,7 +6,7 @@ import * as constants from './constants.js';
 import defaults from "./defaults";
 
 export function boolAsString(value) {
-    return value ? constants.TRUE_VALUE : defaults.FALSEVALUE;
+    return value ? constants.TRUE_VALUE : constants.FALSE_VALUE;
 }
 
 /**************************************************************************************************
@@ -435,28 +435,28 @@ export class Location {
     isWinter() {
         const date = new Date();
         const month = date.getMonth() + 1;
-        return Utils.boolAsString((this.lat >= 0 && (month >= 12 || month <= 2)) ||
+        return boolAsString((this.lat >= 0 && (month >= 12 || month <= 2)) ||
                             (this.lat < 0 && (month >= 6 && month <= 8)));
     }
 
     isSpring() {
         const date = new Date();
         const month = date.getMonth() + 1;
-        return Utils.boolAsString((this.lat >= 0 && (month >= 3 && month <= 5)) ||
+        return boolAsString((this.lat >= 0 && (month >= 3 && month <= 5)) ||
                             (this.lat < 0 && (month >= 9 && month <= 11)));
     }
 
     isSummer() {
         const date = new Date();
         const month = date.getMonth() + 1;
-        return Utils.boolAsString((this.lat >= 0 && (month >= 6 && month <= 8)) ||
+        return boolAsString((this.lat >= 0 && (month >= 6 && month <= 8)) ||
                             (this.lat < 0 && (month >= 12 || month <= 2)))
     }
 
     isAutumn() {
         const date = new Date();
         const month = date.getMonth() + 1;
-        return Utils.boolAsString((this.lat >= 0 && (month >= 9 && month <= 11)) ||
+        return boolAsString((this.lat >= 0 && (month >= 9 && month <= 11)) ||
                             (this.lat < 0 && (month >= 3 && month <= 5)));
     }
 

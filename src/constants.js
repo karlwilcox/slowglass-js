@@ -15,9 +15,12 @@ export const SPRITE_GROUP = "_GROUP_";
 
 // Scene states
 
+export const SCENE_UNLOADED = "_UNLOADED_";
+export const SCENE_LOADED = "_LOADED_";
 export const SCENE_STOPPED = "_STOPPED_";
 export const SCENE_RUNNING = "_RUNNING_";
 export const SCENE_PAUSED = "_PAUSED_";
+export const SCENE_FINISHED = "_FINISHED_";
 
 // scaling types
 export const SCALE_FIT = "_FIT_";

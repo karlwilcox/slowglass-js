@@ -75,6 +75,7 @@ changes over the hour, for example:
 - $ELAPSED - Number of seconds since the main scene was started
 - $MILLIS - number of milliseconds since the main scene was started \
 (also effectively, a unique id)
+- $FINISHED - Have all the previous actions in the current set of actions completed yet?
 
 ## Randomness
 

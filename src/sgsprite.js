@@ -277,15 +277,20 @@ export class SGSprite {
                 newY = this.locY.value();
             }
         }
-        if (in_or_at == "at") {
-            // to be done...
+        if (in_or_at == "at") { // duration is really rate here
+            const xDuration = Math.abs(this.locX.value() - newX) / duration; 
+            const yDuration = Math.abs(this.locY.value() - newY) / duration; 
+            const newDuration = Math.max(xDuration, yDuration);
+            this.locX.setTargetValue(newX, newDuration, now, callback);
+            this.locY.setTargetValue(newY, newDuration, now, callback);
+        } else {
+            this.locX.setTargetValue(newX, duration, now, callback);
+            this.locY.setTargetValue(newY, duration, now, callback);
+            // we set in motion up to two changes
         }
-        // we set in motion up to two changes
         if (callback) {
             callback(2)
         }
-        this.locX.setTargetValue(newX, duration, now, callback);
-        this.locY.setTargetValue(newY, duration, now, callback);
         this.enabled = true;
     }
 
