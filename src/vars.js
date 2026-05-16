@@ -104,11 +104,22 @@ export class VarList {
     }
 
     setValue(name, value) {
+        if (name.match(/:/)) { // this is a different scene
+            const colonParts = name.split(/:/);
+            varName = colonParts[1];
+            sceneName = colonParts[0];
+            const scene = Scene.find(sceneName);
+            if (!scene) {
+                Globals.log.error(`Scene not found: ${sceneName}`);
+            }
+            scene.varList.setValue(varName, value);
+            return;
+        } // else set this ourselves
         const reference = this.parseArrayReference(name);
         if (this.built_in(reference.name)) {
             Globals.log.error("Cannot create built-in variable " + name);
-        } else if (reference.name.match(/[\.:]/) || reference.property !== false) {
-            Globals.log.error("Cannot create variable with dot or colon in name " + name);
+        } else if (reference.name.match(/\./) || reference.property !== false) {
+            Globals.log.error("Cannot create variable with dot in name " + name);
         } else {
             const index = this.find(reference.name);
             if (index !== false) {

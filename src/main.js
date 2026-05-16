@@ -1,5 +1,5 @@
 /* Imports */
-import { Scene } from "./scene.js";
+import { Scene, SceneText } from "./scene.js";
 import Defaults from "./defaults.js";
 import { Globals } from "./globals.js";
 import { AudioManager } from "./audio.js";
@@ -32,7 +32,8 @@ class SlowGlass {
     readFromText(text, include = false, URLFolder = "") {
         const script = text.split(/\r?\n/);
         const count = script.length;
-        const top = new Scene(constants.MAIN_NAME, URLFolder);
+        const top = new SceneText(constants.MAIN_NAME, URLFolder);
+        let main = top;
         let holding = null;
         let inComment = false;
         let inDescription = false;
@@ -109,9 +110,12 @@ class SlowGlass {
                     Globals.log.error(`expected scene name on line ${lineCount}`);
                 } else {
                     if (holding != null) {
-                        Globals.scenes.push(holding);
+                        Globals.scenesTexts.push(holding);
                     }
-                    holding = new Scene(argument, URLFolder);
+                    holding = new SceneText(argument, URLFolder);
+                    if (argument == constants.MAIN_NAME) {
+                        main = holding;
+                    }
                     // Any other content on the line is assumed to be tags
                     let index = 3;
                     if (words.length > 3) {
@@ -133,7 +137,7 @@ class SlowGlass {
                     break;
                 } else if (argument == 'scene') {
                     if (holding != null) {
-                        Globals.scenes.push(holding);
+                        Globals.sceneTexts.push(holding);
                         holding = null;
                     } else {
                         Globals.log.error(`no current scene at line ${lineCount}`);
@@ -144,7 +148,7 @@ class SlowGlass {
                 break;
             } else if (command == "endscene") {
                 if (holding != null) {
-                    Globals.scenes.push(holding);
+                    Globals.sceneTexts.push(holding);
                     holding = null;
                 } else {
                     Globals.log.error(`no current scene at line ${lineCount}`);
@@ -154,23 +158,35 @@ class SlowGlass {
                     Globals.log.error('Directives in include will be ignored!');
                     continue;
                 }
-                if (argument == 'width') {
-                    let displayWidth = parseInt(argument2);
-                    if (displayWidth < 50 || displayWidth > 5000) {
-                        Globals.log.error("silly display width");
-                        displayWidth = defaults.DISPLAY_WIDTH;
-                    }
-                    Globals.displayWidth = displayWidth;
-                } else if (argument == 'height') {
-                    let displayHeight = parseInt(argument2);
-                    if (displayHeight < 50 || displayHeight > 5000) {
-                        Globals.log.error("silly display height");
-                        displayHeight = defaults.DISPLAY_HEIGHT;
-                    }
-                    Globals.displayHeight = displayHeight;
-                } // else look for fullscreen
-            // } else if (command == 'include') {
-            //     Globals.log.error('Include not supported yet');
+                switch (argument) {
+                    case 'width':
+                        let displayWidth = parseInt(argument2);
+                        if (displayWidth < 50 || displayWidth > 5000) {
+                            Globals.log.error("silly display width");
+                            displayWidth = defaults.DISPLAY_WIDTH;
+                        }
+                        Globals.displayWidth = displayWidth;
+                        break;
+                    case 'height':
+                        let displayHeight = parseInt(argument2);
+                        if (displayHeight < 50 || displayHeight > 5000) {
+                            Globals.log.error("silly display height");
+                            displayHeight = defaults.DISPLAY_HEIGHT;
+                        }
+                        Globals.displayHeight = displayHeight;
+                        break;
+                    case "colour":
+                    case "color":
+                    case "background":
+                        Globals.displayColour = argument2;
+                        break;
+                    case "fullscreen":
+                        Globals.log.report("Full screen not supported yet");
+                        break;
+                    default:
+                        Globals.log.error(`Unknown display option ${argument}`);
+                        break;
+                } 
             } else if (command == 'script') {
                 if (include) {
                     Globals.log.error('Directives in include will be ignored!');
@@ -240,7 +256,7 @@ class SlowGlass {
         }
         // add the final scene if unterminated
         if (holding != null) {
-            Globals.scenes.push(holding);
+            Globals.sceneTexts.push(holding);
         }
         if (include) {
             // scenes have already been added, we may have some top level commands
@@ -252,8 +268,8 @@ class SlowGlass {
             mainScene.merge(top);
             // top can now be discarded
         } else {
-            if (top.content.length < 1) {
-                Globals.log.error('No top level actions, nothing will happen!');
+            if (top.content.length < 1 && main == top) {
+                Globals.log.error('No main scene, nothing will happen!');
                 return false;
             } else {
                 // calculate overall scaling
@@ -268,11 +284,14 @@ class SlowGlass {
                     default:
                         break;
                 }
-                top.start();
                 // Add an empty action group to the top level for interactive actions
-                top.interactive_index = top.actionGroups.length;
-                top.actionGroups.push(new Utils.ActionGroup());
-                Globals.scenes.push(top);
+                if (top.content.length > 0) {
+                    Globals.sceneTexts.push(top);
+                }
+                const scene = new Scene(main, constants.MAIN_NAME);
+                scene.interactive_index = scene.actionGroups.length;
+                scene.actionGroups.push(new Utils.ActionGroup());
+                scene.start();
             }
         }
         return true;
@@ -296,7 +315,7 @@ class SlowGlass {
         // Initialise renderer (Pixi v8 requirement)
         await Globals.app.init({
             // resizeTo: window,
-            background: "#dfdfdf",
+            background: Globals.displayColour,
             width: Globals.displayWidth,
             height: Globals.displayHeight,
         });
@@ -336,8 +355,8 @@ class SlowGlass {
         // Action granularity is only 1 second, so only update every 0.5 seconds
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"
         // Could adjust this if needed in defaults
-        let current_millis = Date.now();
-        if (SlowGlass.nextAction_run < current_millis) {
+        let millis = Date.now();
+        if (SlowGlass.nextAction_run < millis) {
             if (Globals.app.screen.width != Globals.displayWidth) {
                 Globals.app.screen.width = Globals.displayWidth;
             }
@@ -346,78 +365,87 @@ class SlowGlass {
             }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (current.state != constants.SCENE_RUNNING) {
+                // we are only interested in running scenes or those that have just been loaded
+                if (current.state != constants.SCENE_RUNNING && current.state != constants.SCENE_LOADED) {
                     continue;
                 }
-                // First let's see if any local timers have expired
-                // for (let j = 0; j < current.timers.length; j++ ) {
-                //     if (current.timers[j].expired(current_millis)) {
-                //         current.timers.splice(j,1);
-                //     }
-                // }
-                let firstAction = 0;
                 // Found an active scene, now go through each action group
+                let firstAction = 0;
                 for ( let j = 0; j < current.actionGroups.length; j++ ) {
-                    let do_run = false;
+                    let doRun = false;
                     const actionGroup = current.actionGroups[j];
                     // Is this a suspended group that can be restarted?
                     if (actionGroup.suspended) {
                         // What was the reason for the suspension?
                         switch(actionGroup.waitType) {
                             case "pause":
-                                do_run = current_millis > actionGroup.waitClause;
+                                doRun = millis > actionGroup.waitClause;
                                 break;
                             case "then":
-                                do_run = actionGroup.isFinished();
+                                doRun = actionGroup.isFinished();
                                 break;
                             case "until":
                             case "while":
                                 const expanded = current.varList.expandVars(actionGroup.waitClause);
                                 const evaluated = Utils.evaluate(expanded)
-                                do_run = Utils.logical(expanded.split(/ +/));
+                                doRun = Utils.logical(expanded.split(/ +/));
                                 if (actionGroup.waitType == "while") {
-                                    do_run = !do_run;
+                                    doRun = !doRun;
                                 }
                                 break;
                         }
-                        if (do_run) {
+                        if (doRun) {
                             firstAction = actionGroup.resume();
                         } else {
                             continue; // still suspended, go on to next group
                         }
                     }  else { // not suspended, test the triggers
-                        // this implements the any/all condition. It is set by looking
-                        // at each trigger in turn. If the when condition is "any"
-                        // we immediately break out of the loop and run actions
-                        // If when is "all" we break out of the loop as soon as a
-                        // trigger fails. Hence the only way to get out of the loop
-                        // with do_run set to true is for all the triggers to succeed
-                        // check each trigger, if ANY is valid then execute actions
                         let triggers = current.actionGroups[j].triggers;
                         for ( let k = 0; k < triggers.length; k++) {
-                            if (triggers[k].fired(current_millis)) {
-                                current.varList.trigger = triggers[k].constructor.name;
-                                do_run = true;
-                                if (actionGroup.any_trigger) {
-                                    break;
+                            if (current.state == constants.SCENE_LOADED) { 
+                                // run init triggers only
+                                if (triggers[k].constructor.name == "Setup") {
+                                    triggers[k].fired();
+                                    doRun = true;
+                                } else {
+                                    continue;
                                 }
                             } else {
-                                do_run = false;
-                                if (!actionGroup.any_trigger) {
-                                    break;
+                                // this implements the any/all condition. It is set by looking
+                                // at each trigger in turn. If the when condition is "any"
+                                // we immediately break out of the loop and run actions
+                                // If when is "all" we break out of the loop as soon as a
+                                // trigger fails. Hence the only way to get out of the loop
+                                // with doRun set to true is for all the triggers to succeed
+                                // check each trigger, if ANY is valid then execute actions
+                                if (triggers[k].fired(millis)) {
+                                    current.varList.trigger = triggers[k].constructor.name;
+                                    doRun = true;
+                                    if (actionGroup.any_trigger) {
+                                        break;
+                                    }
+                                } else {
+                                    doRun = false;
+                                    if (!actionGroup.any_trigger) {
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
-                    if (do_run) {
-                        current.runGroup(j, current_millis, firstAction);
+                    if (doRun) {
+                        current.runGroup(j, millis, firstAction);
                     }
                 }
+                if (current.state == constants.SCENE_LOADED) { 
+                    // now set the state to ready
+                    current.state = constants.SCENE_READY;
+                }
             }
-            SlowGlass.nextAction_run = current_millis + Defaults.TRIGGER_RATE;
+            SlowGlass.nextAction_run = millis + Defaults.TRIGGER_RATE;
         }
         // But sprites can be updated up to every frame if we want...
-        if (SlowGlass.next_spriteUpdate < current_millis) {
+        if (SlowGlass.next_spriteUpdate < millis) {
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
                 if (current.state != constants.SCENE_RUNNING) {
@@ -425,10 +453,10 @@ class SlowGlass {
                 }
                 // Found an active scene, now go through each sprite
                 for ( let j = 0; j < current.sprites.length; j++ ) {
-                    current.sprites[j].update(current.name, current_millis);
+                    current.sprites[j].update(current.name, millis);
                 }
             }
-            SlowGlass.next_spriteUpdate = current_millis + Defaults.SPRITE_RATE;
+            SlowGlass.next_spriteUpdate = millis + Defaults.SPRITE_RATE;
         }
     }
 

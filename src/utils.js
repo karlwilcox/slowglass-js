@@ -1,7 +1,7 @@
 
 
 import { Globals } from "./globals.js";
-import { VarList } from "./vars.js";
+import { VarList, TagList } from "./vars.js";
 import * as constants from './constants.js';
 import defaults from "./defaults";
 

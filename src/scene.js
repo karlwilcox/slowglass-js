@@ -8,25 +8,68 @@ import defaults from "./defaults.js";
 import { WordList } from "./wordlist.js";
 import * as constants from './constants.js';
 
-export class Scene {
-    constructor(sceneName, URLFolder) {
-        this.name = sceneName;
-        this.state = constants.SCENE_STOPPED;
+/**************************************************************************************************
+
+    ######   ######  ######## ##    ## ######## ######## ######## ##     ## ######## 
+   ##    ## ##    ## ##       ###   ## ##          ##    ##        ##   ##     ##    
+   ##       ##       ##       ####  ## ##          ##    ##         ## ##      ##    
+    ######  ##       ######   ## ## ## ######      ##    ######      ###       ##    
+         ## ##       ##       ##  #### ##          ##    ##         ## ##      ##    
+   ##    ## ##    ## ##       ##   ### ##          ##    ##        ##   ##     ##    
+    ######   ######  ######## ##    ## ########    ##    ######## ##     ##    ##    
+
+**************************************************************************************************/
+
+export class SceneText {
+    constructor(name, folder) {
+        this.name = name;
         this.content = [];
+        this.folder = folder;
+        this.tags = new TagList();
+    }
+
+    addContent(lines) {
+        this.text += text;
+    }
+
+    getContent() {
+        return this.text;
+    }
+
+    static find(scene_name, report = true) {
+        for (let i = 0; i < Globals.sceneTexts.length; i++) {
+            if (scene_name == Globals.sceneTexts[i].name) {
+                return Globals.sceneTexts[i];
+            }
+        } // else
+        if (report) {
+            Globals.log.error("Cannot find scene " + scene_name);
+        }
+        return false;
+    }
+
+}
+
+export class Scene {
+    constructor(sceneText, name) {
+        this.sceneText = sceneText;
+        this.name = name;
+        this.state = constants.SCENE_LOADED;
         this.interactive_index = 0;
-        this.URLFolder = URLFolder; // where were we loaded from?
         this.reset();
+        this.load(sceneText);
+        Globals.scenes.push(this);
     }
 
     reset() {
         this.actionGroups = [];
+        this.tags = [...this.sceneText.tags.tags];
         this.currentGroup = false;
         this.images = [];
         this.sprites = [];
-        this.folder = ''; // where should we load from?
+        this.URLfolder = this.sceneText.folder; // where should we load from?
         this.spriteScene = this.name;
         this.varList = new VarList(this.name);
-        this.tags = new TagList();
         this.defaultTags = [];
         this.timers = [];
         this.completionCallback = null;
@@ -287,19 +330,23 @@ export class Scene {
 
 **************************************************************************************************/
 
-    start(parameters) {
-        if (this.state != constants.SCENE_STOPPED) {
-            return;
-        } // not necessarily an error
-        this.actionGroups = [];
+    start(parameters = "") {
+        // if (this.state != constants.SCENE_STOPPED) {
+        //     return;
+        // } // not necessarily an error
         this.parameters = parameters;
+        this.state = constants.SCENE_RUNNING;
+    }
+
+    load(sceneText) {
+        this.actionGroups = [];
         let actionGroup = new Utils.ActionGroup();
         let state = "T";
         let timestamp = Date.now(); // Use same timestamp for all
-        for (let i = 0; i < this.content.length; i++) {
+        for (let i = 0; i < sceneText.content.length; i++) {
             let trigger = null;
-            const lineNo = this.content[i].number;
-            const wordList = new WordList(this.content[i].text);
+            const lineNo = sceneText.content[i].number;
+            const wordList = new WordList(sceneText.content[i].text);
             const keyword = wordList.getWord();
             // First look for triggers
             switch(keyword.toLowerCase()) {
@@ -389,12 +436,12 @@ export class Scene {
             state = "A";
             // not a trigger, must be an action
             if (actionGroup.triggers.length < 1) {
-                Globals.log.error("No trigger for action in scene " + this.name + " at line " + lineNo);
+                Globals.log.error("No trigger for action in scene " + sceneText.name + " at line " + lineNo);
             }
-            actionGroup.addAction(this.content[i]);
+            actionGroup.addAction(sceneText.content[i]);
         }
         this.actionGroups.push(actionGroup);
-        this.state = constants.SCENE_RUNNING;
+        this.state = constants.SCENE_LOADED;
     }
 
 /**************************************************************************************************
@@ -2046,17 +2093,102 @@ export class Scene {
             case "start":
                 if (wordList.wordsLeft() > 0) {
                     wordList.testWord("scene");
-                    const scene_name = wordList.getWord();
-                    const scene = Scene.find(scene_name);
-                    if (scene !== false) {
-                        this.completionCallback = actionGroup.callback();
-                        scene.start(wordList.joinWords());
+                    const sceneName = wordList.getWord();
+                    const sceneText = SceneText.find(sceneName);
+                    if (!sceneText) {
+                        Globals.log.error(`Scene named ${sceneName} not found`);
+                        break;
                     }
+                    let activeName = sceneText.name;
+                    if (wordList.testWord("named")) {
+                        wordList.testWord("as");
+                        activeName = WordList.getWord(activeName);
+                    }
+                    if (wordList.testWord("with")) {
+                        wordList.testWord(["params","parameters"]);
+                    }
+                    const params = wordList.joinWords();
+                    if (Scene.find(activeName)) {
+                        Globals.log.error(`name ${activeName} is already in use as active scene name`);
+                        break;
+                    }
+                    this.completionCallback = actionGroup.callback(1);
+                    const newScene = new Scene(sceneText, activeName);
+                    newScene.start(params);
                 } else {
                     Globals.log.error("Missing scene name at line " + action.number);
                 }
                 break;
 
+
+/**************************************************************************************************
+
+   ########  ########  ######## ########     ###    ########  ######## 
+   ##     ## ##     ## ##       ##     ##   ## ##   ##     ## ##       
+   ##     ## ##     ## ##       ##     ##  ##   ##  ##     ## ##       
+   ########  ########  ######   ########  ##     ## ########  ######   
+   ##        ##   ##   ##       ##        ######### ##   ##   ##       
+   ##        ##    ##  ##       ##        ##     ## ##    ##  ##       
+   ##        ##     ## ######## ##        ##     ## ##     ## ######## 
+
+**************************************************************************************************/
+
+            case "prepare":
+                if (wordList.wordsLeft() > 0) {
+                    wordList.testWord("scene");
+                    const sceneName = wordList.getWord();
+                    const sceneText = SceneText.find(sceneName);
+                    if (!sceneText) {
+                        Globals.log.error(`Scene named ${sceneName} not found`);
+                        break;
+                    }
+                    let activeName = sceneText.name;
+                    if (wordList.testWord("named")) {
+                        wordList.testWord("as");
+                        activeName = WordList.getWord(activeName);
+                    }
+                    if (Scene.find(activeName)) {
+                        Globals.log.error(`name ${activeName} is already in use as active scene name`);
+                        break;
+                    }
+                    this.completionCallback = actionGroup.callback(1);
+                    const newScene = new Scene(sceneText, activeName);
+                } else {
+                    Globals.log.error("Missing scene name at line " + action.number);
+                }
+                break;
+
+/**************************************************************************************************
+
+   ########  ##     ## ##    ## 
+   ##     ## ##     ## ###   ## 
+   ##     ## ##     ## ####  ## 
+   ########  ##     ## ## ## ## 
+   ##   ##   ##     ## ##  #### 
+   ##    ##  ##     ## ##   ### 
+   ##     ##  #######  ##    ## 
+
+**************************************************************************************************/
+
+            case "run":
+                if (wordList.wordsLeft() > 0) {
+                    wordList.testWord("scene");
+                    const sceneName = wordList.getWord();
+                    const scene= Scene.find(sceneName);
+                    if (!scene) {
+                        Globals.log.error(`No active scene called ${sceneName} found`);
+                        break;
+                    }
+                    if (wordList.testWord("with")) {
+                        wordList.testWord(["params","parameters"]);
+                    }
+                    const params = wordList.joinWords();
+                    this.completionCallback = actionGroup.callback(1);
+                    scene.start(params);
+                } else {
+                    Globals.log.error("Missing active scene name at line " + action.number);
+                }
+                break;
 
 /**************************************************************************************************
 

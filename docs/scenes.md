@@ -50,9 +50,6 @@ Or alternatively a scene can stop itself with actions such as:
 If there are other actions needed at the end of the scene make sure that they
 are placed *before* the stop command, otherwise they will never be executed.
 
-Any sprites created by the scene will automatically be removed when the scene
-is stopped, however any sounds currently playing will continue to do so until
-the normal end of the sound file.
 
 ## Resetting Scenes
 
@@ -96,6 +93,10 @@ You can delete a scene if you no longer need it. You can only delete a scene
 if it is not running or paused, and you cannot delete the main scene.
 
 `delete scene {scene-name}`
+
+Any sprites created by the scene will automatically be removed when the scene
+is stopped, however any sounds currently playing will continue to do so until
+the normal end of the sound file.
 
 ## Loading Images and Sounds
 

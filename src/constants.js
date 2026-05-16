@@ -5,7 +5,7 @@ export const FALSE_VALUE = "NO";
 export const NOT_FOUND = "NONE";
 
 // Top level scene
-export const MAIN_NAME = "_MAIN_";
+export const MAIN_NAME = "main";
 
 // Sprite types
 export const SPRITE_IMAGE = "_IMAGE_";
@@ -17,6 +17,7 @@ export const SPRITE_GROUP = "_GROUP_";
 
 export const SCENE_UNLOADED = "_UNLOADED_";
 export const SCENE_LOADED = "_LOADED_";
+export const SCENE_READY = "_READY_";
 export const SCENE_STOPPED = "_STOPPED_";
 export const SCENE_RUNNING = "_RUNNING_";
 export const SCENE_PAUSED = "_PAUSED_";

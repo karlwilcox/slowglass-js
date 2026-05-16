@@ -60,12 +60,13 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 ## Scene Management
 
-* **start** {scene-name} {parameters...} - start scene operating, pass information
-* **stop** \[{scene}\] - stop current scene or named scene (removes all images)
+* **prepare** \[scene\] {scene-name} \[named as {active-name}\] - load scene into memory, do setup actions
+* **run** \[scene\] {active-name} \[with parameters {parameters...}\] - start scene executing
+* **start** \[scene\] {scene-name} \[named as {active-name}\] \[with paramters\] \[{parameters...}\] - prepare and run scene, pass information
+* **stop** \[{active-name}\] - stop current scene or named scene (removes all images)
 * **scene width** {integer} - assumed width of this scene (TBD)
 * **scene height** {integer} - assumed width of this scene (TBD)
-* **reset scene** \[{scene-name}\] - put scene back into the original state
-* **clone** {scene-name} as {new-name} - creates separate duplicate of scene
+* **reset scene** \[{active-name}\] - put scene back into the original state
 
 ## Sprite Management
 

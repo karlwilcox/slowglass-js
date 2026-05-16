@@ -2,6 +2,7 @@
 export default {
     DISPLAY_HEIGHT: 600,
     DISPLAY_WIDTH: 800,
+    DISPLAY_COLOUR: "#dfdfdf",
     DEBUG: true,
     LOCALE: "en-GB",
     TRIGGER_RATE: 500,  // milliseconds between trigger tests

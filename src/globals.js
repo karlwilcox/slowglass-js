@@ -6,6 +6,7 @@ import defaults from "./defaults.js";
 export class Globals {
     static startTime = Date.now();
     static root = null;
+    static sceneTexts = [];
     static scenes = [];
     static app = null;
     static log = new Utils.Log(defaults.DEBUG);
@@ -16,6 +17,7 @@ export class Globals {
     static currentTrigger = "";
     static displayWidth = defaults.DISPLAY_WIDTH;
     static displayHeight = defaults.DISPLAY_HEIGHT;
+    static displayColour = defaults.DISPLAY_COLOUR;
     static scriptWidth = defaults.DISPLAY_WIDTH;
     static scriptHeight = defaults.DISPLAY_HEIGHT;
     static scriptScaleType = constants.SCALE_NONE;

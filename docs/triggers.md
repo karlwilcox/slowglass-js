@@ -12,17 +12,24 @@ change to something smaller in the future.
 
 The following types of trigger are available.
 
+## Setup / init
+
+This trigger is active once only, actions following this trigger will be
+executed when the scene is first loaded in memory. It can be used to load image
+and other resources and any other preparatory work. Note that for this to be
+most useful you need to use the **prepare** and **run** commands, possibly
+setting scene variables between the two.
+
+Within an active scene this trigger will never be activated again once it has
+been run.
+
 ## Begin
 
-This takes no arguments. The actions following this trigger will be carried out
-as soon as the trigger is encountered. So for triggers at the top level this
-means as soon as the program starts to run; for triggers within scenes it means
-as soon as the scene is enabled through the use of the "start" command.
-(Strictly speaking, as per the note on resolution above, they will start
-sometime within the next second, as it ticks over on the clock).
+This trigger will be active once, when the scene starts from the **run** or
+**start** or **restart** commands and will not be activated again.
 
-Typically start triggers are used to load resources and place them in the
-scene, and possibly also making them visible depending on need.
+Typically start triggers are used to place resources on the
+canvas, and possibly also making them visible depending on need.
 
 ## After
 
