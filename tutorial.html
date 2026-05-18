@@ -1,0 +1,117 @@
+---
+title               : "Slow Glass Tutorial"
+---
+
+    <div id="lesson-text>" style="min-height: 200px;">  </div>  
+                
+
+    <div class="container-fluid" id="buttons">
+        <div class="row">
+            <div class="col-2">
+                <button class="btn btn-primary" type="button" id="prev_lesson">Previous Lesson</button>
+            </div>
+            <div class="col-2 offset-1">
+                <button class="btn btn-primary" type="button" id="prev_section">Previous Section</button>
+            </div>
+            <div class="col-2">
+                <button class="btn btn-primary" type="button" id="prev_section">Next Section</button>
+            </div>
+            <div class="col-2 offset-1">
+                <button class="btn btn-primary" type="button" id="prev_lesson">Next Lesson</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sg_div" style="min-height: 600px;"></div>
+
+    <div class="container-fluid" id="script">
+        <div class="row">
+            <div class="col-lg-6 col-md-12 form-group">
+                <p>Script Input Area</p>
+                <p>
+                    <button class="btn btn-primary" type="button" id="run_button">Run Script</button>
+                    &nbsp;
+                    <button class="btn btn-secondary" type="button" id="stop_button">Stop</button>
+                </p>
+                <textarea id="sg_script" name="sg_script" class="form-control p-3" autocomplete="off" rows="10"></textarea>
+            </div>
+            <div class="col-lg-6 col-md-12 form-group">
+                <p>Message Area</p>
+                <p>
+                    <button class="btn btn-secondary" type="button" id="clear_button">Clear Messages</button>
+                    &nbsp;
+                    <button class="btn btn-primary" type="button" id="sound_button">Enable Audio</button>
+                </p>
+                <textarea id="sg_messages" name="sg_messages" class="form-control p-3" rows="10" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="audio"></div>
+
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
+    <script type="module" src="/js/math-expression-evaluator.min.js";></script>
+    <script type="module" src="/js/lexp.js";></script>
+    <script type="module" src="/js/slowglass.js";></script>
+    <script>
+        document.getElementById("run_button").addEventListener("click",loadFromTextArea);
+        document.getElementById("url_button").addEventListener("click",loadFromURL);
+        document.getElementById("interactive_clear").addEventListener("click",clearAction);
+        document.getElementById("interactive_button").addEventListener("click",runAction);
+        document.getElementById("script_clear").addEventListener("click",clearScript);
+        document.getElementById("stop_button").addEventListener("click",clean_up);
+        document.getElementById("clear_button").addEventListener("click",clearMsgs);
+        document.getElementById("sound_button").addEventListener("click",unlockAudio);
+        input_line = document.getElementById("action_input");
+        input_line.addEventListener("keypress",function(event) {
+        // If the user presses the "Enter" key on the keyboard
+        if (event.key === "Enter") {
+            // Cancel the default action, if needed
+            event.preventDefault();
+            // Trigger the button element with a click
+            document.getElementById("interactive_button").click();
+        }
+        }); 
+
+        // Source - https://stackoverflow.com/a/58189464
+        // Posted by Paulo Eduardo, modified by community. See post 'Timeline' for change history
+        // Retrieved 2026-04-05, License - CC BY-SA 4.0
+        function unlockAudio() {
+            const sound = new Audio('dist/accessgranted.wav');
+
+            sound.play();
+            sound.pause();
+            sound.currentTime = 0;
+        }
+
+        function loadFromURL() {
+            clearMsgs();
+            const url = document.getElementById("url_input").value;
+            slowGlass.scriptFromURL(url);
+            fetch(url)
+            .then(response => response.text())
+            .then(text => {
+                document.getElementById('sg_script').value = text;
+            })
+            .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function clearScript() {
+            document.getElementById("url_input").value = "";
+        }
+
+        function loadFromTextArea() {
+            slowGlass.scriptFromText(document.getElementById("sg_script").value);
+        }
+
+        function clean_up() {
+            slowGlass.cleanUp();
+        }
+
+        function clearMsgs() {
+            document.getElementById("sg_messages").value = "";
+        }
+
+        window.onload = function() { slowGlass.setDrawingParent("sg_div"); slowGlass.setMessageParent("sg_messages"); };
+    </script>
+

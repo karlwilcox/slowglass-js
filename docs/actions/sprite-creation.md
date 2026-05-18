@@ -2,36 +2,70 @@
 title               : "Slow Glass Sprite Creation Actions"
 ---
 
-Sprites are created from images, a sequence of images or from text using the following commands:
+SlowGlass currently supports three types of sprite - image sprites, text
+sprites and graphic sprites. (more may be added in the future). The process to
+create them is slightly different so I will explain each separately.
 
-## Source Images
+## Image Sprites
+
+### Simple Image Sprites
+
+If you just have an image that you want to use as sprite you can create it
+with a single, simple command:
+
+`sprite create {sprite-name} load from {url}`
+
+The sprite is then ready to be placed, scaled or whatever. The loaded image
+is not cached and cannot be re-used elsewhere (but can be reloaded if required).
+
+This is the simplest, but lease flexible way to create an image based sprite.
+
+### Re-usable Image Sprites
 
 Sprites are created from images and images can be re-used, or parts of them
-used to create sprites so images are loaded as a separate snamee.
+used to create other sprites. To use images in this way we need to use a stage
+process - loading the image and then creating a sprite from it. The image
+loading is done by the command
 
-`load {url} [named {image-name}]`
+`load  image \[from\] {url} [named {image-name}]`
 
 The image file located at the given URL will be loaded into memory ready for
 use in a sprite. If no name is given the basename of the file (i.e. without
-the extension) will be used as the name.
+the extension or any folder names) will be used as the name.
 
-**Important Note** for the purpose of command timing, the load command will complete immediately
-however this is just a request to load the resource, which will be done
-asynchronously. Hence there may be a delay before the image is actually
-available. This is not a problem and you can still use the image to create
-sprites and modify all of their properties they will just not appear until
-the image has been loaded.
+**Important Note** The load command is just a request to load the resource,
+which will be done asynchronously. Hence there may be a delay before the image
+is actually available. This is not a problem and you can still use the image to
+create sprites and modify all of their properties they will just not appear
+until the image has been loaded.
+
+If it is important to you that the image is available then you can use the
+**then** command immediately after the **load** command which will cause
+execution to wait until the image is actually loaded and ready for use.
 
 Similarly, if the URL does not exist or there is a server problem then sprites
 can still be created but will never appear. Check console messages for loading
 errors.
 
-`(from | using | with) {URL-prefix}`
+### Multi-frame Images
 
-If you are loading several images from the same location you can use
-this command to provide a prefix for the **load** command. It will
-have a '/' placed between the prefix and the image URL that you
-provide to the **load** command.
+Sometimes animated sequences are provided as a single image containing
+a rectangular grid of image "frames". To use these in Slow Glass just
+provide the frame grid counts when you are loading the file:
+
+`load  image \[from\] {url} [named {image-name}] (cells | frames) {cols} by {rows}`
+
+When used as a sprite the first cell of the image only will be used. You can
+use the **advance** and **reverse** commands to cycle through the other cells.
+
+### Image File Loading Locations
+
+Images are loaded from URLS - If you are loading several images from the same
+location you can use this command to provide a prefix for the **load** command.
+It will have a '/' placed between the prefix and the image URL that you provide
+to the **load** command.
+
+`(from | using | with) {URL-prefix}`
 
 **Note** this prefix is local to the scene in which it appears so
 you can use it freely in one scene without affecting the **load**
@@ -39,7 +73,7 @@ commands of other scenes.
 
 This command completes immediately.
 
-## Sprite Creation
+### Image Sprite Creation
 
 `sprite create [named] [{sprite-name}] from {image-name} [area {x} {y} {w} {h}]`
 
@@ -55,23 +89,47 @@ specify the x and y coordinates of the top left corner and the width
 and height of the required rectangle. There is little validation of
 these inputs other than the width and height being greater than 0.
 
-## Text Creation and Modification
+## Text Sprites
+
+Slow Glass supports a basic text creation system. The process is to first
+set the desired text styles then to create the text sprite.
+
+### Text Style Options
+
+Select the text font. At present there is
+no check that the font-family exists so make sure that you get it right!
+
+`text font {font-family}`
+
+Select the text colour, which should be
+a named web colour or a hex colour code preceeded by a hash symbol (#).
+
+`text colour {colour}`
+
+Select the text font size. At present
+there is no checking that this is a sensible value so please take
+care to get this correct.
+
+`text size {font-size}`
+
+Select the desired text alignment. This only makes a big difference
+to multi-line text.
+
+`text align (left | right | center | centre)`
+
+All text commands complete immediately.
+
+### Text Sprite Creation
 
 `text create {sprite-name} {content...}`
 
 `create text {sprite-name} {content...}`
 
-This creates a sprite containing the specified content in a basic font, size and colour.
+This creates a sprite containing the specified content in the previously
+selected font, size and colour. When placing text be aware that you are
+placing the _*centre*_ of the text
 
-**IMPORTANT** Unlike images, text sprites are created and automatically _hidden_. They will
-not become visible until you use the **show** command. This is to allow you to add styling
-or additional content before making it visible.
-
-`text update {sprite-name} {content...}`
-
-This changes the text (only) of the text item, leaving the font, position and
-so on unchanged, however it will have a new height and width depending on the
-length of the content.
+### Text Modification
 
 `text add {sprite-name} {content...}`
 
@@ -83,30 +141,6 @@ of the text sprite will be updated to take account of the new content.
 The existing text will be replaced with new content and the height and width
 of the text sprite will be updated to match.
 
-`text font {sprite-name} {font-family}`
-
-The existing text will be re-drawn with the new font. At present there is
-no check that the font-family exists so make sure that you get it right!
-
-`text colour {sprite-name} {colour}`
-
-The existing text will be re-drawn with the new colour, which should be
-a name web colour or a hex colour code preceeded by a hash symbol (#).
-
-`text size {sprite-name} {font-size}`
-
-The existing text will be re-drawn at the given font-size. At present
-there is no checking that this is a sensible value so please take
-ccare to get this correct.
-
-`text align {sprite-name} (left | right | center)`
-
-The existing text is re-aligned to the specified alignment.The width and
-height of the sprite should remain unchanged as the alignment should take
-place all within the same bounds.
-
-All text commands complete immediately.
-
 ### Future Intentions
 
 I might think about some more sophisticated text formatting commands
@@ -114,7 +148,21 @@ but need to strike a balance between the simplicity and readability
 which are the goals of Slow Glass and the extra functionality that
 could be provided.
 
-## Graphic Shape Creation
+## Graphic Shape Sprites
+
+Slow Glass supports some basic geometric shapes that can be drawn with
+solid colours. The process of creating them is to first set the style
+options then create the desired shape.
+
+The style of a graphic shapes _*cannot*_ be altered after it is created,
+you will need to delete it and create another in the new style.
+
+### Graphic Style Options
+
+These commands set the stroke and fill colour options for subsequent shapes.
+Colour can be a named web color or a hex string but there is no validation of
+the name. Fill and stroke are local to the scene and remain in effect until
+over-written with a new value.
 
 `(shape | graphic) (fill | colour | color) {colour}`
 
@@ -122,10 +170,7 @@ could be provided.
 
 `(shape | graphic) stroke width {number}`
 
-These commands set the stroke and fill colour options for subsequent shapes.
-Colour can be a named web color or a hex string but there is no validation of
-the name. Fill and stroke are local to the scene and remain in effect until
-over-written with a new value.
+### Graphic Creation Commands
 
 `(shape | graphic) create {sprite-name} [as] (rect | rectangle) {width} {height} [{corner-radius}]`
 

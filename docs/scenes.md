@@ -4,7 +4,8 @@ title               : "Slow Glass Animation System"
 
 
 It is possible to group script actions into named “scenes”. Actions within the
-scene will only be carried out when the scene is started by another action.
+scene will only be carried out when the scene is started by another action
+(except for the main scene, which will be started automatically).
 
 ## Creating Scenes
 
@@ -19,24 +20,84 @@ To end a scene, just start a new one, or put on a line on its own:
 
 `end scene`
 
-(Any actions that are not within a named scene will be part of the “top level”
-set of actions and run automatically).
+Any triggers and actions that are not within a named scene will be part of the “main”
+scene.
+
+### Approaches to Scenes
+
+A simple script can ignore scenes and just contain the options, triggers and
+actions that you need. A scene called "main" will be created automatically and
+enabled for running.
+
+If you want to re-use parts of a script, or just organise a larger script into
+parts then you are free to use as many scenes as you like. You can still
+leave "top level" actions outside any scene and they will automatically be
+placed into the "main" scene.
+
+Finally you can group everything into scenes, using as many as you like just
+be sure to have one scene called "main". It can be anywhere in the script and
+will be enabled and run automatically.
 
 ## Running Scenes
 
-Any actions that are NOT in a scene will be run automatically at program start
-up, we refer to these as "top level" actions.
+### Simple Startup
 
-Actions within a scene are not started until a specific command is given, for
-example, if we have a scene 'church-bells' which moves a bell image and plays a
-sound we can use the following code at the top level:
+When the script is first read in by the program the scenes (apart from the
+main one) are just stored away, ready to be "acted out". You can start
+this process following either of two methods. Firstly, and most simply
+you can just use the start command:
 
-`every 15 minutes`
-`    start church-bells`
+`start \[scene\] {scene-name} \[named {active-name}\]`
 
-It is not an error to start a scene which is already running, however
-the action will have no effect (you cannot "restart" a scene without
-stopping it first).
+It is important here to understand the difference a "scene" (a reusable
+part of the script) and an "active scene" (a scene currently running).
+
+You can start a script as many times as you like as long as every scene
+that is currently active has a different "active-name". For example
+you can append the $UNIQUE built-in variable to ensure this:
+
+`start scene my_scene named my_scene-$UNIQUE`
+
+If you are only going to use a scene once you leave out providing the active
+name and the scene name will be used as the active name.
+
+You can also provide information to an active scene by providing paramters
+to the start command. Parameters can be as much text as you want, it is made
+available to the active scene through the $PARAMETERS built-in variable.
+Typically you can use this with the **assign** command to set variables
+for use in the scene.
+
+`start \[scene\] {scene-name} named {active-name\] \[with parameters\] {parameters...}` 
+
+As soon as the scene is started the **init** triggered will be activated
+(if present), immmediately followed by any **begin** triggers (again,
+if present).
+
+### Flexible Startup
+
+If you need more flexibility that a simple start up and parameter passing
+you can use a two stage process to run a scene:
+
+`load scene {scene-name} \[named {active-name}\]`
+
+This will load the scene into memory but the _*ONLY*_ trigger that will
+be activated is **init** (alternatively named **setup**). This for
+example can be used to load image and other resources.
+
+At this point you can set the value of any scene variables that you
+want, using a command like:
+
+`make {active-name}:{variable-name} be {value}`
+
+And then when you are ready you can start the active scene running
+with:
+
+`run [scene] {active-name}`
+
+This will start the scene and also activate any **begin** triggers.
+You can also use parameters as with the **start** command above.
+
+## Stopping Scenes
 
 Scenes can be stopped with the corresponding command:
 
@@ -48,8 +109,12 @@ Or alternatively a scene can stop itself with actions such as:
 `    stop scene`
 
 If there are other actions needed at the end of the scene make sure that they
-are placed *before* the stop command, otherwise they will never be executed.
+are placed _*before*_ the stop command, otherwise they will never be executed.
 
+There is a trigger **atend** which will be activated when the scene is stopped.
+This can be used to do any clean up or other actions, such as fading out
+sprites but note that if you just want to remove everything created by the scene
+you can just use the **delete** command below.
 
 ## Resetting Scenes
 
@@ -85,7 +150,7 @@ scenes). The new scene will not be running and must be specifically started with
 It is **NOT** possible to duplicate the main scene.
 
 Within a scene you can access the name of the scene with the variable
-*$SCENENAME*.
+_*$SCENENAME*_.
 
 ## Deleting Scenes
 
@@ -95,7 +160,7 @@ if it is not running or paused, and you cannot delete the main scene.
 `delete scene {scene-name}`
 
 Any sprites created by the scene will automatically be removed when the scene
-is stopped, however any sounds currently playing will continue to do so until
+is deleted, however any sounds currently playing will continue to do so until
 the normal end of the sound file.
 
 ## Loading Images and Sounds
@@ -116,7 +181,7 @@ stop command. Next time the scene is run the resource will be reloaded.
 ## Resource Names
 
 It is safe to re-use resource names in different scenes as they will silently
-have the scene's own and a colon prefixed to them, hence the "cloud" within the
+have the scene's own name and a colon prefixed to them, hence the "cloud" within the
 scene "rainy-sky" can be safely used alongside the same in the "sunny-sky"
 scene, each reference to the will be restricted to that in the named scene.
 
@@ -125,7 +190,7 @@ scenes, just use their usual names. The program will look first for local names
 (within the scene), then top level tags. Hence local tags will "hide" top-level
 tags - if you really want to access a top-level tag that is hidden by a local
 one (not a recommended practice!) this can be done by putting a colon (:) in
-front of the tag name.
+front of the tag name. NOTE TO SELF - is this correct???
 
 The pre-fixing of scene names means that it is also possible to refer to
 resource tags from other scenes, for example we can say:
@@ -141,7 +206,7 @@ There are some options that can be set specifically for each scene.
 
 `gravity {integer}`
 
-`ground [level] {integer}`
+`ground \[level\] {integer}`
 
 These settings determine the behaviour of objects that are subject to the
 actions "throw", "launch" or "drop". 'gravity' sets the acceleration due to
@@ -155,7 +220,7 @@ coordinate exceeds twice the actual display size. Hence if a sprite goes
 slightly out of frame at the top it may well come back into view, but a fast
 moving sprite may go out of bounds and stop being updated.
 
-Additionaly, sprites under the influence of gravity will also stop moving if
+Additionally, sprites under the influence of gravity will also stop moving if
 they reach "ground level". Remember that the 'y' coordinate grows downwards so
 ground level cannot be assumed to be 0. You can set the actual level at which a
 sprite will stop "falling" with the ground level directive.

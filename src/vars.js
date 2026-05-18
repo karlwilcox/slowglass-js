@@ -307,6 +307,8 @@ export class VarList {
             case "MILLIS":
             case "MS":
                 return (Date.now() - Globals.startTime);
+            case "UNIQUE":
+                return Globals.unique();
             default:
                 return false;
         }

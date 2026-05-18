@@ -68,13 +68,12 @@ is not helpful. Instead, you can use a duration to interpolate
 changes over the hour, for example:
 
 `every 1 hour`
-`   DARKEN background to ($SUNANGLE * some_factor) in 60 minutes` 
+`   DARKEN background to ($SUNANGLE * some_factor) in 60 minutes`
 
 ## Timing Information
 
 - $ELAPSED - Number of seconds since the main scene was started
-- $MILLIS - number of milliseconds since the main scene was started \
-(also effectively, a unique id)
+- $MILLIS - number of milliseconds since the main scene was started
 - $FINISHED - Have all the previous actions in the current set of actions completed yet?
 
 ## Randomness
@@ -83,6 +82,7 @@ changes over the hour, for example:
 - $PERCENT - a random value between 0 and 100, different every time
 - $RANDOMX - a random location across the canvas, different every time
 - $RANDOMY - a random location down the canvas, different every time
+- $UNIQUE - a number guaranteed to be higher each time, but not necessarily sequential
 
 ## Drawing Canvas Information
 

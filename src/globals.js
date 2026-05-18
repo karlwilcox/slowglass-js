@@ -28,6 +28,7 @@ export class Globals {
     static highestZ = 0;
     static location = new Utils.Location();
     static corsProxy = defaults.CORS_PROXY;
+    static uniqueCount = 1;
 
     constructor() {
 
@@ -49,6 +50,11 @@ export class Globals {
             text += `${propt} = ${this[propt]}\n`;
         }
         return text;
+    }
+
+    static unique(prefix = "") {
+        Globals.uniqueCount += 1;
+        return `${prefix}${Globals.uniqueCount}`;
     }
 
     static listScenes(verbose = true) {

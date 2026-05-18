@@ -4,26 +4,53 @@ title               : "Slow Glass Sprite Placement Actions"
 
 ## Sprite Initial Placement
 
-`place {sprite-name} [hidden] at {x} {y} [depth {z}] [size {w} {h}]`
+This command has a lot of flexibility so I will cover it several parts. The
+simplest usage is:
 
-`place {sprite-name} [hidden] at (centre | center) [depth {z}] [size {w} {h}]`
+`place {sprite-name} at {x} {y}`
 
-Places the named sprite at the given location and depth. If no
-depth is specified the sprite will automatically be assigned
-the next highest depth that has been used so far. I.e. sprites
+This will place the name sprite centered on the given location at its
+"native" size, i.e. the actual size of the image or the view on to the image.
+The depth will be one layer higher than the highest existing object. Hence sprites
 will be overlaid in the order that they are placed, so later
 placements will be "on top" of earlier ones, excluding the **frame**
-if present (see below).
+if present (see below). If you want to give the depth yourself use:
 
-If the keyword **hidden** is present then the sprite will be placed
-but will not be visible. In this way you can apply further modifications
-or effects before making the sprite visible with the **show** command.
+`place {sprite-name} at {x} {y} [depth] {z}`
 
-The sprite will be created at its original size unless you explicitly
-provide a size. If one of the size parameters is less than 1 then it
-will be calculated from the other dimension to preseve the aspect ratio.
-For example if the source image was 250 by 200 pixels and you request
-a size of **0, 100** then the sprite will be created sized **125, 100**.
+Instead of giving absolute coordinates you can put the sprite in the
+centre of the screen:
+
+`place {sprite-name} at (centre | center) [depth] {z}`
+
+If you want to make additional changes to the sprite (e.g. to
+gradually fade it into view) you can place it on the canvas
+without it being visible like this:
+
+`place {sprite-name} hidden at {x} {y}`
+
+If you want the sprite to be a different size to the original you
+have several options. At the simplest, just give the size in pixels:
+
+`place {sprite-name} at {x} {y} size {w} {h}`
+
+Alternatively, if you know one of the dimensions and want the other to
+be scaled to preserve the original proportions just give it and the other
+will be calculated to match:
+
+`place {sprite-name} at {x} {y} (width | height) {number}`
+
+Finally, you can scale the image to a certain percentage of its
+original size, either scaling both dimensions together or giving
+seperate scaling factors for each:
+
+`place {sprite-name} at {x} {y} scale {percentage}`
+
+`place {sprite-name} at {x} {y} scale {width-percentage} {height-percentage}`
+
+Most of the options can be combined where sensible, so for example you
+can place a scaled sprite the centre and have it hidden by using the
+appropriate options.
 
 This command completes immediately (but see the note above about
 asynchronous image loading).
@@ -99,13 +126,13 @@ foreground.
 ### Frame
 
 This is scaled to the fit the whole of the display without
-preserving the aspect ratio. It is place at a depth of 1000 and thus
+preserving the aspect ratio. It is placed at a depth of 1000 and thus
 is drawn on top of everything else.
 
 The expectation is that it can be used for an outer frame with a
 transparent centre, like a theatre stage. Since it appears on top
 of everything else it can also be used to display title cards
-or speech like in silent movies. Just use the **show** command
+or speech like in silent movies. Just use the **hide** command
 to make it invisible once you are finished with it.
 
 ### Depth hints

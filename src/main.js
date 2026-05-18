@@ -98,11 +98,15 @@ class SlowGlass {
             }
             let argument = "";
             let argument2 = "";
+            let argument3 = "";
             if (words.length > 1) {
                 argument = words[1];
             }
             if (words.length > 2) {
                 argument2 = words[2];
+            }
+            if (words.length > 3) {
+                argument3 = words[3];
             }
             // Look for a new scene
             if (command == 'scene') {
@@ -159,21 +163,38 @@ class SlowGlass {
                     continue;
                 }
                 switch (argument) {
-                    case 'width':
-                        let displayWidth = parseInt(argument2);
-                        if (displayWidth < 50 || displayWidth > 5000) {
-                            Globals.log.error("silly display width");
-                            displayWidth = defaults.DISPLAY_WIDTH;
+                    case 'width': {
+                            let displayWidth = parseInt(argument2);
+                            if (displayWidth < 50 || displayWidth > 5000) {
+                                Globals.log.error("silly display width");
+                                displayWidth = defaults.DISPLAY_WIDTH;
+                            }
+                            Globals.displayWidth = displayWidth;
                         }
-                        Globals.displayWidth = displayWidth;
                         break;
-                    case 'height':
-                        let displayHeight = parseInt(argument2);
-                        if (displayHeight < 50 || displayHeight > 5000) {
-                            Globals.log.error("silly display height");
-                            displayHeight = defaults.DISPLAY_HEIGHT;
+                    case 'height':{
+                            let displayHeight = parseInt(argument2);
+                            if (displayHeight < 50 || displayHeight > 5000) {
+                                Globals.log.error("silly display height");
+                                displayHeight = defaults.DISPLAY_HEIGHT;
+                            }
+                            Globals.displayHeight = displayHeight;
                         }
-                        Globals.displayHeight = displayHeight;
+                        break;
+                    case 'size': {
+                            let displayWidth = parseInt(argument2);
+                            if (displayWidth < 50 || displayWidth > 5000) {
+                                Globals.log.error("silly display width");
+                                displayWidth = defaults.DISPLAY_WIDTH;
+                            }
+                            Globals.displayWidth = displayWidth;
+                            let displayHeight = parseInt(argument3);
+                            if (displayHeight < 50 || displayHeight > 5000) {
+                                Globals.log.error("silly display height");
+                                displayHeight = defaults.DISPLAY_HEIGHT;
+                            }
+                            Globals.displayHeight = displayHeight;
+                        }
                         break;
                     case "colour":
                     case "color":
@@ -545,9 +566,8 @@ class SlowGlass {
     cleanUp() {
         if (this.clean) { return; }
         // tidy up previous run
-        // let pixi = document.getElementById(SlowGlass.sg_id);
         AudioManager.deleteAll();
-        if (Globals.app != null) {
+        if (Globals.app != null && Globals.app.stage.children.length > 0) {
             Globals.app.destroy(
                 { removeView: true },    // removes the canvas element from the DOM
                 {
@@ -559,9 +579,6 @@ class SlowGlass {
         }
         this.clean = true;
         Globals.reset();
-        // if (pixi.hasChildNodes()) {
-        //     pixi.removeChild(pixi.firstChild);
-        // }
         Globals.app = new PIXI.Application();
     }
 

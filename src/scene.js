@@ -62,26 +62,34 @@ export class Scene {
     }
 
     reset() {
+        // Data for this scene
         this.actionGroups = [];
-        this.tags = [...this.sceneText.tags.tags];
-        this.currentGroup = false;
         this.images = [];
         this.sprites = [];
-        this.URLfolder = this.sceneText.folder; // where should we load from?
-        this.spriteScene = this.name;
         this.varList = new VarList(this.name);
         this.defaultTags = [];
-        this.timers = [];
-        this.completionCallback = null;
+        this.tags = [...this.sceneText.tags.tags];
+        // Scene information
+        this.currentGroup = false;
+        this.URLfolder = this.sceneText.folder; // where should we load from?
+        this.spriteScene = this.name;
         this.parameters = defaults.NOTFOUND;
+        this.gravity = defaults.GRAVITY_PS2;
+        this.groundLevel = false;
         // Graphic creation options
         this.graphicFill = "black";
         this.graphicStroke = "black";
         this.graphicStrokeWidth = 1;
+        // Text creation options
+        this.textColour = "black";
+        this.textFont = "Arial";
+        this.textSize = "24";
+        this.textAlign = "centre";
+        // debug
         this.echo = false;
-        this.gravity = defaults.GRAVITY_PS2;
-        this.ground_level = false;
+        // callback handling
         this.finished = false;
+        this.completionCallback = null;
     }
 
     static find(scene_name, report = true) {
@@ -317,6 +325,22 @@ export class Scene {
         // not an error to resume a running or stopped scene
     }
 
+    folderPrefix(filename) {
+        // Folder logic:
+        // if filename looks like an absolute URL, use as is
+        // else if this.folder is set, use that
+        // else use scene.URLFolder
+        let prefix = "";
+        if (filename.startsWith("http:") || filename.startsWith("https:")
+            || filename.startsWith(".") || filename.startsWith('/')) {
+            prefix = "";
+        } else if (this.folder != "") {
+            prefix = this.folder;
+        } else {
+            prefix = this.URLFolder + "/";
+        }
+        return prefix;
+    }
 
 /**************************************************************************************************
 
@@ -580,59 +604,50 @@ export class Scene {
 
             case "load":
             case "upload":
-                let name = null;
-                // Look for a filename
-                if (wordList.wordsLeft() < 1) {
-                    Globals.log.error("Missing filename at line " + action.number);
-                    break;
-                }
-                let filename = wordList.getWord();
-                // look for a name
-                wordList.testWord(["named", "as"]);
                 if (wordList.wordsLeft() > 0) {
-                    name = wordList.getWord();
-                } else { // use file basename as name
-                    let slash = filename.lastIndexOf('/');
-                    let dot = filename.lastIndexOf('.');
-                    name = filename.slice(slash, dot);
-                }
-                // later - look for split cols by rows for animations
-
-                // check if resource already loaded (don't reload)
-                for ( let j = 0; j < this.images.length; j++) {
-                    if (this.images[j].name == name) {
-                        continue; // move on to next action
+                    const loadType = wordList.testWord(["image","sound"],"image");
+                    // Look for a filename
+                    if (wordList.wordsLeft() < 1) {
+                        Globals.log.error("Missing filename at line " + action.number);
+                        break;
                     }
-                }
-                // Folder logic:
-                // if filename looks like an absolute URL, use as is
-                // else if this.folder is set, use that
-                // else use scene.URLFolder
-                let prefix = "";
-                if (filename.startsWith("http:") || filename.startsWith("https:")
-                    || filename.startsWith(".") || filename.startsWith('/')) {
-                    prefix = "";
-                } else if (this.folder != "") {
-                    prefix = this.folder;
+                    let name = null;
+                    let filename = wordList.getWord();
+                    // look for a name
+                    wordList.testWord(["named", "as"]);
+                    if (wordList.wordsLeft() > 0) {
+                        name = wordList.getWord();
+                    } else { // use file basename as name
+                        let slash = filename.lastIndexOf('/');
+                        let dot = filename.lastIndexOf('.');
+                        name = filename.slice(slash + 1, dot);
+                    }
+                    const prefix = this.folderPrefix(filename);
+                    switch(loadType) {
+                        case "image":
+                            // check if resource already loaded (don't reload)
+                            for ( let j = 0; j < this.images.length; j++) {
+                                if (this.images[j].name == name) {
+                                    break; // move on to next action
+                                }
+                            }
+                            wordList.testWord(["cels","cells","frames"]);
+                            const cellX = wordList.getInt(0);
+                            wordList.testWord("by");
+                            const cellY = wordList.getInt(1);
+                            const sgImage = new SGImage(prefix + filename, name, actionGroup.callback(), cellX, cellY);
+                            sgImage.tags.addTag(wordList.getTags());
+                            this.images.push(sgImage);
+                            sgImage.load_image();
+                        case "sound":
+                            AudioManager.create(name, prefix + filename);
+                            break;
+                        default: // check for other resource types
+                            break;
+                        }
                 } else {
-                    prefix = this.URLFolder + "/";
+                    Globals.log.error("Missing sprite data at line " + action.number);
                 }
-                // determine file type
-                if (filename.endsWith(".jpg") ||
-                    filename.endsWith(".jpeg") ||
-                    filename.endsWith(".png")) {
-                    wordList.testWord(["cels","cells","frames"]);
-                    const cellX = wordList.getInt(0);
-                    wordList.testWord("by");
-                    const cellY = wordList.getInt(1);
-                    const sgImage = new SGImage(prefix + filename, name, actionGroup.callback(), cellX, cellY);
-                    sgImage.tags.addTag(wordList.getTags());
-                    this.images.push(sgImage);
-                    sgImage.load_image();
-                } else if (filename.endsWith(".wav") ||
-                    filename.endsWith(".mp3")) {
-                    AudioManager.create(tag, prefix + filename);
-                } // else check for other resource types
                 break;
 
 /**************************************************************************************************
@@ -782,19 +797,33 @@ export class Scene {
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = false;
                     let groupName = null;
+                    let sgSprite = null;
+                    let imageName = null;
                     // should the sprite have a different name?
                     if (wordList.testWord("named") || !wordList.testWord("from"))  {
                         spriteName = wordList.getSpriteName();
                     }
                     // Are we adding this to a group?
                     const groupSprite = wordList.getGroup(this.spriteScene);
+                    const fromURL = wordList.testWord(["load","loaded"]);
                     wordList.testWord("from");
-                    // which (already loaded) image to use?
-                    let imageName = wordList.getWord();
-                    if (!spriteName) {
-                        spriteName = imageName;
+                    if (fromURL) {
+                        const filename = wordList.getWord();
+                        const prefix = this.folderPrefix(filename);
+                        imageName = Globals.unique("image");
+                        const sgImage = new SGImage(prefix + filename, imageName, actionGroup.callback());
+                        this.images.push(sgImage);
+                        sgImage.load_image();
+                    } else { // which (already loaded) image to use?
+                        imageName = wordList.getWord();
+                        if (!spriteName) {
+                            spriteName = imageName;
+                        }
+                        if (!SGImage.getImage(this.name, imageName)) {
+                            break;
+                        }
                     }
-                    let sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
+                    sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
                     if (groupSprite) {
                         sgSprite.sgParent = groupSprite;
                     }
@@ -978,6 +1007,8 @@ export class Scene {
                     if (!sgSprite) {
                         break;
                     }
+                    let height = 0;
+                    let width = 0;
                     const hidden = wordList.testWord("hidden");
                     // is there a location for the sprite?
                     wordList.testWord( "at");
@@ -992,19 +1023,29 @@ export class Scene {
                     wordList.testWord("depth");
                     sgSprite.setDepth("to", wordList.getInt(0));
                     // is there a size? (or just use image size)
-                    wordList.testWord( ["size","scale"]); // separate these?
-                    let width = wordList.getInt(0);
-                    let height = wordList.getInt(0);
-                    if (height < 1 && width > 1) { // scale to given height
-                        height = (sgSprite.piSprite.texture.height / sgSprite.piSprite.texture.width) * width;
-                    } else if (width < 1 && height > 1) {
-                        width = (sgSprite.piSprite.texture.width / sgSprite.piSprite.texture.height) * height;
+                    const dimensionType = wordList.testWord(["size","scale", "width", "height"],"image"); 
+                    let dimension1 = 0;
+                    let dimension2 = 0;
+                    switch (dimensionType) {
+                        case "size":
+                            dimension1 = wordList.getInt(0);
+                            dimension2 = wordList.getInt(0);
+                            break;
+                        case "scale":
+                            dimension1 = wordList.getPercent("0");
+                            dimension2 = wordList.getPercent(dimension1);
+                            break;
+                        case "width":
+                        case "height":
+                            dimension1 = wordList.getInt(0);
+                            break;
                     }
-                    if (width > 0 && height > 0) {
-                        sgSprite.sizeX.setTargetValue(width * Globals.scriptScaleX);
-                        sgSprite.sizeY.setTargetValue(height * Globals.scriptScaleY);
+                    if (dimensionType != "image" && dimension1 < 1 && dimension2 < 1) {
+                        Globals.log.error(`Bad size for ${spriteName}`);
+                        break;
                     }
                     // Got all the data, now create the sprite
+                    sgSprite.requestSize(dimensionType, dimension1, dimension2);
                     if (!hidden) {
                         sgSprite.setVisibility(true);
                     }
@@ -1264,85 +1305,73 @@ export class Scene {
 **************************************************************************************************/
 
             case "text":
-                if (wordList.wordsLeft() > 2) {
+                if (wordList.wordsLeft() > 1) {
                     let groupName = null;
+                    let sgSprite = null;
                     const textCommand = wordList.getWord();
                     const textName = wordList.getWord();
                     // Are we adding this to a group?
                     const groupSprite = wordList.getGroup(this.spriteScene);
-                    const textData = wordList.joinWords();
-                    let sgSprite = null;
-                    if (textCommand == "create") {
-                        sgSprite = new SGSprite(null, textName, constants.SPRITE_TEXT, this.defaultTags);
-                        const textSprite = new PIXI.Text({
-                            text: textData,
-                                style: {
-                                fontFamily: sgSprite.textFont,
-                                fontSize: sgSprite.textFont,
-                                fill: sgSprite.fillColour,
-                                align: sgSprite.textAlign,
-                            }
-                        });
-                        sgSprite.piSprite = textSprite;
-                        sgSprite.piSprite.anchor = 0.5;
-                        sgSprite.setVisibility(false);
-                        sgSprite.sizeX.setTargetValue(textSprite.width);
-                        sgSprite.sizeY.setTargetValue(textSprite.height);
-                        if (groupSprite) {
-                            sgSprite.sgParent = groupSprite;
-                            groupSprite.piSprite.addChild(graphic);
-                        } else {
-                            Globals.root.addChild(textSprite);
-                        }
-                        sgSprite.tags.addTag(wordList.getTags());
-                        this.sprites.push(sgSprite);
-                        break;
-                    } // else
-                    sgSprite = SGSprite.getSprite(this.spriteScene, textName);
-                    if (sgSprite.type != constants.SPRITE_TEXT) {
-                        Globals.log.error("Sprite is not text at " + action.number);
-                        break;
-                    }
-                    let doUpdate = true;
+                    let textData = wordList.joinWords();
                     switch(textCommand) {
                         case "font":
                         case "fontfamily":
-                            sgSprite.textFont = textData;
+                            this.textFont = textData;
                             break;
                         case "fontsize":
                         case "size":
-                            sgSprite.textFont = textData;
+                            this.textFont = textData;
                             break;
                         case "align":
-                            sgSprite.textAlign = textData;
+                            if (textData == "centre") {
+                                textData = "center";
+                            }
+                            this.textAlign = textData;
                             break;
                         case "color":
                         case "colour":
-                            sgSprite.fillColour = textData;
-                            sgSprite.strokeColour = textData;
-                            break;
-                        case "fill":
-                            sgSprite.fillColour = textData;
-                            break;
-                        case "stroke":
-                            sgSprite.strokeColour = textData;
+                            this.textColour = textData;
                             break;
                         case "add":
-                           sgSprite.piSprite.text += "\n" + textData;
-                           break;
                         case "replace":
-                           sgSprite.piSprite.text = textData;
-                           break;
-                        default:
-                            doUpdate = false;
-                            Globals.log.error("Unknown text command at " + action.number);
-                            break;
-                        }
-                        if (doUpdate) {
-                            sgSprite.setStyle();
+                            sgSprite = SGSprite.getSprite(this.spriteScene, textName);
+                            if (sgSprite.type != constants.SPRITE_TEXT) {
+                                Globals.log.error("Sprite is not text at " + action.number);
+                                break;
+                            }
+                            if (textCommand == "add") {
+                                sgSprite.piSprite.text += "\n" + textData;
+                            } else {
+                                sgSprite.piSprite.text = textData;
+                            }
                             sgSprite.sizeX.setTargetValue(sgSprite.piSprite.width);
                             sgSprite.sizeY.setTargetValue(sgSprite.piSprite.height);
-                        }
+                           break;
+                        case "create":
+                            sgSprite = new SGSprite(null, textName, constants.SPRITE_TEXT, this.defaultTags);
+                            const textSprite = new PIXI.Text(textData, {
+                                fontFamily: this.textFont,
+                                fontSize: this.textSize,
+                                fill: this.textColour,
+                                align: this.textAlign,
+                            });
+                            sgSprite.piSprite = textSprite;
+                            sgSprite.piSprite.anchor = 0.5;
+                            sgSprite.piSprite.visible = false;
+                            sgSprite.sizeX.setTargetValue(textSprite.width);
+                            sgSprite.sizeY.setTargetValue(textSprite.height);                            
+                            if (groupSprite) {
+                                sgSprite.sgParent = groupSprite;
+                                groupSprite.piSprite.addChild(textSprite);
+                            } else {
+                                Globals.root.addChild(textSprite);
+                            }
+                            sgSprite.tags.addTag(wordList.getTags());
+                            this.sprites.push(sgSprite);
+                            break;
+                        default:
+                            break;
+                    }
                 } else {
                     Globals.log.error("Missing argument at line " + action.number);
                 }
@@ -1985,7 +2014,7 @@ export class Scene {
 
             case "ground":
                 if (wordList.wordsLeft() > 0) {
-                    this.ground_level = wordList.getFloat(Globals.displayHeight);
+                    this.groundLevel = wordList.getFloat(Globals.displayHeight);
                 } else {
                     Globals.log.error("Missing ground value at line " + action.number);
                 } 
@@ -2953,7 +2982,6 @@ export class Scene {
             case 'pause':
                 wordList.testWord("for");
                 let duration = wordList.getDuration(5);
-                // this.timers.push(new Utils.Timer(now, duration, actionGroup.callback()));
                 actionGroup.suspend("pause", actionIndex, now + (1000 * duration));
                 break;
 

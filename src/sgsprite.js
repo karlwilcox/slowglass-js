@@ -138,6 +138,10 @@ export class SGSprite {
         // size
         this.sizeX = new Adjustable(0);
         this.sizeY = new Adjustable(0);
+        // requested size on placement
+        this.dimensionType = "image";
+        this.dimension1 = 0;
+        this.dimension2 = 0;
         // scale
         this.scaleX = new Adjustable(1);
         this.scaleY = new Adjustable(1);
@@ -192,12 +196,6 @@ export class SGSprite {
         // bluriness
         this.bluriness = new Adjustable(0,0,100);
         this.blurFilter = null;
-        // Text features
-        this.textFont = 'arial';
-        this.textSize = 24;
-        this.textAlign = "center";
-        this.fillColour = "black";
-        this.strokeColour = "black";
         // skewiness
         this.skewX = new Adjustable(0);
         this.skewY = new Adjustable(0);
@@ -211,6 +209,12 @@ export class SGSprite {
         ];
         // debugging
         // this.logged = false;
+    }
+
+    requestSize(type, x, y = 0) {
+        this.dimensionType = type;
+        this.dimension1 = x;
+        this.dimension2 = y;
     }
 
     setPosition(x, y, depth = 0) {
@@ -245,18 +249,6 @@ export class SGSprite {
         }
         this.skewX.setTargetValue(newX, duration, now, callback);
         this.skewY.setTargetValue(newY, duration, now, callback);
-    }
-
-    setStyle() {
-        if (this.imageName == defaults.TEXT_NAME) {
-            this.piSprite.style = {
-                fontFamily: this.textFont,
-                fontSize: this.textFont,
-                fill: this.fillColour,
-                stroke: this.strokeColour,
-                align: this.textAlign
-            };
-        }
     }
 
     move(newX, newY, to_or_by, in_or_at, duration, now, callback = false) {
@@ -773,13 +765,32 @@ export class SGSprite {
                     if (this.depth == null ) {
                         this.depth = depth;
                     }
-                } else { // set size from the image, if not already set
-                    if (this.sizeX.value() == 0) {
-                        this.sizeX.setTargetValue(imgWidth);
+                } else { // set size from the image, as per request
+                    let width = imgWidth;
+                    let height = imgHeight;
+                    switch (this.dimensionType) {
+                        case "size":
+                            width = this.dimension1;
+                            height = this.dimension2;
+                            break;
+                        case "scale":
+                            width = imgWidth * (this.dimension1 / 100);
+                            height = imgHeight * (this.dimension2 / 100);
+                            break;
+                        case "width":
+                            width = this.dimension1;
+                            height = (imgHeight / imgWidth) * width;
+                            break;
+                        case "height":
+                            height = this.dimension1;
+                            width = (imgWidth / imgHeight) * height;
+                            break;
+                        case "image":
+                        default: // no action needed
+                            break;
                     }
-                    if (this.sizeY.value() == 0) {
-                        this.sizeY.setTargetValue(imgHeight);
-                    }
+                    this.sizeX.setTargetValue(width);
+                    this.sizeY.setTargetValue(height);
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = null;
@@ -931,7 +942,7 @@ export class SGSprite {
             // gravity is negative because y grows downwards on a canvas
             const deltaY = ((this.thrownVy * fallingTime) - (0.5 * scene.gravity * -1 * fallingTime * fallingTime)) * Globals.scriptScaleY;
             if (((Math.abs(deltaX) > Globals.app.screen.width * 2) || (Math.abs(deltaY) > Globals.app.screen.height * 2)) ||
-                (scene.ground_level && this.locY.value + deltaY > scene.ground_level)) {
+                (scene.groundLevel && this.locY.value + deltaY > scene.groundLevel)) {
                 this.falling = false; // gone off the edge of the world or hit the ground
                 this.visible = false; 
                 this.enabled = false;
