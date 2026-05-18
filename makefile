@@ -8,6 +8,9 @@ sg:
 	bundle exec jekyll build
 	rsync -q --delete -e ssh -aP /Users/karlw/Sites/slowglass/ karlw@192.168.1.10:/home/karlw/sites/slowglass
 
+deploy:
+	rclone sync -c -v /Users/karlw/Sites/slowglass kw-site:/slowglass --exclude '/404.shtml' --exclude '/.well-known/'
+
 # esbuild src/main.js --bundle --minify --sourcemap --outfile=js/slowglass.js
 # copy the distribution js to the test server in case we only changed the code
 #	rsync --delete -e "ssh" -aP /Users/karlw/icloud/Projects/SlowGlass-js/dist/ karlw@192.168.1.10:/home/karlw/sites/karlwilcox/slow-glass/dist

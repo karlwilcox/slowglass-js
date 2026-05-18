@@ -9,6 +9,27 @@ export function boolAsString(value) {
     return value ? constants.TRUE_VALUE : constants.FALSE_VALUE;
 }
 
+export function expandRange(str) {
+    const match = str.match(/^(-?\d+)\.\.(-?\d+)$/);
+    if (!match) {
+        Globals.log.error("Invalid range format");
+        return "";
+    }
+    const start = parseInt(match[1], 10);
+    const end = parseInt(match[2], 10);
+    const numbers = [];
+    if (start <= end) {
+        for (let i = start; i <= end; i++) {
+            numbers.push(i);
+        }
+    } else {
+        for (let i = start; i >= end; i--) {
+            numbers.push(i);
+        }
+    }
+    return numbers.join(" ");
+}
+
 /**************************************************************************************************
 #                     
 #        ####   ####  

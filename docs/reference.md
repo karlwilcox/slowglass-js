@@ -5,7 +5,8 @@ title               : "Slow Glass Animation System"
 
 ## Format
 
-New lines are significant, each item must be on a separate line but initial whitespace is ignored.
+New lines are significant, each item must be on a separate line but initial whitespace is ignored. Long lines
+can be split by ending them with '\\' and will be treated as a single line.
 
 Lines starting with a # are ignored, as is all content from // to the
 end of the line and any content between /\* and \*/.
@@ -18,6 +19,7 @@ end of the line and any content between /\* and \*/.
 * **end file** - same as above
 * **include** {file} - read file as if inserted at this point
 * **display height/width** {value} - sets window dimensions
+* **display size** {width} {height} - sets window dimensions
 * **display fullscreen** - full screen window (TBD)
 * **scale** (fit \| stretch \| none) - how to adapt script scale to display
 * **gravity** {integer} - force of gravity in pixels per second
@@ -32,6 +34,7 @@ end of the line and any content between /\* and \*/.
 * **on key** {key} -runs when key is pressed
 * **on click** - runs when any mouse key is pressed
 * **at** time {timecode} - runs when time of day matches the timecode
+* **atend** - runs when the scene is stopped, just prior to deletion
 * **each** time {timecode} - runs when time of day matches timecode (including wild cards)
 * **every** {duration} - runs after duration has elapsed from scene start and repeats
 * **when** (expression) - Evaluated once per second, runs once when the Python expression becomes truthy
@@ -56,7 +59,7 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 * **from** {folder} - take all resources from the named folder
 * **reset from** - set folder name to blank
 * **(load \| upload)** {file} named {resource-name} \[split {cols} by {rows}\] - load resource of any type
-* **unload** {r-tag...} - remove resources from memory
+* **unload** {resource-name...} - remove resources from memory
 
 ## Scene Management
 
@@ -71,7 +74,8 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 ## Sprite Management
 
 * **reset sprite** {sprite-name} - set all sprite aspects back to their original state
-* **sprite create** \[named {sprite-name}\] \[in {group-name}\] from {resource-name} - creates a sprite, hidden, needs to be placed (AREA???)
+* **sprite create** \[named {sprite-name}\] \[in {group-name}\] load from {url} - creates a sprite directly from an image
+* **sprite create** \[named {sprite-name}\] \[in {group-name}\] from {resource-name} \[view {x} {y} {w} {h}\] - creates a sprite, hidden, needs to be placed
 * **replace** {sprite-name} \[with\] {resource-name} - change the sprite image leaving all other aspects unchanged
 * **with** {scene-name} - sprite names without a prefix assumed to in the named scene
 * **reset with** - sprite names without a prefix assumed to be in the current scene (the default behaviour)
@@ -152,12 +156,12 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 * **text create** {text-name} \[in {group-name}\] {text...} - create a named text item
 * **text replace** {text-name} {text...} - changes the displayed text
 * **text add** {text-name} {text...} - Adds the displayed text as additional line
-* **text font** {text-name} {font-name} - sets font face (no checking)
-* **text size** {text-name} {integer} - sets font size (no checking)
-* **text align** {text-name} (left \| centre \| right) - sets font alignment
-* **text colour** {text-name} {colour} - sets fill and stroke to named colour or hex code
-* **text fill** {text-name} {colour} - sets fill to named colour or hex code
-* **text stroke** {text-name} {colour} - sets stroke to named colour or hex code
+* **text font** {font-name} - sets font face (no checking)
+* **text size** {integer} - sets font size (no checking)
+* **text align** (left \| centre \| right) - sets font alignment
+* **text colour** {colour} - sets fill and stroke to named colour or hex code
+* **text fill** {colour} - sets fill to named colour or hex code
+* **text stroke** {colour} - sets stroke to named colour or hex code
 
 Once created a text item is like a sprite and must be placed to become visible. Colour, font
 and other aspects of appearance can be changed after the text item has been created.
@@ -175,10 +179,7 @@ and other aspects of appearance can be changed after the text item has been crea
 * **graphic stroke** {graphic-name} {colour} - sets stroke to named colour or hex code
 * **graphic stroke width** {graphic-name} {integer} - sets stroke width
 
-The word 'shape' can be used instead of 'graphic'. Unlike text items you
-**must** set the appearance first, then created the graphic, to change the colour
-you must create a new graphic. Once created a
-text item is like a sprite and must be placed to become visible.
+The word 'shape' can be used instead of 'graphic'.
 
 ## Sounds
 
@@ -198,6 +199,7 @@ however individual sprites within the group can still be operated on by name.
 ## Flow Control
 
 * **for** {variable-name} **in** {values...}
+* **for** {variable-name} **range** {N..M}
 * **(endfor \| next)** - assign each value to variable in turn
 * **repeat**
 * **until** {logical-expression} - run actions until expression is false
@@ -234,7 +236,8 @@ supported:
 * **increment** {variable-name} - if it looks like a number
 * **deccrement** {variable-name} - if it looks like a number
 
-All variables start with $. Unset variables evaluate to "NONE".
+All variables start with $, use braces '{}' to isolate variable names within strings
+or if the variable name contains a '.' character. Unset variables evaluate to "NONE".
 
 Variables are local to scenes, to access variables in other scenes use ${scene-name:variable-name}.
 
@@ -283,6 +286,7 @@ trigger is tested. Variables can **NOT** be used in directives
 * $IMAGES - as above for images
 * $SCENES - list of all scene names
 * $VARIABLES - list of all variables in the current scene ONLY
+* $UNIQUE - incrementing number guaranteed to be unique in this run
 
 ## Sprite properties
 
@@ -298,4 +302,5 @@ by a '.' and one of the following:
 * angle - current rotation
 * visible - true/false visibity
 * role - if used in a put command, the name of the location
+* frame - current frame number, 0 if not animated
 * bounds - for debugging

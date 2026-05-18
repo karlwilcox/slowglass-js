@@ -468,6 +468,8 @@ export class VarList {
                             value = sgSprite.role;
                         }
                         break;
+                    case 'frame':
+                        return sgSprite.currentFrame;
                     case 'bounds':
                         const bounds = sgSprite.piSprite.getBounds();
                         value = `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;

@@ -9,3 +9,4 @@ _site
 vendor
 js/slowglass.js
 js/slowglass.js.map
+.DS_Store

@@ -81,7 +81,8 @@ export class Scene {
         this.graphicStroke = "black";
         this.graphicStrokeWidth = 1;
         // Text creation options
-        this.textColour = "black";
+        this.textFill = "black";
+        this.textStroke = "black";
         this.textFont = "Arial";
         this.textSize = "24";
         this.textAlign = "centre";
@@ -1330,7 +1331,14 @@ export class Scene {
                             break;
                         case "color":
                         case "colour":
-                            this.textColour = textData;
+                            this.textFill = textData;
+                            this.textStroke = textData;
+                            break;
+                        case "fill":
+                            this.textFill = textData;
+                            break;
+                        case "stroke":
+                            this.textStroke = textData;
                             break;
                         case "add":
                         case "replace":
@@ -1352,7 +1360,8 @@ export class Scene {
                             const textSprite = new PIXI.Text(textData, {
                                 fontFamily: this.textFont,
                                 fontSize: this.textSize,
-                                fill: this.textColour,
+                                fill: this.textFill,
+                                stroke: this.textStroke,
                                 align: this.textAlign,
                             });
                             sgSprite.piSprite = textSprite;
@@ -1433,6 +1442,41 @@ export class Scene {
                                             if (s > 2 && r > 0) {
                                                 graphic = new PIXI.Graphics().regularPoly(0, 0, r, s);
                                             }
+                                        }
+                                        break;
+                                    case "polyline":
+                                        {
+                                            const coords = [];
+                                            let minX = Number.MAX_SAFE_INTEGER;
+                                            let maxX = Number.MIN_SAFE_INTEGER;
+                                            let minY = Number.MAX_SAFE_INTEGER;
+                                            let maxY = Number.MIN_SAFE_INTEGER;
+                                            let XorY = "X";
+                                            while (wordList.wordsLeft()) {
+                                                const value = wordList.getFloat();
+                                                coords.push(value);
+                                                if (XorY == "X") {
+                                                    maxX = Math.max(maxX, value);
+                                                    minX = Math.min(minX, value);
+                                                    XorY = "Y";
+                                                } else {
+                                                    maxY = Math.max(maxY, value);
+                                                    minY = Math.min(minY, value);
+                                                    XorY = "X";
+                                                }
+                                            }
+                                            if (XorY != "X") {
+                                                Globals.log.error("Uneven coordinates for polyline");
+                                                coords.pop();
+                                            }
+                                            // Rewrite coordinates to draw around the origin
+                                            const xAdj = (maxX - minX) / 2;
+                                            const yAdj = (maxY - minY) / 2;
+                                            for (let i = 0; i < coords.length; i += 2) {
+                                                coords[i] -= xAdj;
+                                                coords[i+1] -= yAdj;
+                                            }
+                                            graphic = new PIXI.Graphics().poly(coords, true);
                                         }
                                         break;
                                     case "line":
@@ -2849,12 +2893,21 @@ export class Scene {
             case "for":
                 if (wordList.wordsLeft() > 0) {
                     let varName = wordList.getWord();
-                    let offset = 3;
-                    if (wordList.testWord( "in")) {
-                        offset = 4;
+                    let rangeOrList = wordList.testWord(["range","in"]);
+                    let values = "";
+                    switch(rangeOrList) {
+                        case "range":
+                            values = Utils.expandRange(wordList.getWord);
+                            break;
+                        case "in":
+                            values = wordList.sliceWords(4);
+                            break;
+                        default:
+                            Globals.log.error("for must be 'range' or 'in'");
+                            break;
                     }
                     this.varList.setValue(varName,wordList.getWord(defaults.NOTFOUND));
-                    const stackFrame = new Utils.StackFrame(constants.STACK_FOR, actionIndex + 1, wordList.sliceWords(offset), varName);
+                    const stackFrame = new Utils.StackFrame(constants.STACK_FOR, actionIndex + 1, values, varName);
                     actionGroup.stack.push(stackFrame);
                 } else {
                     Globals.log.error("Missing for loop");

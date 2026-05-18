@@ -8,11 +8,11 @@ should probably be considered as advanced.
 
 ## Then
 
-This is quite straightforward, it just pauses the actions in this group
-until ALL the previous actions have completed. As discussed in the overview,
-most commands complete straightaway, but somethings, like loading images,
-moving sprites in a given duration and so on take an indeterminate time
-to actually happen.
+This is quite straightforward, it just pauses the actions in this group until
+ALL the previous actions have completed. As discussed in the overview, most
+commands complete immediately, but some things, like loading images, moving
+sprites in to a location at a particular speed and so on take an indeterminate
+time to actually happen.
 
 Using the **then** command will ensure that everything is finished before
 the next command is executed. Consider the example:
