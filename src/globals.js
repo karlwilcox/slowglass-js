@@ -29,6 +29,7 @@ export class Globals {
     static location = new Utils.Location();
     static corsProxy = defaults.CORS_PROXY;
     static uniqueCount = 1;
+    static lastId = 0;
 
     constructor() {
 

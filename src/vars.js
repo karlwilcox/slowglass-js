@@ -59,6 +59,9 @@ class Variable {
         return keys.length > 0 ? keys.join(" ") : defaults.NOTFOUND;
     }
 
+    getValues() {
+    }
+
     setValue(value, key = false) {
         if (key !== false) {
             this.arrayValues[key] = value;
@@ -84,10 +87,10 @@ export class VarList {
     static lastKey = null;
     static hemisphere = null;
 
-    constructor(sceneName) {
+    constructor(scene) {
         this.variables = [];
         this.trigger = null;
-        this.sceneName = sceneName;
+        this.scene = scene;
         this.currentGroup = false;
     }
 
@@ -295,13 +298,16 @@ export class VarList {
             case "SCALEY":
                 return Globals.scriptScaleY;
             case "SCENENAME":
-                return this.sceneName;
+                return this.scene.name;
+            case "SCENEID":
+                return this.scene.instance;
+            case "LASTID":
+                return Globals.lastId;
             case "FINISHED":
                 return Utils.boolAsString(this.currentGroup.isFinished());
             case "PARAMS":
             case "PARAMETERS":
-                const scene = Scene.find(this.sceneName);
-                return scene.parameters;
+                return this.scene.parameters;
             case "ELAPSED":
                 return Math.floor((Date.now() - Globals.startTime) / 1000);
             case "MILLIS":
@@ -350,7 +356,7 @@ export class VarList {
 
     getValue(varName, report=false) {
         let value = false;
-        let sceneName = this.sceneName; // assume we are local
+        let sceneName = this.scene.name; // assume we are local
         if (varName.match(/:/)) { // this is a different scene
             const colonParts = varName.split(/:/);
             varName = colonParts[1];
@@ -485,7 +491,7 @@ export class VarList {
         }
         if (value === false) {
             // then look for user defined 
-            if (sceneName != this.sceneName) { // look in a different scene
+            if (sceneName != this.scene.name) { // look in a different scene
                     value = scene.varList.getValue(varName);
             } else {
                 let index = this.findVariable(reference.name);
@@ -494,6 +500,8 @@ export class VarList {
                         value = this.variables[index].getLength();
                     } else if (reference.property == "keys" && reference.key === false) {
                         value = this.variables[index].getKeys();
+                    } else if (reference.property == "values" && reference.key === false) {
+                        value = this.variables[index].getValues();
                     } else if (reference.property === false) {
                         value = this.variables[index].getValue(reference.key);
                     }

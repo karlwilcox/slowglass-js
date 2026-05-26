@@ -28,7 +28,7 @@ without any intention to claim ownership or infringe any copyrights.
 
 The idea for Slow Glass originated with the desire to have a flat panel display
 at the end of a street of Lego Creator buildings making it appear that a busy street
-receeded into the background. With that in mind I wanted something:
+receded into the background. With that in mind I wanted something:
 
 * Scripted: driven by a text file with readable structured English
 * Animated: Moving images with simple effects and sounds
@@ -80,14 +80,27 @@ anyone who has written in a high level language before. The number of
 programming concepts used has been kept to a minimum, which may sometimes
 require more verbose code but keeps the actual language quite simple.
 
-## Get Me Started!
+## Getting Started
 
-The tutorials are probably the best place to start to gain an understanding of the scripting language, which is all fully documented in the links shown at the top of the page.
+Slow Glass is written in JavaScript, initially targetted at the browser environment.
+It does need some libraries to be present and works best if you tell it your rough
+location. See the [/docs/advanced/web-page-integration.html](Web Integration page)
+for full details of this.
 
-The demos show the sorts of things that are possible, and the demo source code is provided at the bottom of each demo page, so study these listing to see how they work.
+However, you don't need to set up your own web page - if you just want to try some
+things out you can use the [/playground.html](Playground page) to type in scripts
+or actions and see their effects.
 
-There is also a "playground" page where you can load scripts and run commands interactively to see what they do, and also debug your scripts with a visible message console.
+To understand how the Slow Glass scripting language is used the
+[/tutorials/index.html] (tutorial pages) are probably the best place to start.
+
+There are also a number of demonstration scripts that show the sorts of things
+that are possible, and the source code for each script is provided at the
+bottom of each demonstration page, so you can study these listing to see how
+they work.
 
 ### Assets
 
-In the course of creating and testing Slow Glass I've created a number of graphic objects (largely with the assistance of the Affinity App Canva AI image generator) and you are free to use these as you wish.
+In the course of creating and testing Slow Glass I've created a number of
+graphic objects (largely with the assistance of the Affinity App Canva AI image
+generator) and you are free to use these as you wish.

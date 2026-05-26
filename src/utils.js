@@ -159,6 +159,7 @@ export class ActionGroup {
         this.failedIfCount = 0; // for nesting if statements
         this.waitType = false;
         this.waitClause = "";
+        this.dataVarName = "";
     }
 
     addAction(action) {

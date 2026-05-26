@@ -13,7 +13,7 @@ To create a new scene add the following to your script, on a new line:
 
 `scene <name>`
 
-This can be followed by any number of triggers, conditions and a actions that
+This can be followed by any number of cues, conditions and actions that
 will form part of the scene.
 
 To end a scene, just start a new one, or put on a line on its own:
@@ -25,9 +25,9 @@ scene.
 
 ### Approaches to Scenes
 
-A simple script can ignore scenes and just contain the options, triggers and
+A simple script can ignore scenes and just contain the options, cues and
 actions that you need. A scene called "main" will be created automatically and
-enabled for running.
+performed immediately
 
 If you want to re-use parts of a script, or just organise a larger script into
 parts then you are free to use as many scenes as you like. You can still
@@ -36,40 +36,48 @@ placed into the "main" scene.
 
 Finally you can group everything into scenes, using as many as you like just
 be sure to have one scene called "main". It can be anywhere in the script and
-will be enabled and run automatically.
+will be enabled and performed automatically.
 
-## Running Scenes
+## Performing Scenes
 
 ### Simple Startup
 
 When the script is first read in by the program the scenes (apart from the
-main one) are just stored away, ready to be "acted out". You can start
+main one) are just stored away, ready to be performed You can start
 this process following either of two methods. Firstly, and most simply
-you can just use the start command:
+you can just use the perform command:
 
-`start \[scene\] {scene-name} \[named {active-name}\]`
+`perform \[scene\] {scene-name} \[named {active-name}\]`
 
 It is important here to understand the difference a "scene" (a reusable
-part of the script) and an "active scene" (a scene currently running).
+part of the script) and an "active scene" (a scene currently being performed).
 
-You can start a script as many times as you like as long as every scene
-that is currently active has a different "active-name". For example
-you can append the $UNIQUE built-in variable to ensure this:
+If you need to refer to a scene while it is being performed (for example to pause
+it, or access one of its variables) you will need to use the active name. If you
+don't give an active name them you can just the scene's own name, and in many
+cases this is all that you will need.
 
-`start scene my_scene named my_scene-$UNIQUE`
+One way that you might need to use active names is to manage several versions
+of a scene being performed at the same time. It might be helpful to give each
+"version" of the scene its own name. For example you can append the $UNIQUE
+built-in variable to ensure this:
 
-If you are only going to use a scene once you leave out providing the active
-name and the scene name will be used as the active name.
+`perform scene my_scene named my_scene-$UNIQUE`
+
+However, you don't have to do this and below we discuss a different
+mechanism that can help with multiple copies of scenes.
+
+### Providing Information to a Scene
 
 You can also provide information to an active scene by providing paramters
-to the start command. Parameters can be as much text as you want, it is made
+to the perform command. Parameters can be as much text as you want, it is made
 available to the active scene through the $PARAMETERS built-in variable.
 Typically you can use this with the **assign** command to set variables
 for use in the scene.
 
-`start \[scene\] {scene-name} named {active-name\] \[with parameters\] {parameters...}` 
+`perform \[scene\] {scene-name} named {active-name\] \[with parameters\] {parameters...}` 
 
-As soon as the scene is started the **init** triggered will be activated
+As soon as the scene performance starts the **setup** cue will be activated
 (if present), immmediately followed by any **begin** triggers (again,
 if present).
 
@@ -78,10 +86,10 @@ if present).
 If you need more flexibility that a simple start up and parameter passing
 you can use a two stage process to run a scene:
 
-`load scene {scene-name} \[named {active-name}\]`
+`prepare scene {scene-name} \[named {active-name}\]`
 
 This will load the scene into memory but the _*ONLY*_ trigger that will
-be activated is **init** (alternatively named **setup**). This for
+be activated is **setup** (alternatively named **init**). This for
 example can be used to load image and other resources.
 
 At this point you can set the value of any scene variables that you
@@ -92,14 +100,61 @@ want, using a command like:
 And then when you are ready you can start the active scene running
 with:
 
-`run [scene] {active-name}`
+`act out [scene] {active-name}`
 
 This will start the scene and also activate any **begin** triggers.
 You can also use parameters as with the **start** command above.
 
-## Stopping Scenes
+### When Scenes Actually Start Performing
 
-Scenes can be stopped with the corresponding command:
+Starting a performance with **perform** or **act out** only marks a scene
+as "ready to start performing" and adds it to the queue of scenes in the
+update process. Depending on whether the scene is before or after the
+current scene in the queue it will start running on the current update or
+the next one. This means that variables and sprites will **NOT** necessarily
+be set up immediately.
+
+The cues **setup** and **begin** will be run but no other cues will be tested
+yet (even if they might be triggered).
+
+If this is an issue then just make the invoking scene pause for a second,
+then all the other cues will be tested. For example:
+
+`perform {scene-name}`
+`pause for 1 second`
+`log ${scene-name}:{local-name}`
+
+## Scene Duration and Deletion
+
+It is likely that you will find yourself creating two types of scenes - those
+that run continuously and those that complete after a certain time. For example
+the "main" scene will be performed continuously as this is the "director" that
+controls all the other scene. You might also have a scene that moves clouds
+across the background which will be performed all the time that your animation
+is showing. Most scenes however are likely to have a defined end state.
+
+You will find it most convenient if scenes that end clean up after themselves! Most simply,
+when the scene is no longer needed you should include a delete action after
+an appropriate cue (e.g. after a set length of time, or using the **then**
+cue to wait for all previous actions to complete:
+
+`delete scene`
+
+Any sprites created by the scene will automatically be removed when the scene
+is deleted, however any sounds currently playing will continue to do so until
+the normal end of the sound file.
+
+You can also have another scene carry out an action to delete your scene (for example
+the main, "director" scene can do it), just by giving the scene name:
+
+`delete scene {active-name}`
+
+But I would suggest that this is a bit error-prone and it is neater if a scene
+deletes itself.
+
+## Stopping Scenes For Manual Clean Up
+
+Scenes can be stopped with the action:
 
 `stop church-bells`
 
@@ -111,7 +166,7 @@ Or alternatively a scene can stop itself with actions such as:
 If there are other actions needed at the end of the scene make sure that they
 are placed _*before*_ the stop command, otherwise they will never be executed.
 
-There is a trigger **atend** which will be activated when the scene is stopped.
+There is a cue **atend** which will be activated when the scene is stopped.
 This can be used to do any clean up or other actions, such as fading out
 sprites but note that if you just want to remove everything created by the scene
 you can just use the **delete** command below.
@@ -132,10 +187,7 @@ loaded a lot of images and will not be used again for some time.
 
 ## Duplicating Scenes
 
-As noted above, it is only possible for one invocation of a scene to be running
-at a time, the **start** command on a running scene is silently ignored. If you
-do want to have multiple versions of the same scene running you can create a
-copy of a scene with:
+You can create a copy of a scene with:
 
 `(copy | clone) {scene-name} as {new-name}`
 
@@ -145,23 +197,62 @@ and triggers will be duplicated. (Note that images are
 cached so there is no penalty for using the **load** command on multiple
 scenes). The new scene will not be running and must be specifically started with:
 
-`start scene {new-scene}`
+`perform scene {new-scene}`
 
 It is **NOT** possible to duplicate the main scene.
 
-Within a scene you can access the name of the scene with the variable
-_*$SCENENAME*_.
+I'm not really sure where you might use this action but I wrote it as part
+of earlier iteration of scene management so I might as well leave it and document
+it here.
 
-## Deleting Scenes
+## Managing Multiple Scene Performances
 
-You can delete a scene if you no longer need it. You can only delete a scene
-if it is not running or paused, and you cannot delete the main scene.
+As discussed above, all scenes have a name, which defaults to the name that you
+gave to it originally. When a scene is **prepared** or **performed** you can
+give it a different "active-name". In this way if you have multiple
+performances of the same scene running you can refer to them by the unique
+names that you give them when they start. Within a scene you can access the
+name of the scene with the variable _*$SCENENAME*_.
 
-`delete scene {scene-name}`
+It is NOT required to give scenes unique names, if you just want to start
+several copies of a scene and will never need to refer to them at all
+(e.g. they all just run forever, or they delete themselves when finished)
+then you can just perform them as many times as you need. They will have
+the same name.
 
-Any sprites created by the scene will automatically be removed when the scene
-is deleted, however any sounds currently playing will continue to do so until
-the normal end of the sound file.
+It is still possible however to access the scenes individually - the program
+itself gives every scene an "identifier" which **is** guaranteed to be unique.
+
+Within the scene you can find this identifier by using the built-in variable
+_*$SCENEID*_. If you have just started a scene with the **perform** command
+then the id of the most recently started performance is available with the
+built-in variable _*LASTID*_. You can store this in a variable if you wish,
+or just use it until it is overwritten when another scene performance starts.
+
+There is also a built-in scene name, **LAST** which refers to the most recently
+started scene.
+
+### Rules for Accessing Scene Variables and Sprites
+
+If there are multiple performances of the same scene, all with the same scene name
+then the following rules apply:
+
+`${scene-name}:{local-name}`
+
+Refers to an arbitrary running scene. There is no guarantee which scene and it
+may differ between uses, so this isn't really useful
+
+`let reference be ${LASTID}:{local-name}`
+`$${reference}`
+
+Refers to local name within the most recently started performance. Can be re-used
+even after more scene performances are started as the _*LASTID*_ is stored
+with the _*reference*_ variable.
+
+`${LAST}:{local-name}`
+
+Same as the above, but shorter - however it only works as expected immediately
+after the scene performance has started.
 
 ## Loading Images and Sounds
 

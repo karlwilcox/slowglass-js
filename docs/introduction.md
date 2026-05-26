@@ -10,47 +10,48 @@ careful design should be able to produce some impressive results.
 
 ## Basic Concepts
 
-At its heart, the Slow Glass Language supports a series of actions that can be
-carried out on sprites, small graphical images. Actions take place when they
-are triggered by an event. So you will organise your script as a set of one or
-more triggers followed by one more actions that will be carried out when the
-conditions of the triggers are met.
+It might be helpful to imagine a Slow Glass document as a playbook, containing
+scenes that can be performed, not by actors but by sprites, small graphical images.
+A scene contains one or more "cues" and when the conditions of the cue occur then
+one or more actions are carried out, usually involving sprites doing things.
 
-It is also possible to organise your triggers and actions into separate
-scenes, each of which is independent and can be reused if necessary.
+There are also some overall "stage directions" that set things up, like the size of the
+stage, any background colours and various options, including the geographical location.
 
-In addition to this, the language also contains directives, which are
-instructions and information to affect the operation of the program as a
-whole, for example defining window sizes or creating scenes.
+Unlike a traditional play, in which scenes are usually acted out in sequence,
+Slow Glass allows you perform scenes in any order, and perform multiple scenes
+at the same time. You can even have the same scene being performed at the same
+time in different parts of the stage or with different actors (sprites).
 
-Hence a script is a series of lines of text, each line will either be a
-directive, a trigger or an action. To allow for documentation there are also
-ways of including comments in the file and white space is ignored so that we
-can use indentation to help show structure.
+There is one scene, called "main" which can be thought of as the director, it controls
+all the other scenes, deciding when they are performed and making any changes
+necessary as the "play" proceeds.
+
+See the [/docs/overview.html](Overview page) for more information about the
+structure and organisation of a Slow Glass Document.
 
 ## Coordinate System
 
- All positions in SlowGlass are specified in terms of x, y coordinates. 0,0 is
- the top left corner, x increases to the right and y increases down the page.
- (Note, this is not always the case with some animation systems so watch the
- sign of things, especially on the y axis!)
+In order to instruct our sprite actors in their roles we need to tell them
+where to stand and where to move to. We do this in terms of coordinates called
+x and y which are whole numbers. 0,0 is the top left corner, x increases to the
+right and y increases down the page.
 
- Additionally sprites may have a depth, or z coordinate. z is an arbitrary value
- but sprites with higher values of z are drawn **in front** of sprites with
- lower values of z.
+(Note, if you are already familiar with animation systems having y grow
+downwards is not always the case with some animation systems so watch the sign
+of things, especially on the y axis!)
 
-## Requirements
+Additionally sprites may overlap in the coordinate space so we need to know
+which one is in front. For this we use the idea of depth, or z coordinate. z is
+an arbitrary value but sprites with higher values of z are drawn **in front**
+of sprites with lower values of z.
 
-Slow Glass is written in JavaScript, initially targetted at the browser environment. It will ask for
-location but this is only to determine the hemisphere so the season variables work correctly.
+### Documentation Notes
 
-(Slow glass was originally written in Python 3 using the Pygame-ce library, this code is still available.)
+I've tried to provide comprehensive documentation and to be consistent I
+have used the following conventions:
 
-### Documentation Conventions
-
-When documenting the language the following conventions are used:
-
-* Words in ordinary text are REQUIRED as part of the command
+* Words in ordinary text are REQUIRED as part of the language
 * Words in curly brackets are supplied by the user (usually names)
 * (EXCEPT where the examples is discussing variable names, where the curly brackets mark the limits of the variable name)
 * Words in square brackets are OPTIONAL and can be used to help readability - this is encouraged but not required
@@ -61,11 +62,12 @@ When documenting the language the following conventions are used:
 
 Where you are asked to supply a name it is best to assume that all names should
 be unique, i.e. they all share the same namespace. So do not have a scene, a
-sprite and a sound all using the same name. Although this will work in most
-cases, the **stop** command cannot tell these apart for example. This may change
-in a future version but why make things difficult for yourself!
+sprite and a sound all using the same name. Although this might work I can't
+guarantee it and you are only making things confusing for yourself anyway.
 
-It is probably also best to avoid using the language keywords as names, so don't call you scene "scene"!
+It is probably also best to avoid using the language keywords as names, so
+don't call your scene "scene"! I also recommend NOT using all upper case
+names as these are used for built-in variables.
 
 ### Specifying Duration
 

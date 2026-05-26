@@ -50,7 +50,7 @@ class SlowGlass {
                 }
             }
             if (inDescription) {
-                if (currentLine.match(/^end ?description/)) {
+                if (currentLine.match(/^end ?notes?/)) {
                     inDescription = false;
                 }
                 continue;
@@ -92,7 +92,7 @@ class SlowGlass {
             }
             // Handle scene management commands
             let command = words[0];
-            if (command == "description") {
+            if (command == "notes") {
                 inDescription = true;
                 continue;
             }
@@ -112,6 +112,8 @@ class SlowGlass {
             if (command == 'scene') {
                 if (argument == null) {
                     Globals.log.error(`expected scene name on line ${lineCount}`);
+                } else if (!argument.match(/[a-zA-z]/)) {
+                    Globals.log.error(`Scene name must contain at least one letter ${lineCount}`);
                 } else {
                     if (holding != null) {
                         Globals.scenesTexts.push(holding);
@@ -157,9 +159,9 @@ class SlowGlass {
                 } else {
                     Globals.log.error(`no current scene at line ${lineCount}`);
                 }
-            } else if (command == "display" || command == "canvas") {
+            } else if (command == "stage" || command == "display" || command == "canvas") {
                 if (include) {
-                    Globals.log.error('Directives in include will be ignored!');
+                    Globals.log.error('Stage Directions in include will be ignored!');
                     continue;
                 }
                 switch (argument) {
@@ -210,7 +212,7 @@ class SlowGlass {
                 } 
             } else if (command == 'script') {
                 if (include) {
-                    Globals.log.error('Directives in include will be ignored!');
+                    Globals.log.error('Stage Directions in include will be ignored!');
                     continue;
                 }
                 if (argument == 'width') {

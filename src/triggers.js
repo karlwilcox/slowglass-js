@@ -39,7 +39,7 @@ export class Trigger {
 **************************************************************************************************/
 
 
-export class Start extends Trigger {
+export class Begin extends Trigger {
     constructor(scene, timestamp, params) {
         super(scene, timestamp, params);
     }

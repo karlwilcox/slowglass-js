@@ -7,6 +7,7 @@ import { AudioManager } from "./audio.js";
 import defaults from "./defaults.js";
 import { WordList } from "./wordlist.js";
 import * as constants from './constants.js';
+import { act } from "react";
 
 /**************************************************************************************************
 
@@ -36,19 +37,31 @@ export class SceneText {
         return this.text;
     }
 
-    static find(scene_name, report = true) {
+    static find(sceneName, report = true) {
         for (let i = 0; i < Globals.sceneTexts.length; i++) {
-            if (scene_name == Globals.sceneTexts[i].name) {
+            if (sceneName == Globals.sceneTexts[i].name) {
                 return Globals.sceneTexts[i];
             }
         } // else
         if (report) {
-            Globals.log.error("Cannot find scene " + scene_name);
+            Globals.log.error("Cannot find scene " + sceneName);
         }
         return false;
     }
 
 }
+
+/**************************************************************************************************
+
+    ######   ######  ######## ##    ## ######## 
+   ##    ## ##    ## ##       ###   ## ##       
+   ##       ##       ##       ####  ## ##       
+    ######  ##       ######   ## ## ## ######   
+         ## ##       ##       ##  #### ##       
+   ##    ## ##    ## ##       ##   ### ##       
+    ######   ######  ######## ##    ## ######## 
+
+**************************************************************************************************/
 
 export class Scene {
     constructor(sceneText, name) {
@@ -59,6 +72,8 @@ export class Scene {
         this.reset();
         this.load(sceneText);
         Globals.scenes.push(this);
+        this.instance = Globals.unique();
+        Globals.lastId = this.instance;
     }
 
     reset() {
@@ -66,12 +81,13 @@ export class Scene {
         this.actionGroups = [];
         this.images = [];
         this.sprites = [];
-        this.varList = new VarList(this.name);
+        this.varList = new VarList(this);
         this.defaultTags = [];
         this.tags = [...this.sceneText.tags.tags];
         // Scene information
         this.currentGroup = false;
-        this.URLfolder = this.sceneText.folder; // where should we load from?
+        this.fromFolder = "";
+        this.urlFolder = this.sceneText.folder; // where should we load from?
         this.spriteScene = this.name;
         this.parameters = defaults.NOTFOUND;
         this.gravity = defaults.GRAVITY_PS2;
@@ -93,14 +109,42 @@ export class Scene {
         this.completionCallback = null;
     }
 
-    static find(scene_name, report = true) {
+    static find(sceneName, report = true) {
+        let useName = true;
+        if (sceneName == "LAST") {
+            sceneName = Globals.lastId;
+            useName = false;
+        } else if (!sceneName.match(/[a-zA-Z]/)) {
+            useName = false;
+        }
         for (let i = 0; i < Globals.scenes.length; i++) {
-            if (scene_name == Globals.scenes[i].name) {
+            if (useName && sceneName == Globals.scenes[i].name) {
+                return Globals.scenes[i];
+            } else if (sceneName == Globals.scenes[i].instance) {
                 return Globals.scenes[i];
             }
         } // else
         if (report) {
-            Globals.log.error("Cannot find scene " + scene_name);
+            Globals.log.error("Cannot find scene " + sceneName);
+        }
+        return false;
+    }
+
+    static findName(sceneName) {
+        let response = [];
+        for (let i = 0; i < Globals.scenes.length; i++) {
+            if (sceneName == Globals.scenes[i].name) {
+                response.push(Globals.scenes[i].instance); 
+            }
+        }
+        return response;
+    }
+
+    static findInstance(instance) {
+        for (let i = 0; i < Globals.scenes.length; i++) {
+            if (instance == Globals.scenes[i].instance) {
+                return Globals.scenes[i];
+            }
         }
         return false;
     }
@@ -329,16 +373,16 @@ export class Scene {
     folderPrefix(filename) {
         // Folder logic:
         // if filename looks like an absolute URL, use as is
-        // else if this.folder is set, use that
+        // else if this.fromFolder is set, use that
         // else use scene.URLFolder
         let prefix = "";
         if (filename.startsWith("http:") || filename.startsWith("https:")
             || filename.startsWith(".") || filename.startsWith('/')) {
             prefix = "";
-        } else if (this.folder != "") {
-            prefix = this.folder;
+        } else if (this.fromFolder) {
+            prefix = this.fromFolder;
         } else {
-            prefix = this.URLFolder + "/";
+            prefix = this.urlFolder + "/";
         }
         return prefix;
     }
@@ -375,6 +419,8 @@ export class Scene {
             const keyword = wordList.getWord();
             // First look for triggers
             switch(keyword.toLowerCase()) {
+                case 'cue':
+                case 'cues':
                 case 'trigger':
                 case 'triggers':
                     wordList.testWord("on");
@@ -390,14 +436,10 @@ export class Scene {
                     continue;
                 case 'setup':
                 case 'init':
-                    trigger = new Triggers.Start(this, timestamp, "");
-                    break;
-                case 'start':
-                case 'begin':
                     trigger = new Triggers.Setup(this, timestamp, "");
                     break;
-                case 'end':
-                    trigger = new Triggers.Trigger("ATEND", "");
+                case 'begin':
+                    trigger = new Triggers.Begin(this, timestamp, "");
                     break;
                 case 'after':
                     trigger = new Triggers.After(this, timestamp, wordList.joinWords());
@@ -528,6 +570,15 @@ export class Scene {
             Globals.log.report("> " + evaluatedText);
         }
         const wordList = new WordList(evaluatedText);
+        if (actionGroup.dataVarName != "") {
+            const key = wordList.getWord();
+            if (key == "enddata") {
+                actionGroup.dataVarName = "";
+            } else {
+                this.varList.setValue(`${actionGroup.dataVarName}[${key}]`,wordList.joinWords());
+            }
+            return;
+        }
         // remove syntactic sugar and default item type
         wordList.testWord(["and","set","sprite"]);
         let command = wordList.getWord().toLowerCase();
@@ -665,14 +716,14 @@ export class Scene {
 
             case "from":
                 if (wordList.wordsLeft() > 0) {
-                    this.folder = wordList.getWord() + "/";
+                    this.fromFolder = wordList.getWord() + "/";
                 } else {
                     Globals.log.error("Expected folder name at " + action.number);
                 }
                 break;
             
             case "endfrom":
-                this.folder = "";
+                this.fromFolder = "";
                 break;
 
 /**************************************************************************************************
@@ -775,7 +826,7 @@ export class Scene {
                             Globals.log.error("Scene not found at line " + action.number);
                         }
                     } else if (reset_type == "from") {
-                        this.folder = "";
+                        this.fromFolder = "";
                     } else if (reset_type == "with") {
                         this.defaultScene = this.name;
                     }
@@ -1869,6 +1920,7 @@ export class Scene {
             case "remove":
             case "erase":
             case "delete":
+            case "finish":
                 if (wordList.wordsLeft() > 1) {
                     const type = wordList.testWord(["sprite","audio","sound","var","variable","scene"]);
                     const item = wordList.getWord();
@@ -2164,6 +2216,7 @@ export class Scene {
 **************************************************************************************************/
 
             case "start":
+            case "perform":
                 if (wordList.wordsLeft() > 0) {
                     wordList.testWord("scene");
                     const sceneName = wordList.getWord();
@@ -2176,15 +2229,19 @@ export class Scene {
                     if (wordList.testWord("named")) {
                         wordList.testWord("as");
                         activeName = WordList.getWord(activeName);
+                        if (!activeName.match(/[a-zA-z]/)) {
+                            Globals.log.error("Active name must include at least one letter");
+                            break;
+                        }
                     }
                     if (wordList.testWord("with")) {
                         wordList.testWord(["params","parameters"]);
                     }
                     const params = wordList.joinWords();
-                    if (Scene.find(activeName)) {
-                        Globals.log.error(`name ${activeName} is already in use as active scene name`);
-                        break;
-                    }
+                    // if (Scene.find(activeName)) {
+                    //     Globals.log.error(`name ${activeName} is already in use as active scene name`);
+                    //     break;
+                    // }
                     this.completionCallback = actionGroup.callback(1);
                     const newScene = new Scene(sceneText, activeName);
                     newScene.start(params);
@@ -2244,7 +2301,9 @@ export class Scene {
 **************************************************************************************************/
 
             case "run":
+            case "act":
                 if (wordList.wordsLeft() > 0) {
+                    wordList.testWord("out");
                     wordList.testWord("scene");
                     const sceneName = wordList.getWord();
                     const scene= Scene.find(sceneName);
@@ -2278,14 +2337,14 @@ export class Scene {
             case "copy":
             case "clone":
                 if (wordList.wordsLeft() > 0) {
-                    const scene_name = wordList.getWord();
-                    if (scene_name == constants.MAIN_NAME) {
+                    const sceneName = wordList.getWord();
+                    if (sceneName == constants.MAIN_NAME) {
                         Globals.log.error("Cannot duplicate main scene at line " + action.number);
                         break;
                     }
                     wordList.testWord("as");
                     const new_name = wordList.getWord();
-                    const scene = Scene.find(scene_name, false);
+                    const scene = Scene.find(sceneName, false);
                     if (scene === false) {
                         Globals.log.error("Scene not found at line " + action.number);
                         break;
@@ -2333,19 +2392,36 @@ export class Scene {
                         break;
                     }
                     // todo allow an option here to fade out the sound after a set duration
-                    if (stop_type == "audio" || stop_type == "sound" || stop_type == "track") {
-                        if (AudioManager.exists(item)) {
-                            AudioManager.delete(item);
-                        }
-                    } else if (stop_type == "scene") {
-                        const scene = Scene.find(item);
-                        if (scene !== false) {
-                            scene.stop(false);
-                        }
-                    } else if (stop_type == "sprite") {
-                        let sgSprite = SGSprite.getSprite(this.spriteScene, item, false);
-                        if (sgSprite) {
-                            sgSprite.stop();
+                    if (stop_type) {
+                        switch(stop_type) {
+                            case "audio":
+                            case "sound":
+                            case "track":
+                                if (AudioManager.exists(item)) {
+                                    AudioManager.delete(item);
+                                }
+                                break;
+                            case "scene":
+                                {
+                                    const scene = Scene.find(item);
+                                    if (scene !== false) {
+                                        scene.stop(false);
+                                    }
+                                }
+                                break;
+                            case "sprite":
+                                {
+                                    let sgSprite = SGSprite.getSprite(this.spriteScene, item, false);
+                                    if (sgSprite) {
+                                        sgSprite.stop();
+                                    }
+                                }
+                                break;
+                            case "all":
+                            case "play":
+                            case "app":
+                                Globals.app.stop();
+                                break;
                         }
                     } else if (AudioManager.exists(item)) {
                         AudioManager.delete(item);
@@ -2379,8 +2455,12 @@ export class Scene {
             case "make":
                 if (wordList.wordsLeft() > 0) {
                     let varName = wordList.getWord();
-                    wordList.testWord(["be","to"]);
-                    this.varList.setValue(varName, wordList.joinWords());
+                    let assignType = wordList.testWord(["be","to","from"]);
+                    if (assignType == "from") {
+                        actionGroup.dataVarName = varName;
+                    } else {
+                        this.varList.setValue(varName, wordList.joinWords());
+                    }
                 } else {
                     Globals.log.error("Missing variable name at line " + action.number);
                 }
@@ -3054,26 +3134,8 @@ export class Scene {
                     let rawWords = action.text.split(/ +/).slice(2).join(' ');
                     actionGroup.suspend(waitType, actionIndex, rawWords);
                 } else {
-                    Globals.log.error("Missing if condition at line " + action.number);
+                    Globals.log.error("Missing wait condition at line " + action.number);
                 }
-                break;
-
-
-
-/**************************************************************************************************
-
-######## #### ##    ## ####  ######  ##     ## 
-##        ##  ###   ##  ##  ##    ## ##     ## 
-##        ##  ####  ##  ##  ##       ##     ## 
-######    ##  ## ## ##  ##   ######  ######### 
-##        ##  ##  ####  ##        ## ##     ## 
-##        ##  ##   ###  ##  ##    ## ##     ## 
-##       #### ##    ## ####  ######  ##     ## 
-
-**************************************************************************************************/
-
-            case 'finish':
-                Globals.app.stop();
                 break;
 
 /**************************************************************************************************
