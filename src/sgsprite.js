@@ -49,7 +49,6 @@ export class SGImage {
     }
 
     async load_image() {
-        Globals.log.report("Starting load_image()");
         this.piImage = await PIXI.Assets.load(this.url);
         this.loading = false;
         if (this.callback) {
@@ -59,7 +58,6 @@ export class SGImage {
         this.height = this.piImage.height;
         this.origWidth = this.width;
         this.origHeight = this.height;
-        Globals.log.report("Finished load_image()");
     }
 
     static getImage(scene, name) {
@@ -133,6 +131,8 @@ export class SGSprite {
         this.tags = new TagList();
         this.tags.addTag(tags); // default tags
         this.sgParent = null;
+        this.children = [];
+        this.changedBounds = false; // set when a child is changed
         // created yet?
         this.piSprite = null;
         this.enabled = true;
@@ -241,7 +241,7 @@ export class SGSprite {
         }
         // We don't use depth values below 0
         if (this.depth < 1) {
-            this.depth = 1;
+            this.depth = Globals.nextZ();
         }
         if (this.enabled && this.piSprite != null) {
             this.piSprite.zIndex = this.depth;
@@ -702,6 +702,34 @@ export class SGSprite {
         this.piSprite.setCorners(...this.getWarpCorners());
     }
 
+    applySize(imgWidth, imgHeight, dimensionType, dimension1, dimension2) {
+        let width = imgWidth;
+        let height = imgHeight;
+        switch (dimensionType) {
+            case "size":
+                width = dimension1;
+                height = dimension2;
+                break;
+            case "scale":
+                width = imgWidth * (dimension1 / 100);
+                height = imgHeight * (dimension2 / 100);
+                break;
+            case "width":
+                width = dimension1;
+                height = (imgHeight / imgWidth) * width;
+                break;
+            case "height":
+                height = dimension1;
+                width = (imgWidth / imgHeight) * height;
+                break;
+            case "image":
+            default: // no action needed
+                break;
+        }
+        this.sizeX.setTargetValue(width);
+        this.sizeY.setTargetValue(height);
+    }
+
 /**************************************************************************************************
 
    ##     ## ########  ########     ###    ######## ######## 
@@ -782,31 +810,7 @@ export class SGSprite {
                         this.depth = depth;
                     }
                 } else { // set size from the image, as per request
-                    let width = imgWidth;
-                    let height = imgHeight;
-                    switch (this.dimensionType) {
-                        case "size":
-                            width = this.dimension1;
-                            height = this.dimension2;
-                            break;
-                        case "scale":
-                            width = imgWidth * (this.dimension1 / 100);
-                            height = imgHeight * (this.dimension2 / 100);
-                            break;
-                        case "width":
-                            width = this.dimension1;
-                            height = (imgHeight / imgWidth) * width;
-                            break;
-                        case "height":
-                            height = this.dimension1;
-                            width = (imgWidth / imgHeight) * height;
-                            break;
-                        case "image":
-                        default: // no action needed
-                            break;
-                    }
-                    this.sizeX.setTargetValue(width);
-                    this.sizeY.setTargetValue(height);
+                    this.applySize(imgWidth, imgHeight, this.dimensionType, this.dimension1, this.dimension2);
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = null;
@@ -878,13 +882,15 @@ export class SGSprite {
                 if (this.sgParent) {
                 // If this within a group, recalculate overall group size.
                     this.sgParent.piSprite.addChild(this.piSprite);
-                    const bounds = this.sgParent.piSprite.getBounds();
-                    this.sgParent.sizeX.setTargetValue(bounds.width);
-                    this.sgParent.sizeY.setTargetValue(bounds.height);
-                    // Set size for reset
-                    this.sgParent.origX = bounds.width;
-                    this.sgParent.origY = bounds.height;
-                    this.sgParent.piSprite.pivot.set(bounds.width / 2, bounds.height / 2);
+                    this.sgParent.changedBounds = true;
+                    // const bounds = this.sgParent.piSprite.getBounds();
+                    // this.sgParent.applySize(bounds.width, bounds.height, this.sgParent.dimensionType, this.sgParent.dimension1, this.sgParent.dimension2);
+                    // // this.sgParent.sizeX.setTargetValue(bounds.width);
+                    // // this.sgParent.sizeY.setTargetValue(bounds.height);
+                    // // Set size for reset
+                    // this.sgParent.origX = bounds.width;
+                    // this.sgParent.origY = bounds.height;
+                    // this.sgParent.piSprite.pivot.set(bounds.width / 2, bounds.height / 2);
                 } else {
                     Globals.root.addChild(this.piSprite);
                 }
@@ -896,6 +902,15 @@ export class SGSprite {
         }
         // Flag later changes that they need to update as well
         let forceUpdate = false;
+        // Are we a group that needs to recalculate the bounds?
+        if (this.changedBounds) {
+            const bounds = this.piSprite.getBounds();
+            this.applySize(bounds.width, bounds.height, this.dimensionType, this.dimension1, this.dimension2);
+            this.origX = bounds.width;
+            this.origY = bounds.height;
+            this.piSprite.pivot.set(bounds.width / 2, bounds.height / 2);
+            this.changedBounds = false;
+        }
         // Do we need to flip?
         if (this.piSprite !== null && this.flipChange) {
             this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);

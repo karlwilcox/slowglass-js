@@ -419,6 +419,9 @@ export class VarList {
             const parts = reference.name.split(/\./, 2);
             const sgSprite = SGSprite.getSprite(sceneName, parts[0], false);
             if (sgSprite != null) {
+                if (sgSprite.type == constants.SPRITE_IMAGE && (sgSprite.image === null || sgSprite.image == "loading")) {
+                    return constants.NOT_LOADED;
+                }
                 switch(parts[1]) {
                     case 'x':
                     case 'loc.x':

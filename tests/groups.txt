@@ -1,19 +1,15 @@
 stage size 800 600
 
 setup
+    graphic create grid as grid
+    place grid at centre
     group create planes
-    log on creation ${planes.sx} ${planes.sy}
     load /assets/lego/plane.png as plane
     sprite create plane1 in group planes from plane
-    pause 1
-    log plane1 is ${plane1.sx} ${plane1.sy}
     sprite create plane2 in group planes from plane
-    pause 1
-    log plane2 is ${plane2.sx} ${plane2.sy}
     place plane1 at 100 100
-    log after plane1 ${planes.sx} ${planes.sy}
-    place plane2 at 300 200
-    log after plane2 ${planes.sx} ${planes.sy}
+flip plane1 horizontally
+    place plane2 at 100 -100
 
 begin
-    place planes at centre
+   place planes at centre 0 width 120

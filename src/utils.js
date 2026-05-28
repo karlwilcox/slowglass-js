@@ -308,7 +308,7 @@ export function logical(words) {
     } else if (words.length == 1) { // check it for truthiness / falseiness
         if (words[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
             result = !(Math.abs(parseFloat(words[0])) < 0.001); // zero is false, all else true
-        } else if ( ["false","no","n","none"].includes(words[0].toLowerCase())) {
+        } else if ( ["false","no","n","none","invalid"].includes(words[0].toLowerCase())) {
             result = false;
         } else {
             result = true;

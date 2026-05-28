@@ -7,6 +7,7 @@ sg:
 	esbuild src/main.js --bundle --sourcemap --outfile=js/slowglass.js
 	bundle exec jekyll build
 	rsync -q --delete -e ssh -aP /Users/karlw/Sites/slowglass/ karlw@192.168.1.10:/home/karlw/sites/slowglass
+	date
 
 deploy:
 	rclone sync -c -v /Users/karlw/Sites/slowglass kw-site:/slowglass --exclude '/404.shtml' --exclude '/.well-known/'

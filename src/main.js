@@ -374,6 +374,25 @@ class SlowGlass {
 
 **************************************************************************************************/
 
+    updateSprite(sprite, sceneName, now) {
+        // If sprite is a group, update all its children
+        if (sprite.type == constants.SPRITE_GROUP) {
+            for (let i = 0; i < sprite.children.length; i++) {
+                const childSprite = sprite.children[i];
+                if (childSprite.type == constants.SPRITE_GROUP) {
+                    this.updateSprite(childSprite, sceneName, now);
+                } else {
+                    childSprite.update(sceneName, now);
+                }
+            }
+        }
+        // Now update yourself if top level
+        if (!sprite.sgParent) {
+            sprite.update(sceneName, now);
+        }
+    }
+
+
     update(ticker) {
         // Action granularity is only 1 second, so only update every 0.5 seconds
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"

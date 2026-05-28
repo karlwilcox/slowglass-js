@@ -3,6 +3,7 @@
 export const TRUE_VALUE = "YES";
 export const FALSE_VALUE = "NO";
 export const NOT_FOUND = "NONE";
+export const NOT_LOADED = "INVALID";
 
 // Top level scene
 export const MAIN_NAME = "main";

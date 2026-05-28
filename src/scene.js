@@ -686,13 +686,10 @@ export class Scene {
                             const cellX = wordList.getInt(0);
                             wordList.testWord("by");
                             const cellY = wordList.getInt(1);
-                            Globals.log.report("Creating " + name);
                             const sgImage = new SGImage(prefix + filename, name, actionGroup.callback(), cellX, cellY);
                             sgImage.tags.addTag(wordList.getTags());
                             this.images.push(sgImage);
-                            Globals.log.report("Calling load_image()");
                             sgImage.load_image();
-                            Globals.log.report("after load_image()");
                         case "sound":
                             AudioManager.create(name, prefix + filename);
                             break;
@@ -880,6 +877,7 @@ export class Scene {
                     sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
                     if (groupSprite) {
                         sgSprite.sgParent = groupSprite;
+                        sgSprite.sgParent.children.push(sgSprite);
                     }
                     if (wordList.testWord("view")) {
                         const x = wordList.getInt(0);
@@ -1099,15 +1097,14 @@ export class Scene {
                         Globals.log.error(`Bad size for ${spriteName}`);
                         break;
                     }
-                    // Got all the data, now create the sprite
-                    sgSprite.requestSize(dimensionType, dimension1, dimension2);
+                    if (sgSprite.type == constants.SPRITE_IMAGE) {
+                        // might not be loaded yet, so we don't know the size, ask for when loaded
+                        sgSprite.requestSize(dimensionType, dimension1, dimension2);
+                    } else { // just set the size we want
+                        sgSprite.applySize(sgSprite.sizeX.value(), sgSprite.sizeY.value(), dimensionType, dimension1, dimension2);
+                    }
                     if (!hidden) {
                         sgSprite.setVisibility(true);
-                    }
-                    if (sgSprite.sgParent) { // is this part of a group?
-                        // Get the new group size
-                        sgSprite.sgParent.sizeX.forceValue(sgSprite.sgParent.piSprite.width);
-                        sgSprite.sgParent.sizeY.forceValue(sgSprite.sgParent.piSprite.height);
                     }
                 } else {
                     Globals.log.error("Missing place data at line " + action.number);
@@ -1281,6 +1278,7 @@ export class Scene {
                                     break;
                                 }
                                 sgSprite.sgParent = groupSprite;
+                                sgSprite.sgParent.children.push(sgSprite);
                                 groupSprite.piSprite.reparentChild(sgSprite.piSprite);
                                 // Get the new group size
                                 // sgSprite.sizeX.forceValue(groupSprite.width);
@@ -1429,6 +1427,7 @@ export class Scene {
                             sgSprite.origY = textSprite.height;
                             if (groupSprite) {
                                 sgSprite.sgParent = groupSprite;
+                                sgSprite.sgParent.children.push(sgSprite);
                                 groupSprite.piSprite.addChild(textSprite);
                             } else {
                                 Globals.root.addChild(textSprite);
@@ -1597,6 +1596,7 @@ export class Scene {
                                         const sgSprite = new SGSprite(null, graphicname, constants.SPRITE_GRAPHIC, this.defaultTags);
                                         if (groupSprite) {
                                             sgSprite.sgParent = groupSprite
+                                            sgSprite.sgParent.children.push(sgSprite);
                                             groupSprite.piSprite.addChild(graphic);
                                         } else {
                                             Globals.root.addChild(graphic);
