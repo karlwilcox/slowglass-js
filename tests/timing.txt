@@ -1,0 +1,11 @@
+stage size 800 600
+
+setup
+    log ${DAYNAME}, ${DAYOFMONTH} ${MONTHNAME} ${YEAR} (day ${DAYOFYEAR})
+    log Starting at ${HOUR}:${MINUTE}:${SECOND}
+
+every 10 seconds
+    log every ten seconds is ${HOUR}:${MINUTE}:${SECOND}
+
+each **:*0
+    log each 10 seconds is ${HOUR}:${MINUTE}:${SECOND}

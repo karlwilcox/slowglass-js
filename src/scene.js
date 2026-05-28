@@ -7,7 +7,6 @@ import { AudioManager } from "./audio.js";
 import defaults from "./defaults.js";
 import { WordList } from "./wordlist.js";
 import * as constants from './constants.js';
-import { act } from "react";
 
 /**************************************************************************************************
 
@@ -687,10 +686,13 @@ export class Scene {
                             const cellX = wordList.getInt(0);
                             wordList.testWord("by");
                             const cellY = wordList.getInt(1);
+                            Globals.log.report("Creating " + name);
                             const sgImage = new SGImage(prefix + filename, name, actionGroup.callback(), cellX, cellY);
                             sgImage.tags.addTag(wordList.getTags());
                             this.images.push(sgImage);
+                            Globals.log.report("Calling load_image()");
                             sgImage.load_image();
+                            Globals.log.report("after load_image()");
                         case "sound":
                             AudioManager.create(name, prefix + filename);
                             break;
@@ -893,6 +895,7 @@ export class Scene {
                     sgSprite.setVisibility(false);
                     sgSprite.tags.addTag(wordList.getTags());
                     this.sprites.push(sgSprite);
+                    // sgSprite.update(this.name, now, true);
                 } else {
                     Globals.log.error("Missing sprite data at line " + action.number);
                 }
@@ -1229,22 +1232,26 @@ export class Scene {
                                 const sgSprite = new SGSprite(null, groupName, constants.SPRITE_GROUP);
                                 const group = new PIXI.Container();
                                 const superGroupSprite = wordList.getGroup(this.spriteScene);
-                                wordList.testWord("size");
-                                const width = wordList.getInt(0);
-                                const height = wordList.getInt(0);
-                                if (width > 0 && height > 0) {
-                                    sgSprite.sizeX.setTargetValue(width);
-                                    sgSprite.sizeY.setTargetValue(height);
-                                    group.pivot.set(width / 2, height / 2);
-                                } else if (superGroupSprite) { // use parent's size
-                                    const parentWidth = superGroupSprite.sizeX;
-                                    const parentHeight = superGroupSprite.sizeY;
-                                    sgSprite.sizeX.setTargetValue(parentWidth);
-                                    sgSprite.sizeY.setTargetValue(parentHeight);
-                                    group.pivot.set(parentWidth / 2, parentHeight / 2);
-                                } else {
-                                    group.pivot.set(Globals.displayWidth / 2, Globals.displayHeight / 2);
-                                }
+                                // wordList.testWord("size");
+                                // const width = wordList.getInt(0);
+                                // const height = wordList.getInt(0);
+                                // if (width > 0 && height > 0) {
+                                //     sgSprite.sizeX.setTargetValue(width);
+                                //     sgSprite.sizeY.setTargetValue(height);
+                                //     sgSprite.origX = width;
+                                //     sgSprite.origY = height;
+                                //     group.pivot.set(width / 2, height / 2);
+                                // } else if (superGroupSprite) { // use parent's size
+                                //     const parentWidth = superGroupSprite.sizeX;
+                                //     const parentHeight = superGroupSprite.sizeY;
+                                //     sgSprite.sizeX.setTargetValue(parentWidth);
+                                //     sgSprite.sizeY.setTargetValue(parentHeight);
+                                //     sgSprite.origX = parentWidth;
+                                //     sgSprite.origY = parentHeight;
+                                //     group.pivot.set(parentWidth / 2, parentHeight / 2);
+                                // } else {
+                                //     group.pivot.set(Globals.displayWidth / 2, Globals.displayHeight / 2);
+                                // }
                                 sgSprite.depth = Globals.nextZ(0);
                                 group.zIndex = sgSprite.depth;
                                 // this group goes on top for now...
@@ -1256,8 +1263,6 @@ export class Scene {
                                 }
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(false);
-                                // sgSprite.locX.forceValue(Globals.displayWidth / 2); 
-                                // sgSprite.locY.forceValue(Globals.displayHeight / 2);
                                 sgSprite.locX.forceValue(0); 
                                 sgSprite.locY.forceValue(0);
                                 sgSprite.tags.addTag(wordList.getTags());
@@ -1278,8 +1283,8 @@ export class Scene {
                                 sgSprite.sgParent = groupSprite;
                                 groupSprite.piSprite.reparentChild(sgSprite.piSprite);
                                 // Get the new group size
-                                sgSprite.sizeX.forceValue(groupSprite.width);
-                                sgSprite.sizeY.forceValue(groupSprite.height);
+                                // sgSprite.sizeX.forceValue(groupSprite.width);
+                                // sgSprite.sizeY.forceValue(groupSprite.height);
                                 break;
                             }
                         default:
@@ -1420,6 +1425,8 @@ export class Scene {
                             sgSprite.piSprite.visible = false;
                             sgSprite.sizeX.setTargetValue(textSprite.width);
                             sgSprite.sizeY.setTargetValue(textSprite.height);                            
+                            sgSprite.origX = textSprite.width;
+                            sgSprite.origY = textSprite.height;
                             if (groupSprite) {
                                 sgSprite.sgParent = groupSprite;
                                 groupSprite.piSprite.addChild(textSprite);
@@ -1598,6 +1605,8 @@ export class Scene {
                                         sgSprite.setVisibility(false);
                                         sgSprite.sizeX.setTargetValue(graphic.width);
                                         sgSprite.sizeY.setTargetValue(graphic.height);
+                                        sgSprite.origX = graphic.width;
+                                        sgSprite.origY = graphic.height;
                                         sgSprite.tags.addTag(wordList.getTags());
                                         this.sprites.push(sgSprite);
                                     } else {
@@ -1840,8 +1849,8 @@ export class Scene {
                         break; 
                     }
                     if  (toOrBy == "reset") {
-                        sgSprite.scaleX.setTargetValue(100);
-                        sgSprite.scaleY.setTargetValue(100);
+                        sgSprite.scaleX.setTargetValue(1);
+                        sgSprite.scaleY.setTargetValue(1);
                     } else if (w != 0 || h != 0) {
                         sgSprite.setScale( w, h, command, toOrBy, duration, now,
                             actionGroup.callback());
@@ -2828,7 +2837,7 @@ export class Scene {
                         break; 
                     }
                     let fade_type = wordList.testWord(["to","by", "up", "down"],"to");
-                    let value = wordList.getInt(100);
+                    let value = wordList.getPercent(100);
                     let duration = wordList.getDuration(0);
                     if (sgSprite) {
                         sgSprite.setTransparency(value, duration, fade_type, now, actionGroup.callback());

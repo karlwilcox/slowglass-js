@@ -44,7 +44,7 @@ starts.
 `every {number} {duration}`
 
 This cue is active at regular intervals, as given by the duration. It
-repeats every interval until the scene is ended.
+repeats every interval until the scene is ended.≈
 
 ## At
 

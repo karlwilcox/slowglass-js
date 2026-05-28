@@ -1,0 +1,35 @@
+stage size 800 600
+
+setup
+    make my_array from data
+    first 1 2 3 4
+    second 5 6 7 8 9
+    third 10 11 12 13
+    enddata
+    make vehicles from data
+        # row 1
+        refusetruck 20 46 1172 516
+        firetruck 1242 76 1374 480
+        minivan 2632 214 868 322
+        # row 2
+        citybus 4 610 1524 506
+        greycar 1686 748 894 318
+        bluecar 2596 768 850 288
+        # row 3
+        darkcar 48 1196 970 324
+        taxi 1262 1184 924 336
+        minibus 2298 1084 1072 438
+        # row 4
+        van 78 1558 1072 454
+        sportscar 1242 1726 1026 290
+        greencar 2364 1652 984 352 
+    enddata
+
+begin
+    log Length- ${my_array.length}
+    log Keys- ${my_array.keys}
+    log Values- ${my_array.values}
+    log ${my_array[first]}
+    for key in ${my_array.keys}
+       log ${my_array[$key]}
+    endfor

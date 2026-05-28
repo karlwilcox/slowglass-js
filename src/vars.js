@@ -60,6 +60,8 @@ class Variable {
     }
 
     getValues() {
+        const values = Object.values(this.arrayValues);
+        return values.length > 0 ? values.join(" ") : defaults.NOTFOUND;
     }
 
     setValue(value, key = false) {
@@ -95,7 +97,7 @@ export class VarList {
     }
 
     parseArrayReference(name) {
-        const match = `${name}`.match(/^([a-zA-Z0-9_:#]+)(?:\[([^\]]+)\])?(?:\.(length|keys))?$/);
+        const match = `${name}`.match(/^([a-zA-Z0-9_:#]+)(?:\[([^\]]+)\])?(?:\.(length|keys|values))?$/);
         if (!match) {
             return { name, key: false, property: false };
         }

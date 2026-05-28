@@ -22,6 +22,8 @@ export class SGImage {
         this.name = name;
         this.width = 0;
         this.height = 0;
+        this.origWidth = 0;
+        this.origHeight = 0;
         this.callback = callback;
         // check for silly cell sizes
         if (cols < 0) {
@@ -32,7 +34,7 @@ export class SGImage {
         this.cols = cols; // animation frames
         this.rows = rows;
         this.tags = new TagList();
-        if (typeof data === "string") {
+        if (data !== null) { // this is an image
             this.piImage = null;
             if (callback) {
                 callback(1);
@@ -47,11 +49,17 @@ export class SGImage {
     }
 
     async load_image() {
+        Globals.log.report("Starting load_image()");
         this.piImage = await PIXI.Assets.load(this.url);
         this.loading = false;
-        this.callback(-1);
+        if (this.callback) {
+            this.callback(-1);
+        }
         this.width = this.piImage.width;
         this.height = this.piImage.height;
+        this.origWidth = this.width;
+        this.origHeight = this.height;
+        Globals.log.report("Finished load_image()");
     }
 
     static getImage(scene, name) {
@@ -138,6 +146,8 @@ export class SGSprite {
         // size
         this.sizeX = new Adjustable(0);
         this.sizeY = new Adjustable(0);
+        this.origX = 0; // set on creation
+        this.origY = 0;
         // requested size on placement
         this.dimensionType = "image";
         this.dimension1 = 0;
@@ -238,8 +248,8 @@ export class SGSprite {
         }
     }
 
-    setSkew(newX, newY, to_or_by, duration, now, callback = false) {
-         if (to_or_by == "by") {
+    setSkew(newX, newY, toOrBy, duration, now, callback = false) {
+         if (toOrBy == "by") {
             newX += this.skewX.value();
             newY += this.skewY.value();
         }       
@@ -251,8 +261,8 @@ export class SGSprite {
         this.skewY.setTargetValue(newY, duration, now, callback);
     }
 
-    move(newX, newY, to_or_by, in_or_at, duration, now, callback = false) {
-        if (to_or_by == "by") {
+    move(newX, newY, toOrBy, inOrAt, duration, now, callback = false) {
+        if (toOrBy == "by") {
             if (newX === false) {
                 newX = 0;
             }
@@ -269,7 +279,7 @@ export class SGSprite {
                 newY = this.locY.value();
             }
         }
-        if (in_or_at == "at") { // duration is really rate here
+        if (inOrAt == "at") { // duration is really rate here
             const xDuration = Math.abs(this.locX.value() - newX) / duration; 
             const yDuration = Math.abs(this.locY.value() - newY) / duration; 
             const newDuration = Math.max(xDuration, yDuration);
@@ -510,25 +520,31 @@ export class SGSprite {
         }
     }
 
-    resize(new_w, newH, to_or_by, in_or_at, duration, now, callback = false) {
-        if (to_or_by == "by") {
-            new_w += this.sizeX.value();
-            newH += this.sizeY.value();
+    resize(newX, newY, toOrBy, inOrAt, duration, now, callback = false) {
+        if (newX == 0) {
+            newX = this.origX * newY / this.origY;
         }
-        if (in_or_at == "at") {
+        if (newY == 0) {
+            newY = this.origY * newX / this.origX;
+        }
+        if (toOrBy == "by") {
+            newX += this.sizeX.value();
+            newY += this.sizeY.value();
+        }
+        if (inOrAt == "at") {
             // (future: rate-based resizing)
         }
         // we set in motion up to two changes
         if (callback) {
             callback(2)
         }
-        this.sizeX.setTargetValue(new_w, duration, now, callback);
-        this.sizeY.setTargetValue(newH, duration, now, callback);
+        this.sizeX.setTargetValue(newX, duration, now, callback);
+        this.sizeY.setTargetValue(newY, duration, now, callback);
     }
 
     resetSize() {
-        this.sizeX.setTargetValue(this.piImage.orig.width);
-        this.sizeY.setTargetValue(this.piImage.orig.height);
+        this.sizeX.setTargetValue(this.origX);
+        this.sizeY.setTargetValue(this.origY);
     }
 
     setScale(scaleX, scaleY, command, toOrBy, duration, now, callback = false) {
@@ -698,7 +714,7 @@ export class SGSprite {
 
 **************************************************************************************************/
         
-    update(scene, now) {
+    update(scene, now, loadOnly = false) {
         if (!this.enabled) {
             return;
         }
@@ -845,19 +861,38 @@ export class SGSprite {
                 this.depth = Globals.nextZ(this.depth);
                 this.piSprite.zIndex = this.depth;
                 this.piSprite.tint = this.currentTint();
+                // Set size for reset
+                this.origX = this.sizeX.value();
+                this.origY = this.sizeY.value();
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {
-                    this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
-                        this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+                    const newX = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX;
+                    const newY = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY;
+                    if (newX <= 0 || newY <= 0) {
+                        Globals.log.error("trying to set zero size");
+                    } else {
+                        this.piSprite.setSize(newX, newY);
+                    }
                 }
                 if (this.sgParent) {
+                // If this within a group, recalculate overall group size.
                     this.sgParent.piSprite.addChild(this.piSprite);
+                    const bounds = this.sgParent.piSprite.getBounds();
+                    this.sgParent.sizeX.setTargetValue(bounds.width);
+                    this.sgParent.sizeY.setTargetValue(bounds.height);
+                    // Set size for reset
+                    this.sgParent.origX = bounds.width;
+                    this.sgParent.origY = bounds.height;
+                    this.sgParent.piSprite.pivot.set(bounds.width / 2, bounds.height / 2);
                 } else {
                     Globals.root.addChild(this.piSprite);
                 }
                 this.image = image;
             } // else, still loading, try again later
+        }
+        if (loadOnly) {
+            return;
         }
         // Flag later changes that they need to update as well
         let forceUpdate = false;

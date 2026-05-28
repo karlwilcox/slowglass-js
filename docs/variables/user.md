@@ -121,19 +121,10 @@ Variables are expanded (i.e. replaced by their value) when it
 most makes "sense" to do so. In general:
 
 - If the variable is included on a command / action line it will be expanded
-  when the action is triggered.
+  when the action is run when its cue occurs.
 
-- If the variable is included on a trigger line it will be expanded each
-time that the trigger is tested.
+- If the variable is included as part of a cue it will be expanded each
+time that the cue is tested.
 
-- Do **NOT** use variables on directives, these are read once when the
+- Do **NOT** use variables on stage directions, these are read once when the
 script is created and so no variables will yet have been created.
-
-## Built-in Variables
-
-Slow Glass also includes some built-in variables that you do not need
-to create (and you cannot overwrite). They are expanded exactly the
-same way as variables that you define yourself, however I have
-adopted the convention that built-in variables are all upper-case,
-
-## Sprite Properties

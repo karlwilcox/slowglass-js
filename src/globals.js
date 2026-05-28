@@ -92,6 +92,7 @@ export class Globals {
     static reset() {
         Globals.root = null;
         Globals.scenes = [];
+        Globals.sceneTexts = [];
         Globals.app = null;
         Globals.currentTrigger = "";
         Globals.displayWidth = defaults.DISPLAY_WIDTH;

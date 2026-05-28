@@ -1,0 +1,6 @@
+stage size 800 600
+
+setup
+    create sprite plane load from /assets/lego/plane.png
+    place plane at centre
+    

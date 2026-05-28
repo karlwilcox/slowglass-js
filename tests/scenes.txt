@@ -1,0 +1,18 @@
+stage size 800 600
+
+begin
+log hello world
+perform scene test wobble
+log lastid is $LASTID
+pause 2 seconds
+log ${LAST:test_var}
+perform scene test wibble
+log lastid is $LASTID
+pause 2 seconds
+log ${LAST:test_var}
+
+scene test
+  begin
+let test_var be $PARAMS
+  log hello from $SCENENAME id $SCENEID with $PARAMS
+end scene

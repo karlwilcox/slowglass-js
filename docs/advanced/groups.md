@@ -29,7 +29,7 @@ It is still possible to control individual sprites within a group, just use the 
 
 ## The Size of the Group “Image”
 
-By default a group is treated as an image which is the same size as the whole window - this means that if it is placed at $CENTREX, $CENTREY it works as an “overlay” to your window. This is useful for example if you want to have various (transparent) lights at various locations in your scene. Put them all into the group “light-group”, place the group in the centre and then you can change the transparency of the whole group using the normal image commands to make them appear brighter (perhaps at the same time as darkening the background image.
+By default a group is treated as an image which is the same size as the whole window - this means that if it is placed at $CENTREX, $CENTREY it works as an “overlay” to your window. This is useful for example if you want to have various (transparent) lights at various locations in your scene. Put them all into the group “light-group”, place the group in the centre and then you can change the transparency of the whole group using the normal image commands to make them appear brighter (perhaps at the same time as darkening the background image).
 
 An alternative use for groups is to gather together a set of objects that you want to move in lock-step. For this purpose you can specify an initial size for the group. When adding objects to the group make sure that they are “placed” inside the dimensions of this image size. For example:
 
@@ -53,7 +53,3 @@ Resize planes-group to 600,400 in the same time
 Recall that layers determine which sprites appear in front of which other sprite. Each sprite has a layer number, higher numbers appear further back.
 
 A group is considered to be an image source for a sprite so it does have a layer assigned, however this has no impact - sprites within the group will be drawn with the layer numbered assigned to each individual sprite within the group.
-
-
-
-
