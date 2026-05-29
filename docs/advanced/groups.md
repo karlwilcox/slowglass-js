@@ -2,54 +2,65 @@
 title               : "Slow Glass Animation System"
 ---
 
-
-Groups can be used to carry out actions on a set of images at the same time. Groups are considered to be a type of resource so can be treated very much like a single image.
+Groups can be used to, err, "group" sprites together. For most purposes you can
+treat a group like a single sprite, you can scale it, move it, size it, tint it
+and most other things.
 
 ## Creating Groups
 
-Groups are named and share the same namespace as image resources, so make sure that they are different. To create a group use the command:
+Groups are named and share the same namespace as image resources, so it is best
+to make sure that they are different. To create a group use the command:
 
-```
-Create group named <group-name>
-```
+`group create {group-name} (hidden)`
 
-You can then add any number of sprites to the group with the command:
+If you use the optional "hidden" then the group will need to make visible later with `show {group-name}`.
 
-```
-Add to group <group-name> <sprite-name-1> <sprite-name-2> …
-```
+You can then add any number of existing sprites to the group with the command:
 
-Note that adding a sprite to a group means that it will not appear until the group is placed somewhere using the **place** command. Hence it is usually a good idea to put group creation, sprite creation and the adding of those sprites to the group, and its placement all under the same trigger.
+`group add {sprite-name}`
 
-## Using Groups
+Groups can be nested to any depth, using the construction:
 
-The group can now be used exactly the same as any other image. It can be placed in scene using the **place** command, it can be re-sized, moved, have its transparency changed etc. and the commands will apply to every sprite within the scene.
+`group create {group-name} (hidden) in (group) {parent-group-name}`
 
-It is still possible to control individual sprites within a group, just use the sprite name as normal (so do not give your group the same name as a sprite, I suggest using -group as a suffix on group names).
+## Creating Sprites in Groups
 
-## The Size of the Group “Image”
+You can also place a sprite directly in a group at the point you are creating it, so for an image sprite you can do:
 
-By default a group is treated as an image which is the same size as the whole window - this means that if it is placed at $CENTREX, $CENTREY it works as an “overlay” to your window. This is useful for example if you want to have various (transparent) lights at various locations in your scene. Put them all into the group “light-group”, place the group in the centre and then you can change the transparency of the whole group using the normal image commands to make them appear brighter (perhaps at the same time as darkening the background image).
+`sprite create plane1 in group planes from plane`
 
-An alternative use for groups is to gather together a set of objects that you want to move in lock-step. For this purpose you can specify an initial size for the group. When adding objects to the group make sure that they are “placed” inside the dimensions of this image size. For example:
+Graphics and text sprites work the same way.
 
-```
-Create group planes-group size 600 by 400
-Place plane-1 at 200,100,100
-Place plane-2 at 300,200,101
-Place plane-3 at 400,300,102
-```
+## Groups and Group Members
 
-You can now place and size the group as required, scaling will be done relative to the group size - so for example to make these planes appear to be flying across the screen getting gradually close you can use the following commands:
+It is still possible to control individual sprites within a group, just use the
+sprite name as normal (so do not give your group the same name as a sprite, I
+suggest using g- as a prefix on group names perhaps).
 
-```
-Place planes-group at 100,100,0 size 300 by 200
-Move planes-group to 1000,500 in 60 seconds
-Resize planes-group to 600,400 in the same time
-```
+Note that if you **scale** a group and then move one of the individual sprites
+within the group, the movement will also be scaled. So for example if you scale
+a group to 50% and then move one of its members 100 pixels, it will only move
+50 pixels on the screen. The full size movement will be apparent if the
+group scaling is later **reset**. Note that the program may not successfully
+track a sequence of scaling and group member movements, see the discussion below
+on dimensions.
 
-## Groups and Layers
+## Group Dimensions
 
-Recall that layers determine which sprites appear in front of which other sprite. Each sprite has a layer number, higher numbers appear further back.
+How "big" is a group? The dimensions of a group are considered to be those of
+a rectangle just big enough to contain all of the group, wherever you have placed
+them. This means that if you move or scale or change the size of a group member
+the dimensions of the group _*may*_ change. As you **resize** or **scale** the
+group the program will calculate a new size, and also try to maintain
+the original size for the purpose of resize or scale **reset**.
 
-A group is considered to be an image source for a sprite so it does have a layer assigned, however this has no impact - sprites within the group will be drawn with the layer numbered assigned to each individual sprite within the group.
+So for example, if you scale a group down, then move one of its members "outside"
+the existing group, then scale it back up again the group will actually be larger,
+at least for simple scale / move / scale chains like this.
+
+## Groups and Depth
+
+The layering of sprites is determined first by their relative depth within the
+group, the the group as a whole is positioned in accordance with its own depth.
+This means that you cannot "interleave" different parts of a group within other
+sprites, all group members share the same depth within the larger scene.

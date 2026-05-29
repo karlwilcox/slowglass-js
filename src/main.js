@@ -538,6 +538,7 @@ class SlowGlass {
         const interactiveGroup = topScene.actionGroups[topScene.interactive_index];
         interactiveGroup.actions = [];
         const lines = text.split(";");
+        Globals.log.clearDuplicates();
 
         for (let i = 0; i < lines.length; i++) {
             const lineText = lines[i].trim();

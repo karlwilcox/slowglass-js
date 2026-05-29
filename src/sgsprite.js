@@ -125,6 +125,7 @@ export class SGSprite {
         // future date.
         // Identification
         this.type = type;
+        this.loaded = false;
         this.imageName = imageName;
         this.image = null;
         this.name = spriteName
@@ -147,10 +148,13 @@ export class SGSprite {
         this.sizeY = new Adjustable(0);
         this.origX = 0; // set on creation
         this.origY = 0;
-        // requested size on placement
+        // requested size on placement (deferred sizing)
         this.dimensionType = "image";
         this.dimension1 = 0;
         this.dimension2 = 0;
+        this.deferredDuration = 0;
+        this.deferredNow = 0;
+        this.deferredCallback = null;
         // scale
         this.scaleX = new Adjustable(1);
         this.scaleY = new Adjustable(1);
@@ -220,10 +224,13 @@ export class SGSprite {
         // this.logged = false;
     }
 
-    requestSize(type, x, y = 0) {
+    requestSize(type, x, y = 0, duration = 0, now = 0, callback = false) {
         this.dimensionType = type;
         this.dimension1 = x;
         this.dimension2 = y;
+        this.deferredDuration = duration;
+        this.deferredNow = now;
+        this.deferredCallback = callback;
     }
 
     setPosition(x, y, depth = 0) {
@@ -701,9 +708,27 @@ export class SGSprite {
         this.piSprite.setCorners(...this.getWarpCorners());
     }
 
-    applySize(imgWidth, imgHeight, dimensionType, dimension1, dimension2) {
-        let width = imgWidth;
-        let height = imgHeight;
+    applySize(newX, newY, dimensionType, dimension1, dimension2, 
+                toOrBy = null, inOrAt = null, duration = 0, now = 0, callback = false) {
+        if (newX == 0) {
+            newX = this.origX * newY / this.origY;
+        }
+        if (newY == 0) {
+            newY = this.origY * newX / this.origX;
+        }
+        if (toOrBy == "by") {
+            newX += this.sizeX.value();
+            newY += this.sizeY.value();
+        }
+        if (inOrAt == "at") {
+            // (future: rate-based resizing)
+        }
+        let width = newX;
+        let height = newY;
+        // we set in motion up to two changes
+        if (callback) {
+            callback(2)
+        }
         switch (dimensionType) {
             case "size":
                 width = dimension1;
@@ -725,17 +750,20 @@ export class SGSprite {
             default: // no action needed
                 break;
         }
-        this.sizeX.setTargetValue(width);
-        this.sizeY.setTargetValue(height);
+        this.sizeX.setTargetValue(width, duration, now, callback);
+        this.sizeY.setTargetValue(height, duration, now, callback);
     }
 
     sizeFromBounds() {
+        if (this.type != constants.SPRITE_GROUP) {
+            return;
+        }
         // Get the new group size
         const bounds = this.piSprite.getBounds();
         this.sizeX.forceValue(bounds.width);
         this.sizeY.forceValue(bounds.height);
-        this.origX = bounds.width;
-        this.origY = bounds.height;
+        this.origX = bounds.width / this.scaleX.value();
+        this.origY = bounds.height / this.scaleY.value();
     }
 
 /**************************************************************************************************
@@ -818,7 +846,8 @@ export class SGSprite {
                         this.depth = depth;
                     }
                 } else { // set size from the image, as per request
-                    this.applySize(imgWidth, imgHeight, this.dimensionType, this.dimension1, this.dimension2);
+                    this.applySize(imgWidth, imgHeight, this.dimensionType, this.dimension1, this.dimension2,
+                                "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = null;
@@ -890,7 +919,8 @@ export class SGSprite {
                 //     Globals.root.addChild(this.piSprite);
                 // }
                 this.image = image;
-                // End image loading updatess
+                this.loaded = true;
+                // End image loading updates
             } // else, still loading, try again later
         }
         if (loadOnly) {

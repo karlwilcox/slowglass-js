@@ -58,6 +58,10 @@ export class Log {
         }
     }
 
+    clearDuplicates() {
+        this.errors = [];
+    }
+
     // don't report duplicate errors
     error(text) {
         for ( let i = 0; i < this.errors.length; i++ ) {

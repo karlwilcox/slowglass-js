@@ -1104,8 +1104,8 @@ export class Scene {
                         Globals.log.error(`Bad size for ${spriteName}`);
                         break;
                     }
-                    if (sgSprite.type == constants.SPRITE_IMAGE) {
-                        // might not be loaded yet, so we don't know the size, ask for when loaded
+                    if (!sgSprite.loaded) {
+                        // not loaded yet, so we don't know the size, ask for when loaded
                         sgSprite.requestSize(dimensionType, dimension1, dimension2);
                     } else { // just set the size we want
                         sgSprite.applySize(sgSprite.sizeX.value(), sgSprite.sizeY.value(), dimensionType, dimension1, dimension2);
@@ -1233,6 +1233,7 @@ export class Scene {
                                 if (SGSprite.getSprite(this.spriteScene, groupName, false)) {
                                     break; // already exists, but not an error
                                 } 
+                                const hidden = wordList.testWord("hidden");
                                 const sgSprite = new SGSprite(null, groupName, constants.SPRITE_GROUP);
                                 const group = new PIXI.Container();
                                 const superGroupSprite = wordList.getGroup(this.spriteScene);
@@ -1261,7 +1262,7 @@ export class Scene {
                                     Globals.root.addChild(group);
                                 }
                                 sgSprite.piSprite = group;
-                                sgSprite.setVisibility(false);
+                                sgSprite.setVisibility(!hidden);
                                 sgSprite.tags.addTag(wordList.getTags());
                                 this.sprites.push(sgSprite);                           
                             }
@@ -1438,6 +1439,7 @@ export class Scene {
                                 Globals.root.addChild(textSprite);
                             }
                             sgSprite.tags.addTag(wordList.getTags());
+                            sgSprite.loaded = true;
                             this.sprites.push(sgSprite);
                             break;
                         default:
@@ -1614,6 +1616,7 @@ export class Scene {
                                         sgSprite.origX = graphic.width;
                                         sgSprite.origY = graphic.height;
                                         sgSprite.tags.addTag(wordList.getTags());
+                                        sgSprite.loaded = true;
                                         this.sprites.push(sgSprite);
                                     } else {
                                         Globals.log.error("Invalid graphic arguments at " + action.number);
@@ -1816,11 +1819,32 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
+                    const dimensionType = wordList.testWord(["size", "width", "height"]); 
+                    let dimension1 = 0;
+                    let dimension2 = 0;
+                    switch (dimensionType) {
+                        case "width":
+                        case "height":
+                            dimension1 = wordList.getInt(0);
+                            break;
+                        case "size":
+                        default:
+                            dimension1 = wordList.getInt(0);
+                            dimension2 = wordList.getInt(0);
+                            break;
+                    }
+                    if (dimensionType == "size" && dimension1 <= 0 && dimension2 <= 0) {
+                        Globals.log.error(`Bad resize for ${spriteName}`);
+                        break;
+                    }
                     if (toOrBy == "reset") {
                         sgSprite.resetSize();
-                    } else {
-                        sgSprite.resize( w, h, toOrBy, inOrAt, duration, now,
-                            actionGroup.callback());
+                    } else if (!sgSprite.loaded) {
+                        // not loaded yet, so we don't know the size, ask for when loaded
+                        sgSprite.requestSize(dimensionType, dimension1, dimension2, duration, now, actionGroup.callback());
+                    } else { // just set the size we want
+                        sgSprite.applySize(sgSprite.sizeX.value(), sgSprite.sizeY.value(), dimensionType, dimension1, dimension2,
+                                toOrBy, inOrAt, duration, now, actionGroup.callback());
                     }
                 } else {
                     Globals.log.error("Missing resize data at line " + action.number);
@@ -1856,6 +1880,9 @@ export class Scene {
                     if  (toOrBy == "reset") {
                         sgSprite.scaleX.setTargetValue(1);
                         sgSprite.scaleY.setTargetValue(1);
+                        if (sgSprite.type == constants.SPRITE_GROUP) {
+                            sgSprite.resetSize(); // pick up any new bounds
+                        }
                     } else if (w != 0 || h != 0) {
                         sgSprite.setScale( w, h, command, toOrBy, duration, now,
                             actionGroup.callback());
