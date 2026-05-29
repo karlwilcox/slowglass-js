@@ -875,10 +875,6 @@ export class Scene {
                         }
                     }
                     sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
-                    if (groupSprite) {
-                        sgSprite.sgParent = groupSprite;
-                        sgSprite.sgParent.children.push(sgSprite);
-                    }
                     if (wordList.testWord("view")) {
                         const x = wordList.getInt(0);
                         const y = wordList.getInt(0);
@@ -890,10 +886,21 @@ export class Scene {
                             sgSprite.sizeY.setTargetValue(h);
                         }
                     }
+                    const piSprite = new PIXI.Sprite({
+                            anchor: 0.5,
+                            });
+                    sgSprite.piSprite = piSprite;
                     sgSprite.setVisibility(false);
                     sgSprite.tags.addTag(wordList.getTags());
+                    if (groupSprite) {
+                        sgSprite.sgParent = groupSprite;
+                        sgSprite.sgParent.children.push(sgSprite);
+                        groupSprite.piSprite.addChild(sgSprite);
+                        groupSprite.sizeFromBounds();
+                    } else {
+                        Globals.root.addChild(sgSprite.piSprite);
+                    }
                     this.sprites.push(sgSprite);
-                    // sgSprite.update(this.name, now, true);
                 } else {
                     Globals.log.error("Missing sprite data at line " + action.number);
                 }
@@ -1229,28 +1236,23 @@ export class Scene {
                                 const sgSprite = new SGSprite(null, groupName, constants.SPRITE_GROUP);
                                 const group = new PIXI.Container();
                                 const superGroupSprite = wordList.getGroup(this.spriteScene);
-                                // wordList.testWord("size");
-                                // const width = wordList.getInt(0);
-                                // const height = wordList.getInt(0);
-                                // if (width > 0 && height > 0) {
-                                //     sgSprite.sizeX.setTargetValue(width);
-                                //     sgSprite.sizeY.setTargetValue(height);
-                                //     sgSprite.origX = width;
-                                //     sgSprite.origY = height;
-                                //     group.pivot.set(width / 2, height / 2);
-                                // } else if (superGroupSprite) { // use parent's size
-                                //     const parentWidth = superGroupSprite.sizeX;
-                                //     const parentHeight = superGroupSprite.sizeY;
-                                //     sgSprite.sizeX.setTargetValue(parentWidth);
-                                //     sgSprite.sizeY.setTargetValue(parentHeight);
-                                //     sgSprite.origX = parentWidth;
-                                //     sgSprite.origY = parentHeight;
-                                //     group.pivot.set(parentWidth / 2, parentHeight / 2);
-                                // } else {
-                                //     group.pivot.set(Globals.displayWidth / 2, Globals.displayHeight / 2);
-                                // }
+                                const width = Globals.scriptWidth;
+                                const width2 = width / 2;
+                                const height = Globals.scriptHeight;
+                                const height2 = height / 2;
+                                sgSprite.sizeX.setTargetValue(0);
+                                sgSprite.sizeY.setTargetValue(0);
+                                sgSprite.locX.setTargetValue(width2);
+                                sgSprite.locY.setTargetValue(height2);
+                                sgSprite.origX = 0;
+                                sgSprite.origY = 0;
+                                group.pivot.set(width2, height2);
                                 sgSprite.depth = Globals.nextZ(0);
                                 group.zIndex = sgSprite.depth;
+                                // Add an invisble rectangle to ensure scaling and sizing works like others
+                                // const holder = new PIXI.Graphics().rect(0, 0, width, height);
+                                // holder.alpha = 0;
+                                // group.addChild(holder);
                                 // this group goes on top for now...
                                 if (superGroupSprite) {
                                     sgSprite.sgParent = superGroupSprite;
@@ -1260,8 +1262,6 @@ export class Scene {
                                 }
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(false);
-                                sgSprite.locX.forceValue(0); 
-                                sgSprite.locY.forceValue(0);
                                 sgSprite.tags.addTag(wordList.getTags());
                                 this.sprites.push(sgSprite);                           
                             }
@@ -1271,6 +1271,7 @@ export class Scene {
                                 const spriteName = wordList.getSpriteName();
                                 const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                                 if (!sgSprite) {
+                                    Globals.log.error("Sprite not found" + action.number);
                                     break;
                                 }
                                 const groupSprite = wordList.getGroup(this.spriteScene);
@@ -1281,8 +1282,11 @@ export class Scene {
                                 sgSprite.sgParent.children.push(sgSprite);
                                 groupSprite.piSprite.reparentChild(sgSprite.piSprite);
                                 // Get the new group size
-                                // sgSprite.sizeX.forceValue(groupSprite.width);
-                                // sgSprite.sizeY.forceValue(groupSprite.height);
+                                const bounds = groupSprite.piSprite.getBounds();
+                                groupSprite.sizeX.forceValue(bounds.width);
+                                groupSprite.sizeY.forceValue(bounds.height);
+                                groupSprite.origX = bounds.width;
+                                groupSprite.origY = bounds.height;
                                 break;
                             }
                         default:
@@ -1429,6 +1433,7 @@ export class Scene {
                                 sgSprite.sgParent = groupSprite;
                                 sgSprite.sgParent.children.push(sgSprite);
                                 groupSprite.piSprite.addChild(textSprite);
+                                groupSprite.sizeFromBounds();
                             } else {
                                 Globals.root.addChild(textSprite);
                             }
@@ -1598,6 +1603,7 @@ export class Scene {
                                             sgSprite.sgParent = groupSprite
                                             sgSprite.sgParent.children.push(sgSprite);
                                             groupSprite.piSprite.addChild(graphic);
+                                            groupSprite.sizeFromBounds();
                                         } else {
                                             Globals.root.addChild(graphic);
                                         }
@@ -1653,15 +1659,11 @@ export class Scene {
             case "move":
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getSpriteName();
-                    const direction = wordList.testWord(["horizontally","hor","h","vertically","vert","v"]);
+                    const direction = wordList.testWord(["horizontally","hor","h","vertically","vert","v","up","down","left","right"]);
                     let delta = 0;
                     let x = 0;
                     let y = 0;
-                    let byOrTo = wordList.getWord( ["by","to"]);
-                    if (byOrTo === false) {
-                        Globals.log.error("Expected by or to on line " + action.number);
-                        break;
-                    }
+                    let byOrTo = wordList.testWord( ["by","to"], "by");
                     if (direction !== false) {
                         delta = wordList.getInt(0) * Globals.scriptScaleX;
                     } else {
@@ -1682,12 +1684,20 @@ export class Scene {
                         case "horizontally":
                         case "hor":
                         case "h":
+                        case "right":
                             sgSprite.move(delta, false, byOrTo, inOrAt, duration, now, callback);
+                            break;
+                        case "left":
+                            sgSprite.move(delta * -1, false, byOrTo, inOrAt, duration, now, callback);
                             break;
                         case "vertically":
                         case "vert":
                         case "v":
+                        case "down":
                             sgSprite.move(false, delta, byOrTo, inOrAt, duration, now, callback);
+                            break;
+                        case "up":
+                            sgSprite.move(false, delta * -1, byOrTo, inOrAt, duration, now, callback);
                             break;
                         default:
                             sgSprite.move(x, y, byOrTo, inOrAt, duration, now, callback);
@@ -1797,12 +1807,7 @@ export class Scene {
             case "resize":
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getSpriteName();
-                    let toOrBy = wordList.getWord( ["to","by", "reset"]);
-                    if (toOrBy === false) {
-                        Globals.log.error("Expected to or by on line " + action.number);
-                        break;
-                    }
-
+                    let toOrBy = wordList.testWord( ["to","by", "reset"], "to");
                     let w = wordList.getInt(0) * Globals.scriptScaleX;
                     let h = wordList.getInt(0) * Globals.scriptScaleY;
                     let inOrAt = wordList.testWord( ["in","at"]);

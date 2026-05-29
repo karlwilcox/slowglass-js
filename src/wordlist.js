@@ -303,16 +303,13 @@ export class WordList {
         let groupSprite = null;
         let hold = this.index;
         if (this.testWord(["in","to"])) {
-            if (this.getWord() != "group") {
-                this.rewind(hold);
-            } else {
-                const groupName = this.getWord();
-                // got a group, check it exists
-                if (groupName) {
-                    groupSprite = SGSprite.getSprite(sceneName, groupName, true);
-                    if (groupSprite && groupSprite.type != constants.SPRITE_GROUP) {
-                        Globals.log.error("Not a group at line " + action.number);
-                    }
+            this.testWord("group");
+            const groupName = this.getWord();
+            // got a group, check it exists
+            if (groupName) {
+                groupSprite = SGSprite.getSprite(sceneName, groupName, true);
+                if (groupSprite && groupSprite.type != constants.SPRITE_GROUP) {
+                    Globals.log.error("Not a group at line " + action.number);
                 }
             }
         }

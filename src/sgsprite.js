@@ -132,7 +132,6 @@ export class SGSprite {
         this.tags.addTag(tags); // default tags
         this.sgParent = null;
         this.children = [];
-        this.changedBounds = false; // set when a child is changed
         // created yet?
         this.piSprite = null;
         this.enabled = true;
@@ -730,6 +729,15 @@ export class SGSprite {
         this.sizeY.setTargetValue(height);
     }
 
+    sizeFromBounds() {
+        // Get the new group size
+        const bounds = this.piSprite.getBounds();
+        this.sizeX.forceValue(bounds.width);
+        this.sizeY.forceValue(bounds.height);
+        this.origX = bounds.width;
+        this.origY = bounds.height;
+    }
+
 /**************************************************************************************************
 
    ##     ## ########  ########     ###    ######## ######## 
@@ -853,13 +861,10 @@ export class SGSprite {
                     if (this.warped) {
                         Globals.log.error("PerspectiveMesh is not available in this PixiJS build");
                     }
-                    this.piSprite = new PIXI.Sprite({
-                            texture: texture,
-                            anchor: 0.5,
-                            position: {x: this.locX.value(),
-                                y: this.locY.value() },
-                            visible: this.visible,
-                            });
+                    this.piSprite.texture = texture;
+                    this.piSprite.position.x = this.locX.value();
+                    this.piSprite.position.y = this.locY.value();
+                    this.piSprite.visible = this.visible;
                 }
                 // set depth to next highest, unless it is already set
                 this.depth = Globals.nextZ(this.depth);
@@ -880,21 +885,12 @@ export class SGSprite {
                     }
                 }
                 if (this.sgParent) {
-                // If this within a group, recalculate overall group size.
-                    this.sgParent.piSprite.addChild(this.piSprite);
-                    this.sgParent.changedBounds = true;
-                    // const bounds = this.sgParent.piSprite.getBounds();
-                    // this.sgParent.applySize(bounds.width, bounds.height, this.sgParent.dimensionType, this.sgParent.dimension1, this.sgParent.dimension2);
-                    // // this.sgParent.sizeX.setTargetValue(bounds.width);
-                    // // this.sgParent.sizeY.setTargetValue(bounds.height);
-                    // // Set size for reset
-                    // this.sgParent.origX = bounds.width;
-                    // this.sgParent.origY = bounds.height;
-                    // this.sgParent.piSprite.pivot.set(bounds.width / 2, bounds.height / 2);
-                } else {
-                    Globals.root.addChild(this.piSprite);
-                }
+                    this.sgParent.sizeFromBounds();
+                }//  else {
+                //     Globals.root.addChild(this.piSprite);
+                // }
                 this.image = image;
+                // End image loading updatess
             } // else, still loading, try again later
         }
         if (loadOnly) {
@@ -902,15 +898,7 @@ export class SGSprite {
         }
         // Flag later changes that they need to update as well
         let forceUpdate = false;
-        // Are we a group that needs to recalculate the bounds?
-        if (this.changedBounds) {
-            const bounds = this.piSprite.getBounds();
-            this.applySize(bounds.width, bounds.height, this.dimensionType, this.dimension1, this.dimension2);
-            this.origX = bounds.width;
-            this.origY = bounds.height;
-            this.piSprite.pivot.set(bounds.width / 2, bounds.height / 2);
-            this.changedBounds = false;
-        }
+        let newBounds = false;
         // Do we need to flip?
         if (this.piSprite !== null && this.flipChange) {
             this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
@@ -977,6 +965,7 @@ export class SGSprite {
         if (changeX || changeY) {
             if (this.piSprite !== null ) { // image has been loaded
                 this.piSprite.position.set(this.locX.value(), this.locY.value());
+                newBounds = true;
             }
         }
         // Bounds checking
@@ -1073,6 +1062,7 @@ export class SGSprite {
                     this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
                         this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
                 }
+                newBounds = true;
             }
         }
          
@@ -1115,6 +1105,7 @@ export class SGSprite {
         if (change_skewX || change_skewY) {
             this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
             this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
+            newBounds = true;
         }
 
         let changeWarp = false;
@@ -1123,6 +1114,9 @@ export class SGSprite {
         }
         if (changeWarp) {
             this.applyWarpCorners();
+        }
+        if (newBounds && this.sgParent) { 
+            this.sgParent.sizeFromBounds();
         }
     }
 
