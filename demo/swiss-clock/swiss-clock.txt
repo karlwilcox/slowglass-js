@@ -13,22 +13,22 @@ scene swiss-clock
         # Pick up the parameters passed in to us
         assign scale xpos ypos darkness as $PARAMETERS
         # Create group for the clock
-        group create clock 200 200
+        group create clock
         # get our local assets 
         sprite create face in group clock load from /demo/swiss-clock/swiss-railway-clock.png 
         sprite create secondhand in group clock load from /demo/swiss-clock/second-hand.png
         sprite create hourhand in group clock load from /demo/swiss-clock/hour-hand.png
         sprite create minutehand in group clock load from /demo/swiss-clock/minute-hand.png
         # Initial sprite placement
-        place face at 100 100 size 200 200 depth 200
-        place minutehand at 100 100 depth 201
+        place face at $CENTREX $CENTREY size 200 200 depth 200
+        place minutehand at $CENTREX $CENTREY depth 201
         rotate minutehand to ($MINUTES * 6)
-        place hourhand at 100 100 depth 202
+        place hourhand at $CENTREX $CENTREY depth 202
         rotate hourhand to ((($HOURS Mod 12) * 30) + ($MINUTES/2))
-        place secondhand at 100 100 depth 203
+        place secondhand at $CENTREX $CENTREY depth 203
         rotate secondhand to ($SECONDS * 6)
         # Clock is ready, now position it and set the current time
-        place clock at $xpos $ypos 100
+        move clock to $xpos $ypos depth 300
         darken clock to $darkness
         scale clock to $scale
 

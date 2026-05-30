@@ -398,6 +398,8 @@ class SlowGlass {
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"
         // Could adjust this if needed in defaults
         let millis = Date.now();
+        let newSceneStarted = false;
+        let nextRun = Defaults.TRIGGER_RATE;
         if (SlowGlass.nextAction_run < millis) {
             if (Globals.app.screen.width != Globals.displayWidth) {
                 Globals.app.screen.width = Globals.displayWidth;
@@ -413,7 +415,7 @@ class SlowGlass {
                 }
                 // Found an active scene, now go through each action group
                 let firstAction = 0;
-                for ( let j = 0; j < current.actionGroups.length; j++ ) {
+                for ( let j = 0; !newSceneStarted && j < current.actionGroups.length; j++ ) {
                     let doRun = false;
                     const actionGroup = current.actionGroups[j];
                     // Is this a suspended group that can be restarted?
@@ -434,6 +436,10 @@ class SlowGlass {
                                 if (actionGroup.waitType == "while") {
                                     doRun = !doRun;
                                 }
+                                break;
+                            case "newScene":
+                                // run again, we just waited for a new scene to start
+                                doRun = true;
                                 break;
                         }
                         if (doRun) {
@@ -476,15 +482,19 @@ class SlowGlass {
                         }
                     }
                     if (doRun) {
-                        current.runGroup(j, millis, firstAction);
+                        newSceneStarted = current.runGroup(j, millis, firstAction);
                     }
                 }
                 if (current.state == constants.SCENE_LOADED) { 
                     // now set the state to ready
                     current.state = constants.SCENE_READY;
                 }
+                if (newSceneStarted) {
+                    nextRun = 0; // as soon as possible
+                    break;
+                }
             }
-            SlowGlass.nextAction_run = millis + Defaults.TRIGGER_RATE;
+            SlowGlass.nextAction_run = millis + nextRun;
         }
         // But sprites can be updated up to every frame if we want...
         if (SlowGlass.next_spriteUpdate < millis) {

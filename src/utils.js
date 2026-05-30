@@ -162,6 +162,7 @@ export class ActionGroup {
         this.nextAction = 0; // for looping
         this.failedIfCount = 0; // for nesting if statements
         this.waitType = false;
+        this.waitLine = 0;
         this.waitClause = "";
         this.dataVarName = "";
     }
@@ -178,16 +179,16 @@ export class ActionGroup {
         return (this.unfinishedCount <= 0);
     }
 
-    suspend(type, action, clause = "") {
+    suspend(type, actionLine, clause = "") {
+        this.suspended = true;
         this.waitType = type;
-        this.suspended = action;
+        this.waitLine = actionLine;
         this.waitClause = clause;
     }
 
     resume() {
-        const nextAction = this.suspended + 1;
         this.suspended = false;
-        return nextAction;
+        return this.waitLine + 1;
     }
         
 

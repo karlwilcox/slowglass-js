@@ -850,7 +850,7 @@ export class SGSprite {
                                 "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
-                let texture = null;
+                let texture = fullTexture;
                 if (image.cols > 0) {
                     const viewRectangle = image.makeCellRect(1);
                     texture = new PIXI.Texture({
@@ -873,8 +873,6 @@ export class SGSprite {
                     texture.source.wrapMode = "mirror-repeat";
                     this.sizeX.setTargetValue(this.viewWidth.value());
                     this.sizeY.setTargetValue(this.viewHeight.value());
-                } else {
-                    texture = fullTexture;
                 }
                 if (this.warped && typeof PIXI.PerspectiveMesh === "function") {
                     this.piSprite = new PIXI.PerspectiveMesh({
@@ -1079,13 +1077,15 @@ export class SGSprite {
         
         // update scale
         // can't test both in same expression because of short-circuiting
-        const changeSX = this.scaleX.updateValue();
-        const changeSY = this.scaleY.updateValue();
-        // update size
-        changeX = this.sizeX.updateValue();
-        changeY = this.sizeY.updateValue();
-        if (forceUpdate || changeSX || changeSY || changeX || changeY) {
-            if (this.piSprite !== null ) { // image has been loaded
+        // And we can't do anything if the image isn't loaded as we don't
+        // know its size yet
+        if (this.loaded) {
+            const changeSX = this.scaleX.updateValue();
+            const changeSY = this.scaleY.updateValue();
+            // update size
+            changeX = this.sizeX.updateValue();
+            changeY = this.sizeY.updateValue();
+            if (forceUpdate || changeSX || changeSY || changeX || changeY) {
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {

@@ -70,7 +70,9 @@ export class Scene {
         this.interactive_index = 0;
         this.reset();
         this.load(sceneText);
-        Globals.scenes.push(this);
+        // put new scenes at the front so they execute *before*
+        // script that started them
+        Globals.scenes.unshift(this);
         this.instance = Globals.unique();
         Globals.lastId = this.instance;
     }
@@ -528,10 +530,12 @@ export class Scene {
         this.varList.currentGroup = actionGroup;
         actionGroup.nextAction = start; // start at the top
         actionGroup.startCounting();
-        while (actionGroup.suspended == 0 && actionGroup.nextAction < actions.length ) {
+        while (actionGroup.suspended == false && actionGroup.nextAction < actions.length ) {
             this.runAction(actionGroup.nextAction, actionGroup, now);
         }
-        // this.varList.currentGroup = false;
+        // If we are suspended because a newGroup started return true so we can start
+        // executing the new scene as soon as possible
+        return (actionGroup.suspended != false && actionGroup.waitType == "newScene");
     }
 
 
@@ -895,7 +899,7 @@ export class Scene {
                     if (groupSprite) {
                         sgSprite.sgParent = groupSprite;
                         sgSprite.sgParent.children.push(sgSprite);
-                        groupSprite.piSprite.addChild(sgSprite);
+                        groupSprite.piSprite.addChild(sgSprite.piSprite);
                         groupSprite.sizeFromBounds();
                     } else {
                         Globals.root.addChild(sgSprite.piSprite);
@@ -1194,6 +1198,9 @@ export class Scene {
                     if ( spriteName == false ) {
                         spriteName = role;
                     }
+                    if (!SGImage.getImage(this.name, imageName)) {
+                        break;
+                    }
                     let sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
                     sgSprite.role = role;
                     wordList.testWord(["as","at"]);
@@ -1203,8 +1210,13 @@ export class Scene {
                         sgSprite.depth = null; // let the system set it instead
                     }
                     // can't set any other properties until we know the image size, so quit for now
+                    const piSprite = new PIXI.Sprite({
+                            anchor: 0.5,
+                            });
+                    sgSprite.piSprite = piSprite;
                     sgSprite.tags.addTag(wordList.getTags());
                     this.sprites.push(sgSprite);
+                    Globals.root.addChild(sgSprite.piSprite);
                 } else {
                         Globals.log.error("Missing put data at line " + action.number);
                 }
@@ -1261,6 +1273,7 @@ export class Scene {
                                 } else {
                                     Globals.root.addChild(group);
                                 }
+                                sgSprite.loaded = true;
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(!hidden);
                                 sgSprite.tags.addTag(wordList.getTags());
@@ -1811,10 +1824,6 @@ export class Scene {
                 if (wordList.wordsLeft() > 0) {
                     let spriteName = wordList.getSpriteName();
                     let toOrBy = wordList.testWord( ["to","by", "reset"], "to");
-                    let w = wordList.getInt(0) * Globals.scriptScaleX;
-                    let h = wordList.getInt(0) * Globals.scriptScaleY;
-                    let inOrAt = wordList.testWord( ["in","at"]);
-                    let duration = wordList.getDuration(0);
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
@@ -1837,6 +1846,8 @@ export class Scene {
                         Globals.log.error(`Bad resize for ${spriteName}`);
                         break;
                     }
+                    let inOrAt = wordList.testWord( ["in","at"]);
+                    let duration = wordList.getDuration(0);
                     if (toOrBy == "reset") {
                         sgSprite.resetSize();
                     } else if (!sgSprite.loaded) {
@@ -2286,6 +2297,7 @@ export class Scene {
                     this.completionCallback = actionGroup.callback(1);
                     const newScene = new Scene(sceneText, activeName);
                     newScene.start(params);
+                    actionGroup.suspend("newScene", actionIndex);
                 } else {
                     Globals.log.error("Missing scene name at line " + action.number);
                 }
@@ -2358,6 +2370,7 @@ export class Scene {
                     const params = wordList.joinWords();
                     this.completionCallback = actionGroup.callback(1);
                     scene.start(params);
+                    actionGroup.suspend("newScene", actionIndex);
                 } else {
                     Globals.log.error("Missing active scene name at line " + action.number);
                 }
