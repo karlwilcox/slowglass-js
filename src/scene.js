@@ -90,7 +90,7 @@ export class Scene {
         this.fromFolder = "";
         this.urlFolder = this.sceneText.folder; // where should we load from?
         this.spriteScene = this.name;
-        this.parameters = defaults.NOTFOUND;
+        // this.parameters = defaults.NOTFOUND;
         this.gravity = defaults.GRAVITY_PS2;
         this.groundLevel = false;
         // Graphic creation options
@@ -336,7 +336,6 @@ export class Scene {
 
     stop(reset = false) {
         this.state  = constants.SCENE_STOPPED;
-        this.parameters = defaults.NOTFOUND;
         this.actionGroups = [];
         // delete all sprites
         for (let i = 0; i < this.sprites; i++) {
@@ -399,14 +398,6 @@ export class Scene {
     ######     ##    ##     ## ##     ##    ##      ### ###   
 
 **************************************************************************************************/
-
-    start(parameters = "") {
-        // if (this.state != constants.SCENE_STOPPED) {
-        //     return;
-        // } // not necessarily an error
-        this.parameters = parameters;
-        this.state = constants.SCENE_RUNNING;
-    }
 
     load(sceneText) {
         this.actionGroups = [];
@@ -2348,8 +2339,13 @@ export class Scene {
                         Globals.log.error(`name ${activeName} is already in use as active scene name`);
                         break;
                     }
+                    if (wordList.testWord("with")) {
+                        wordList.testWord(["params","parameters"]);
+                    }
+                    const params = wordList.joinWords();
                     this.completionCallback = actionGroup.callback(1);
                     const newScene = new Scene(sceneText, activeName);
+                    newScene.parameters = params;
                 } else {
                     Globals.log.error("Missing scene name at line " + action.number);
                 }
@@ -2383,7 +2379,9 @@ export class Scene {
                     }
                     const params = wordList.joinWords();
                     this.completionCallback = actionGroup.callback(1);
-                    scene.parameters = params;
+                    if (params) {
+                        scene.parameters = params;
+                    }
                     scene.state = constants.SCENE_RUNNING;
                     actionGroup.suspend("newScene", actionIndex);
                 } else {

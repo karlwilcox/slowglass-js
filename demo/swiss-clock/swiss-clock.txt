@@ -8,10 +8,12 @@ setup
    put platform as background
 
 
-prepare swiss-clock
+prepare swiss-clock 148 262 83 40  // size, x, y, darkness
+
 
 begin
-    run swiss-clock 148 262 83 40  // size, x, y, darkness
+    run swiss-clock 
+
 
 scene swiss-clock
     setup
@@ -29,7 +31,7 @@ scene swiss-clock
         place minutehand at $CENTREX $CENTREY depth 201
         place hourhand at $CENTREX $CENTREY depth 202
         place secondhand at $CENTREX $CENTREY depth 203
-pause 2
+pause 1
         resize clock to $size $size
         # Now set the current time
         rotate secondhand to ($SECONDS * 6)

@@ -355,7 +355,7 @@ class SlowGlass {
 
         // Run setup for the main scene
         this.update();
-        Scene.find(constants.MAIN_NAME).start();
+        Scene.find(constants.MAIN_NAME).state = constants.SCENE_RUNNING;
 
         // Main loop
         Globals.app.ticker.add(this.update);
