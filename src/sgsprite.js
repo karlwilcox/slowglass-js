@@ -126,6 +126,7 @@ export class SGSprite {
         // Identification
         this.type = type;
         this.loaded = false;
+        this.placed = false;
         this.imageName = imageName;
         this.image = null;
         this.name = spriteName
@@ -149,7 +150,7 @@ export class SGSprite {
         this.origX = 0; // set on creation
         this.origY = 0;
         // requested size on placement (deferred sizing)
-        this.dimensionType = "image";
+        this.dimensionType = false;
         this.dimension1 = 0;
         this.dimension2 = 0;
         this.deferredDuration = 0;
@@ -708,23 +709,10 @@ export class SGSprite {
         this.piSprite.setCorners(...this.getWarpCorners());
     }
 
-    applySize(newX, newY, dimensionType, dimension1, dimension2, 
+    applySize(dimensionType, dimension1, dimension2, 
                 toOrBy = null, inOrAt = null, duration = 0, now = 0, callback = false) {
-        if (newX == 0) {
-            newX = this.origX * newY / this.origY;
-        }
-        if (newY == 0) {
-            newY = this.origY * newX / this.origX;
-        }
-        if (toOrBy == "by") {
-            newX += this.sizeX.value();
-            newY += this.sizeY.value();
-        }
-        if (inOrAt == "at") {
-            // (future: rate-based resizing)
-        }
-        let width = newX;
-        let height = newY;
+        let width = 0;
+        let height = 0;
         // we set in motion up to two changes
         if (callback) {
             callback(2)
@@ -733,22 +721,27 @@ export class SGSprite {
             case "size":
                 width = dimension1;
                 height = dimension2;
-                break;
-            case "scale":
-                width = imgWidth * (dimension1 / 100);
-                height = imgHeight * (dimension2 / 100);
+                if (toOrBy == "by") {
+                    width += this.sizeX.value();
+                    height += this.sizeY.value();
+                }
                 break;
             case "width":
                 width = dimension1;
-                height = (imgHeight / imgWidth) * width;
+                height = (this.origX / this.origY) * width;
                 break;
             case "height":
                 height = dimension1;
-                width = (imgWidth / imgHeight) * height;
+                width = (this.origX / this.origY) * height;
                 break;
             case "image":
-            default: // no action needed
+                width = dimension1;
+                height = dimension2;
+            default: 
                 break;
+        }
+        if (inOrAt == "at") {
+            // (future: rate-based resizing)
         }
         this.sizeX.setTargetValue(width, duration, now, callback);
         this.sizeY.setTargetValue(height, duration, now, callback);
@@ -783,7 +776,7 @@ export class SGSprite {
             return;
         }
         // First, do we need to load an image (and can we?)
-        if (this.type == constants.SPRITE_IMAGE && 
+        if (this.type == constants.SPRITE_IMAGE && this.placed &&
                 (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) { // no image loaded
             let image = SGImage.getImage(scene, this.imageName);
             if (image === null) { // doesn't exist, give up
@@ -845,8 +838,11 @@ export class SGSprite {
                     if (this.depth == null ) {
                         this.depth = depth;
                     }
-                } else { // set size from the image, as per request
-                    this.applySize(imgWidth, imgHeight, this.dimensionType, this.dimension1, this.dimension2,
+                } else if (this.dimensionType == "image") { // set size from the image
+                    this.sizeX.setTargetValue(imgWidth);
+                    this.sizeY.setTargetValue(imgHeight);
+                } else { // set size as per request
+                    this.applySize(this.dimensionType, this.dimension1, this.dimension2,
                                 "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
                 }
                 const fullTexture = new PIXI.Texture(image.piImage);
@@ -906,7 +902,7 @@ export class SGSprite {
                     const newX = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX;
                     const newY = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY;
                     if (newX <= 0 || newY <= 0) {
-                        Globals.log.error("trying to set zero size");
+                        Globals.log.error("trying to set zero size on load");
                     } else {
                         this.piSprite.setSize(newX, newY);
                     }
@@ -988,12 +984,14 @@ export class SGSprite {
 
         // Now update position
         // can't test both in same expression because of short-circuiting
-        let changeX = this.locX.updateValue();
-        let changeY = this.locY.updateValue();
-        if (changeX || changeY) {
-            if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.position.set(this.locX.value(), this.locY.value());
-                newBounds = true;
+        {
+            const changeX = this.locX.updateValue();
+            const changeY = this.locY.updateValue();
+            if (changeX || changeY) {
+                if (this.piSprite !== null ) { // image has been loaded
+                    this.piSprite.position.set(this.locX.value(), this.locY.value());
+                    newBounds = true;
+                }
             }
         }
         // Bounds checking
@@ -1024,22 +1022,25 @@ export class SGSprite {
             }
         }
         // Update rotation angle
-        const pivotOnX = this.pivotX.updateValue();
-        const pivotOnY = this.pivotY.updateValue();
-        const changeAngle = this.angle.updateValue();
-        if (pivotOnX || pivotOnY || changeAngle) {
-            if (this.piSprite !== null ) { // image has been loaded
-                // if (this.type == constants.SPRITE_GRAPHIC) { // graphics are drawn around their centre
-                    // update pivot point (before turning)
-                //     this.piSprite.origin.set((this.sizeX / -2) + (this.sizeX * this.pivotX.value()/100),
-                //                              (this.sizeY / -2) + (this.sizeY * this.pivotY.value()/100));
-                // } else { // sprite.type == constants.SPRITE_IMAGE, etc.
-                //         // update pivot point (before turning)
-                        // this.piSprite.anchor.set(this.sizeX * this.pivotX.value()/100, this.sizeY * this.pivotY.value()/100);
-                // }
-                this.piSprite.angle = this.angle.value();
-                // put it back to the centre for scaling etc. afterwards
-                // this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
+        {
+            const pivotOnX = this.pivotX.updateValue();
+            const pivotOnY = this.pivotY.updateValue();
+            const changeAngle = this.angle.updateValue();
+            if (pivotOnX || pivotOnY || changeAngle) {
+                if (this.piSprite !== null ) { // image has been loaded
+                    // if (this.type == constants.SPRITE_GRAPHIC) { // graphics are drawn around their centre
+                        // update pivot point (before turning)
+                    //     this.piSprite.origin.set((this.sizeX / -2) + (this.sizeX * this.pivotX.value()/100),
+                    //                              (this.sizeY / -2) + (this.sizeY * this.pivotY.value()/100));
+                    // } else { // sprite.type == constants.SPRITE_IMAGE, etc.
+                    //         // update pivot point (before turning)
+                            // this.piSprite.anchor.set(this.sizeX * this.pivotX.value()/100, this.sizeY * this.pivotY.value()/100);
+                    // }
+                    this.piSprite.angle = this.angle.value();
+                    // Do we need to set newBounds here...?
+                    // put it back to the centre for scaling etc. afterwards
+                    // this.piSprite.origin.set(this.sizeX / 2, this.sizeY / 2);
+                }
             }
         }
 
@@ -1075,22 +1076,28 @@ export class SGSprite {
             }
         }
         
-        // update scale
+        // update size
         // can't test both in same expression because of short-circuiting
         // And we can't do anything if the image isn't loaded as we don't
         // know its size yet
-        if (this.loaded) {
+        if (this.placed) {
+        // {
             const changeSX = this.scaleX.updateValue();
             const changeSY = this.scaleY.updateValue();
             // update size
-            changeX = this.sizeX.updateValue();
-            changeY = this.sizeY.updateValue();
-            if (forceUpdate || changeSX || changeSY || changeX || changeY) {
+            const changeX = this.sizeX.updateValue();
+            const changeY = this.sizeY.updateValue();
+            if (this.piSprite != null && (forceUpdate || changeSX || changeSY || changeX || changeY)) {
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {
-                    this.piSprite.setSize(this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX,
-                        this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
+                    const newX = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX;
+                    const newY = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY;
+                    if (newX <= 0 || newY <= 0) {
+                        Globals.log.error("trying to set zero size");
+                    } else {
+                        this.piSprite.setSize(newX, newY);
+                    }
                 }
                 newBounds = true;
             }
@@ -1130,12 +1137,14 @@ export class SGSprite {
         }
 
         // or are we skewing?
-        const change_skewX = this.skewX.updateValue();
-        const change_skewY = this.skewY.updateValue();
-        if (change_skewX || change_skewY) {
-            this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
-            this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
-            newBounds = true;
+        {
+            const change_skewX = this.skewX.updateValue();
+            const change_skewY = this.skewY.updateValue();
+            if (change_skewX || change_skewY) {
+                this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
+                this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
+                newBounds = true;
+            }
         }
 
         let changeWarp = false;

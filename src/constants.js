@@ -18,6 +18,7 @@ export const SPRITE_GROUP = "_GROUP_";
 
 export const SCENE_UNLOADED = "_UNLOADED_";
 export const SCENE_LOADED = "_LOADED_";
+export const SCENE_AUTORUN = "_AUTORUN_";
 export const SCENE_READY = "_READY_";
 export const SCENE_STOPPED = "_STOPPED_";
 export const SCENE_RUNNING = "_RUNNING_";

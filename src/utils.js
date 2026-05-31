@@ -64,17 +64,17 @@ export class Log {
 
     // don't report duplicate errors
     error(text) {
-        for ( let i = 0; i < this.errors.length; i++ ) {
-            if (this.errors[i] == text) {
-                return;
-            }
-        } // else
+        // for ( let i = 0; i < this.errors.length; i++ ) {
+        //     if (this.errors[i] == text) {
+        //         return;
+        //     }
+        // } // else
         if (this.messageElement != null) {
             this.report(text);
         } else {
             console.log(text);
         }
-        this.errors.push(text);
+        // this.errors.push(text);
     }
 
     log(text) {

@@ -284,7 +284,7 @@ class SlowGlass {
         if (include) {
             // scenes have already been added, we may have some top level commands
             top.name = "_INCLUDE_";
-            top.start();
+            top.state = constants.SCENE_RUNNING;
             // Globals.scenes.push(top);
             // merge it with the existing top scene
             const mainScene = Scene.find(constants.MAIN_NAME, false);
@@ -314,7 +314,6 @@ class SlowGlass {
                 const scene = new Scene(main, constants.MAIN_NAME);
                 scene.interactive_index = scene.actionGroups.length;
                 scene.actionGroups.push(new Utils.ActionGroup());
-                scene.start();
             }
         }
         return true;
@@ -353,6 +352,10 @@ class SlowGlass {
         Globals.root = new PIXI.Container();
         Globals.root.sortableChildren = true;
         Globals.app.stage.addChild(Globals.root);
+
+        // Run setup for the main scene
+        this.update();
+        Scene.find(constants.MAIN_NAME).start();
 
         // Main loop
         Globals.app.ticker.add(this.update);
@@ -401,6 +404,7 @@ class SlowGlass {
         let newSceneStarted = false;
         let nextRun = Defaults.TRIGGER_RATE;
         if (SlowGlass.nextAction_run < millis) {
+            // why is this here?
             if (Globals.app.screen.width != Globals.displayWidth) {
                 Globals.app.screen.width = Globals.displayWidth;
             }
@@ -409,56 +413,61 @@ class SlowGlass {
             }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                // we are only interested in running scenes or those that have just been loaded
-                if (current.state != constants.SCENE_RUNNING && current.state != constants.SCENE_LOADED) {
-                    continue;
-                }
-                // Found an active scene, now go through each action group
-                let firstAction = 0;
-                for ( let j = 0; !newSceneStarted && j < current.actionGroups.length; j++ ) {
-                    let doRun = false;
-                    const actionGroup = current.actionGroups[j];
-                    // Is this a suspended group that can be restarted?
-                    if (actionGroup.suspended) {
-                        // What was the reason for the suspension?
-                        switch(actionGroup.waitType) {
-                            case "pause":
-                                doRun = millis > actionGroup.waitClause;
-                                break;
-                            case "then":
-                                doRun = actionGroup.isFinished();
-                                break;
-                            case "until":
-                            case "while":
-                                const expanded = current.varList.expandVars(actionGroup.waitClause);
-                                const evaluated = Utils.evaluate(expanded)
-                                doRun = Utils.logical(expanded.split(/ +/));
-                                if (actionGroup.waitType == "while") {
-                                    doRun = !doRun;
-                                }
-                                break;
-                            case "newScene":
-                                // run again, we just waited for a new scene to start
-                                doRun = true;
-                                break;
+                // If it has just been loaded, run the Setup trigger only
+                if (current.state == constants.SCENE_LOADED || current.state == constants.SCENE_AUTORUN) {
+                    let triggers = current.actionGroups[i].triggers;
+                    for ( let k = 0; k < triggers.length; k++) {
+                        if (triggers[k].constructor.name == "Setup") {
+                            triggers[k].fired();
+                            current.runGroup(i, millis);
+                            break;
                         }
-                        if (doRun) {
-                            firstAction = actionGroup.resume();
-                        } else {
-                            continue; // still suspended, go on to next group
-                        }
-                    }  else { // not suspended, test the triggers
-                        let triggers = current.actionGroups[j].triggers;
-                        for ( let k = 0; k < triggers.length; k++) {
-                            if (current.state == constants.SCENE_LOADED) { 
-                                // run init triggers only
-                                if (triggers[k].constructor.name == "Setup") {
-                                    triggers[k].fired();
+                    }
+                    if (current.state == constants.SCENE_AUTORUN) {
+                        current.state = constants.SCENE_RUNNING;
+                    } else {
+                        current.state = constants.SCENE_READY;
+                    }
+                } else if (current.state == constants.SCENE_RUNNING) {
+                    // we are only interested in running scenes 
+                    // Found an active scene, now go through each action group
+                    let firstAction = 0;
+                    for ( let j = 0; !newSceneStarted && j < current.actionGroups.length; j++ ) {
+                        let doRun = false;
+                        const actionGroup = current.actionGroups[j];
+                        // Is this a suspended group that can be restarted?
+                        if (actionGroup.suspended) {
+                            // What was the reason for the suspension?
+                            switch(actionGroup.waitType) {
+                                case "pause":
+                                    doRun = millis > actionGroup.waitClause;
+                                    break;
+                                case "then":
+                                    doRun = actionGroup.isFinished();
+                                    break;
+                                case "until":
+                                case "while":
+                                    const expanded = current.varList.expandVars(actionGroup.waitClause);
+                                    const evaluated = Utils.evaluate(expanded)
+                                    doRun = Utils.logical(expanded.split(/ +/));
+                                    if (actionGroup.waitType == "while") {
+                                        doRun = !doRun;
+                                    }
+                                    break;
+                                case "newScene":
+                                case "newSprite":
+                                    // run again, we just waited for a new scene to start
                                     doRun = true;
-                                } else {
-                                    continue;
-                                }
+                                    break;
+                            }
+                            if (doRun) {
+                                firstAction = actionGroup.resume();
                             } else {
+                                continue; // still suspended, go on to next group
+                            }
+                        }  else { // not suspended, test the triggers
+                            let triggers = current.actionGroups[j].triggers;
+                            for ( let k = 0; k < triggers.length; k++) {
                                 // this implements the any/all condition. It is set by looking
                                 // at each trigger in turn. If the when condition is "any"
                                 // we immediately break out of the loop and run actions
@@ -480,24 +489,20 @@ class SlowGlass {
                                 }
                             }
                         }
+                        if (doRun) {
+                            newSceneStarted = current.runGroup(j, millis, firstAction);
+                        }
                     }
-                    if (doRun) {
-                        newSceneStarted = current.runGroup(j, millis, firstAction);
+                    if (newSceneStarted) {
+                        nextRun = Defaults.SPRITE_RATE; // next frame
                     }
-                }
-                if (current.state == constants.SCENE_LOADED) { 
-                    // now set the state to ready
-                    current.state = constants.SCENE_READY;
-                }
-                if (newSceneStarted) {
-                    nextRun = 0; // as soon as possible
-                    break;
                 }
             }
             SlowGlass.nextAction_run = millis + nextRun;
         }
         // But sprites can be updated up to every frame if we want...
         if (SlowGlass.next_spriteUpdate < millis) {
+            Globals.frameNo += 1;
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
                 if (current.state != constants.SCENE_RUNNING) {

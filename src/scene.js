@@ -43,7 +43,7 @@ export class SceneText {
             }
         } // else
         if (report) {
-            Globals.log.error("Cannot find scene " + sceneName);
+            Globals.log.error("Cannot find scene text " + sceneName);
         }
         return false;
     }
@@ -63,13 +63,13 @@ export class SceneText {
 **************************************************************************************************/
 
 export class Scene {
-    constructor(sceneText, name) {
+    constructor(sceneText, name, autorun = false) {
         this.sceneText = sceneText;
         this.name = name;
-        this.state = constants.SCENE_LOADED;
         this.interactive_index = 0;
         this.reset();
         this.load(sceneText);
+        this.state = autorun ? constants.SCENE_AUTORUN : constants.SCENE_LOADED;
         // put new scenes at the front so they execute *before*
         // script that started them
         Globals.scenes.unshift(this);
@@ -905,6 +905,7 @@ export class Scene {
                         Globals.root.addChild(sgSprite.piSprite);
                     }
                     this.sprites.push(sgSprite);
+                    // actionGroup.suspend("newSprite", actionIndex);
                 } else {
                     Globals.log.error("Missing sprite data at line " + action.number);
                 }
@@ -1112,11 +1113,12 @@ export class Scene {
                         // not loaded yet, so we don't know the size, ask for when loaded
                         sgSprite.requestSize(dimensionType, dimension1, dimension2);
                     } else { // just set the size we want
-                        sgSprite.applySize(sgSprite.sizeX.value(), sgSprite.sizeY.value(), dimensionType, dimension1, dimension2);
+                        sgSprite.applySize(dimensionType, dimension1, dimension2);
                     }
                     if (!hidden) {
                         sgSprite.setVisibility(true);
                     }
+                    sgSprite.placed = true;
                 } else {
                     Globals.log.error("Missing place data at line " + action.number);
                 }
@@ -1215,6 +1217,7 @@ export class Scene {
                             });
                     sgSprite.piSprite = piSprite;
                     sgSprite.tags.addTag(wordList.getTags());
+                    sgSprite.placed = true;
                     this.sprites.push(sgSprite);
                     Globals.root.addChild(sgSprite.piSprite);
                 } else {
@@ -1277,6 +1280,7 @@ export class Scene {
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(!hidden);
                                 sgSprite.tags.addTag(wordList.getTags());
+                                sgSprite.placed = true; // groups are always "placed"
                                 this.sprites.push(sgSprite);                           
                             }
                             break;
@@ -1828,7 +1832,7 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
-                    const dimensionType = wordList.testWord(["size", "width", "height"]); 
+                    let dimensionType = wordList.testWord(["size", "width", "height"], "size"); 
                     let dimension1 = 0;
                     let dimension2 = 0;
                     switch (dimensionType) {
@@ -1842,19 +1846,28 @@ export class Scene {
                             dimension2 = wordList.getInt(0);
                             break;
                     }
-                    if (dimensionType == "size" && dimension1 <= 0 && dimension2 <= 0) {
-                        Globals.log.error(`Bad resize for ${spriteName}`);
+                    if (dimensionType == "size") {
+                        // Fixups if we don't get both dimensions
+                         if (dimension1 <= 0 && dimension2 <= 0) {
+                            Globals.log.error(`Bad resize for ${spriteName}`);
                         break;
+                         } else if (dimension1 <= 0) {
+                            dimensionType = "height";
+                            dimension1 = dimension2;
+                         } else if (dimension2 <= 0) {
+                            dimensionType = "width";
+                         }
                     }
                     let inOrAt = wordList.testWord( ["in","at"]);
                     let duration = wordList.getDuration(0);
+                    // sgSprite.update(this.name, now);
                     if (toOrBy == "reset") {
                         sgSprite.resetSize();
                     } else if (!sgSprite.loaded) {
                         // not loaded yet, so we don't know the size, ask for when loaded
                         sgSprite.requestSize(dimensionType, dimension1, dimension2, duration, now, actionGroup.callback());
                     } else { // just set the size we want
-                        sgSprite.applySize(sgSprite.sizeX.value(), sgSprite.sizeY.value(), dimensionType, dimension1, dimension2,
+                        sgSprite.applySize(dimensionType, dimension1, dimension2,
                                 toOrBy, inOrAt, duration, now, actionGroup.callback());
                     }
                 } else {
@@ -1888,6 +1901,7 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
+                    // sgSprite.update(this.name, now);
                     if  (toOrBy == "reset") {
                         sgSprite.scaleX.setTargetValue(1);
                         sgSprite.scaleY.setTargetValue(1);
@@ -2295,8 +2309,8 @@ export class Scene {
                     //     break;
                     // }
                     this.completionCallback = actionGroup.callback(1);
-                    const newScene = new Scene(sceneText, activeName);
-                    newScene.start(params);
+                    const newScene = new Scene(sceneText, activeName, true);
+                    newScene.parameters = params;
                     actionGroup.suspend("newScene", actionIndex);
                 } else {
                     Globals.log.error("Missing scene name at line " + action.number);
@@ -2330,7 +2344,7 @@ export class Scene {
                         wordList.testWord("as");
                         activeName = WordList.getWord(activeName);
                     }
-                    if (Scene.find(activeName)) {
+                    if (Scene.find(activeName, false)) {
                         Globals.log.error(`name ${activeName} is already in use as active scene name`);
                         break;
                     }
@@ -2369,7 +2383,8 @@ export class Scene {
                     }
                     const params = wordList.joinWords();
                     this.completionCallback = actionGroup.callback(1);
-                    scene.start(params);
+                    scene.parameters = params;
+                    scene.state = constants.SCENE_RUNNING;
                     actionGroup.suspend("newScene", actionIndex);
                 } else {
                     Globals.log.error("Missing active scene name at line " + action.number);

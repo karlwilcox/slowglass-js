@@ -1,0 +1,16 @@
+stage size 800 600
+
+setup
+    log main:setup at $FRAME
+
+begin
+    log main:begin at $FRAME
+    start scene tester
+
+scene tester
+    setup
+        log tester:setup at $FRAME
+
+    begin
+        log tester:begin at $FRAME
+        

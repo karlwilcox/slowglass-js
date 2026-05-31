@@ -9,6 +9,7 @@ export class Globals {
     static sceneTexts = [];
     static scenes = [];
     static app = null;
+    static frameNo = 0;
     static log = new Utils.Log(defaults.DEBUG);
     static reporter = new Utils.Reporter();
     static evaluator = null;
@@ -94,6 +95,7 @@ export class Globals {
         Globals.scenes = [];
         Globals.sceneTexts = [];
         Globals.app = null;
+        Globals.frameNo = 0;
         Globals.currentTrigger = "";
         Globals.displayWidth = defaults.DISPLAY_WIDTH;
         Globals.displayHeight = defaults.DISPLAY_HEIGHT;
@@ -105,6 +107,7 @@ export class Globals {
         Globals.gravity = defaults.GRAVITY_PS2;
         Globals.lastKey = null;
         Globals.key = null;
+        Globals.lastId = 0;
         Globals.highestZ = 0;
         let missing = "";
         // Put these in reverse order of your preferred evaluator

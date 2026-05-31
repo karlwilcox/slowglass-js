@@ -3,15 +3,20 @@
 canvas width 800
 canvas height 600
 
+setup
+  load /assets/backgrounds/station-platform.png as platform
+   put platform as background
+
+
+prepare swiss-clock
+
 begin
-    load /assets/backgrounds/station-platform.png as platform
-    put platform as background
-    perform swiss-clock 59 262 83 40  // scale, x, y, darkness
+    run swiss-clock 148 262 83 40  // size, x, y, darkness
 
 scene swiss-clock
     setup
         # Pick up the parameters passed in to us
-        assign scale xpos ypos darkness as $PARAMETERS
+        assign size xpos ypos darkness as $PARAMETERS
         # Create group for the clock
         group create clock
         # get our local assets 
@@ -22,15 +27,18 @@ scene swiss-clock
         # Initial sprite placement
         place face at $CENTREX $CENTREY size 200 200 depth 200
         place minutehand at $CENTREX $CENTREY depth 201
-        rotate minutehand to ($MINUTES * 6)
         place hourhand at $CENTREX $CENTREY depth 202
-        rotate hourhand to ((($HOURS Mod 12) * 30) + ($MINUTES/2))
         place secondhand at $CENTREX $CENTREY depth 203
+pause 2
+        resize clock to $size $size
+        # Now set the current time
         rotate secondhand to ($SECONDS * 6)
-        # Clock is ready, now position it and set the current time
+        rotate minutehand to ($MINUTES * 6)
+        rotate hourhand to ((($HOURS Mod 12) * 30) + ($MINUTES/2))
+        # Clock is ready, now position it
         move clock to $xpos $ypos depth 300
         darken clock to $darkness
-        scale clock to $scale
+        raise clock to 300
 
     each **:**:00
         # move both hands
