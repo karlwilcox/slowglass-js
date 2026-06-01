@@ -747,12 +747,13 @@ export class SGSprite {
         this.sizeY.setTargetValue(height, duration, now, callback);
     }
 
-    sizeFromBounds() {
+    sizeFromBounds(message = "") {
         if (this.type != constants.SPRITE_GROUP) {
             return;
         }
         // Get the new group size
         const bounds = this.piSprite.getBounds();
+        Globals.log.report(`${message} ${bounds.width}  ${bounds.height}`);
         this.sizeX.forceValue(bounds.width);
         this.sizeY.forceValue(bounds.height);
         this.origX = bounds.width / this.scaleX.value();
@@ -908,7 +909,7 @@ export class SGSprite {
                     }
                 }
                 if (this.sgParent) {
-                    this.sgParent.sizeFromBounds();
+                    this.sgParent.sizeFromBounds(this.name);
                 }//  else {
                 //     Globals.root.addChild(this.piSprite);
                 // }
@@ -990,6 +991,7 @@ export class SGSprite {
             if (changeX || changeY) {
                 if (this.piSprite !== null ) { // image has been loaded
                     this.piSprite.position.set(this.locX.value(), this.locY.value());
+                    // Globals.log.report("Change of location " + this.imageName);
                     newBounds = true;
                 }
             }
@@ -1099,6 +1101,7 @@ export class SGSprite {
                         this.piSprite.setSize(newX, newY);
                     }
                 }
+                    // Globals.log.report("Change of size " + this.imageName);
                 newBounds = true;
             }
         }
@@ -1143,6 +1146,7 @@ export class SGSprite {
             if (change_skewX || change_skewY) {
                 this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
                 this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
+                    // Globals.log.report("Change of skew " + this.imageName);
                 newBounds = true;
             }
         }
@@ -1155,7 +1159,7 @@ export class SGSprite {
             this.applyWarpCorners();
         }
         if (newBounds && this.sgParent) { 
-            this.sgParent.sizeFromBounds();
+            this.sgParent.sizeFromBounds(this.name);
         }
     }
 

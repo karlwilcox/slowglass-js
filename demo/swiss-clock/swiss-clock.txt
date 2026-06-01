@@ -8,7 +8,7 @@ setup
    put platform as background
 
 
-prepare swiss-clock 148 262 83 40  // size, x, y, darkness
+prepare swiss-clock 148 263 83 40  // size, x, y, darkness
 
 
 begin

@@ -891,7 +891,7 @@ export class Scene {
                         sgSprite.sgParent = groupSprite;
                         sgSprite.sgParent.children.push(sgSprite);
                         groupSprite.piSprite.addChild(sgSprite.piSprite);
-                        groupSprite.sizeFromBounds();
+                        // groupSprite.sizeFromBounds(spriteName);
                     } else {
                         Globals.root.addChild(sgSprite.piSprite);
                     }

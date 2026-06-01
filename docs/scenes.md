@@ -90,7 +90,9 @@ you can use a two stage process to run a scene:
 
 This will load the scene into memory but the _*ONLY*_ trigger that will
 be activated is **setup** (alternatively named **init**). This for
-example can be used to load image and other resources.
+example can be used to load image and other resources. You can provide
+parameters if you wish, for example if they are required in the **setup**
+actions.
 
 At this point you can set the value of any scene variables that you
 want, using a command like:
@@ -103,7 +105,11 @@ with:
 `act out [scene] {active-name}`
 
 This will start the scene and also activate any **begin** triggers.
-You can also use parameters as with the **start** command above.
+You can also use parameters as with the **start** command above, be
+aware that these will **OVERWRITE** any parameters that you previously
+provided at the **prepare** stage, although this might be useful to you -
+it means that you can provide different parameters to the **setup**
+actions than to all the other action groups.
 
 ### When Scenes Actually Start Performing
 
