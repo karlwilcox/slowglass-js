@@ -19,17 +19,52 @@ You can then add any number of existing sprites to the group with the command:
 
 `group add {sprite-name}`
 
-Groups can be nested to any depth, using the construction:
+Note that the coordinates will be adjusted so that wherever the group is currently
+located the sprite will appear to be in the same place as it currently is, but
+is not part of the group and will move with the group.
 
-`group create {group-name} (hidden) in (group) {parent-group-name}`
+## Placing Sprites in Groups
 
-## Creating Sprites in Groups
+You can also place a sprite directly in a group. Note that the location you
+provide will be relative to the location of the group, **NOT** the overall
+stage.
 
-You can also place a sprite directly in a group at the point you are creating it, so for an image sprite you can do:
+`place {sprite-name} in {group-name} at {x} {y} {depth}`
 
-`sprite create plane1 in group planes from plane`
+If the group is hidden the sprite will also be hidden.
 
-Graphics and text sprites work the same way.
+A group is itself just another type of sprite so you can nest them
+to any depth using the same construction:
+
+`place {group-name} in {super-group} at {xy} {y} {depth}`
+
+## Uses of Groups
+
+I expect groups will be used in two, rather different ways, for which
+different approaches might be appropriate.
+
+### Grouping Sprites to Move Them as One
+
+This is grouping several sprites so you can move them as a single unit (Or
+scale them, skew them rotate them as one), like a formation of aircraft for
+example.
+
+For this type of group I suggest creating the group (which will initially be at
+coordinates 0, 0) and then adding the sprites to the groups as you place them
+around those coordinates. If you wanted four aircraft in a square formation
+then use negative coordinates on some of them to centre them around the origin.
+Then when you place the group itself in your scene at a particular location the
+aircraft will be centered at that location.
+
+### Grouping Sprites to Apply Effects to All of Them
+
+This is for example if you want to have a number of windows in a city
+scape and to tint or darken them all at once. In this case I suggest
+that you create the group, place all your windows exactly where you
+want them in the scene and then use `group add` to put them into the
+group. You never need to place or move the group and apply your
+**darken** or **tint** (or whatever) commands to the group, which
+will affect all of the sprites at once.
 
 ## Groups and Group Members
 

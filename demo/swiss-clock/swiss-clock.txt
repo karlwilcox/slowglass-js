@@ -17,8 +17,7 @@ begin
 
 scene swiss-clock
     setup
-        # Pick up the parameters passed in to us
-        assign size xpos ypos darkness as $PARAMETERS
+log params = $PARAMETERS
         # Create group for the clock
         group create clock
         # get our local assets 
@@ -27,17 +26,22 @@ scene swiss-clock
         sprite create hourhand in group clock load from /demo/swiss-clock/hour-hand.png
         sprite create minutehand in group clock load from /demo/swiss-clock/minute-hand.png
         # Initial sprite placement
-        place face at $CENTREX $CENTREY size 200 200 depth 200
-        place minutehand at $CENTREX $CENTREY depth 201
-        place hourhand at $CENTREX $CENTREY depth 202
-        place secondhand at $CENTREX $CENTREY depth 203
-pause 1
-        resize clock to $size $size
+        place face at origin size 200 200 depth 200
+        place minutehand at origin depth 201
+        place hourhand at origin depth 202
+        place secondhand at origin depth 203
+// pause 1
         # Now set the current time
         rotate secondhand to ($SECONDS * 6)
         rotate minutehand to ($MINUTES * 6)
         rotate hourhand to ((($HOURS Mod 12) * 30) + ($MINUTES/2))
+
+begin
+log params = $PARAMETERS
+        # Pick up the parameters passed in to us
+        assign size xpos ypos darkness as $PARAMETERS
         # Clock is ready, now position it
+        resize clock to $size $size
         move clock to $xpos $ypos depth 300
         darken clock to $darkness
         raise clock to 300

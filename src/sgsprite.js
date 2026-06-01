@@ -752,8 +752,10 @@ export class SGSprite {
             return;
         }
         // Get the new group size
-        const bounds = this.piSprite.getBounds();
-        Globals.log.report(`${message} ${bounds.width}  ${bounds.height}`);
+        const bounds = this.piSprite.getLocalBounds();
+        Globals.log.report(`${message} local bounds ${bounds.width}  ${bounds.height}`);
+        const size = this.piSprite.getSize();
+        Globals.log.report(`${message} size ${size.width}  ${size.height}`);
         this.sizeX.forceValue(bounds.width);
         this.sizeY.forceValue(bounds.height);
         this.origX = bounds.width / this.scaleX.value();
@@ -908,11 +910,6 @@ export class SGSprite {
                         this.piSprite.setSize(newX, newY);
                     }
                 }
-                if (this.sgParent) {
-                    this.sgParent.sizeFromBounds(this.name);
-                }//  else {
-                //     Globals.root.addChild(this.piSprite);
-                // }
                 this.image = image;
                 this.loaded = true;
                 // End image loading updates
@@ -991,8 +988,6 @@ export class SGSprite {
             if (changeX || changeY) {
                 if (this.piSprite !== null ) { // image has been loaded
                     this.piSprite.position.set(this.locX.value(), this.locY.value());
-                    // Globals.log.report("Change of location " + this.imageName);
-                    newBounds = true;
                 }
             }
         }
@@ -1101,8 +1096,6 @@ export class SGSprite {
                         this.piSprite.setSize(newX, newY);
                     }
                 }
-                    // Globals.log.report("Change of size " + this.imageName);
-                newBounds = true;
             }
         }
          
@@ -1157,9 +1150,6 @@ export class SGSprite {
         }
         if (changeWarp) {
             this.applyWarpCorners();
-        }
-        if (newBounds && this.sgParent) { 
-            this.sgParent.sizeFromBounds(this.name);
         }
     }
 

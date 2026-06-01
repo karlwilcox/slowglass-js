@@ -302,15 +302,14 @@ export class WordList {
     getGroup(sceneName) {
         let groupSprite = null;
         let hold = this.index;
-        if (this.testWord(["in","to"])) {
-            this.testWord("group");
-            const groupName = this.getWord();
-            // got a group, check it exists
-            if (groupName) {
-                groupSprite = SGSprite.getSprite(sceneName, groupName, true);
-                if (groupSprite && groupSprite.type != constants.SPRITE_GROUP) {
-                    Globals.log.error("Not a group at line " + action.number);
-                }
+        this.testWord(["in","to"]);
+        this.testWord("group");
+        const groupName = this.getWord();
+        // got a group, check it exists
+        if (groupName) {
+            groupSprite = SGSprite.getSprite(sceneName, groupName, true);
+            if (groupSprite && groupSprite.type != constants.SPRITE_GROUP) {
+                Globals.log.error("Not a group at line " + action.number);
             }
         }
         return groupSprite;

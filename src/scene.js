@@ -209,6 +209,14 @@ export class Scene {
                 if (sprite.sgParent) {
                     text += `child of ${sprite.sgParent.name}`;
                 }
+                // if (sprite.type == constants.SPRITE_GROUP || sprite.type == constants.SPRITE_GRAPHIC) {
+                    const bounds = sprite.piSprite.getLocalBounds();
+                    text += `\nlocal bounds ${bounds.width}  ${bounds.height}\n`;
+                    const gbounds = sprite.piSprite.getBounds();
+                    text += `global bounds ${gbounds.width}  ${gbounds.height}\n`;
+                    const size = sprite.piSprite.getSize();
+                    text += `size ${size.width}  ${size.height}\n`;
+                // }
                 text += "\n";
             } else {
                 text += `${sprite.name} `;
@@ -849,8 +857,6 @@ export class Scene {
                     if (wordList.testWord("named") || !wordList.testWord("from"))  {
                         spriteName = wordList.getSpriteName();
                     }
-                    // Are we adding this to a group?
-                    const groupSprite = wordList.getGroup(this.spriteScene);
                     const fromURL = wordList.testWord(["load","loaded"]);
                     wordList.testWord("from");
                     if (fromURL) {
@@ -887,16 +893,8 @@ export class Scene {
                     sgSprite.piSprite = piSprite;
                     sgSprite.setVisibility(false);
                     sgSprite.tags.addTag(wordList.getTags());
-                    if (groupSprite) {
-                        sgSprite.sgParent = groupSprite;
-                        sgSprite.sgParent.children.push(sgSprite);
-                        groupSprite.piSprite.addChild(sgSprite.piSprite);
-                        // groupSprite.sizeFromBounds(spriteName);
-                    } else {
-                        Globals.root.addChild(sgSprite.piSprite);
-                    }
                     this.sprites.push(sgSprite);
-                    // actionGroup.suspend("newSprite", actionIndex);
+                    actionGroup.suspend("newSprite", actionIndex);
                 } else {
                     Globals.log.error("Missing sprite data at line " + action.number);
                 }
@@ -1063,17 +1061,27 @@ export class Scene {
                     if (!sgSprite) {
                         break;
                     }
+                    const hidden = wordList.testWord("hidden");
+                    const groupSprite = wordList.getGroup(this.spriteScene);
                     let height = 0;
                     let width = 0;
-                    const hidden = wordList.testWord("hidden");
                     // is there a location for the sprite?
                     wordList.testWord( "at");
-                    if (wordList.testWord(["center","centre"])) {
-                        sgSprite.locX.setTargetValue(Globals.app.screen.width / 2);
-                        sgSprite.locY.setTargetValue(Globals.app.screen.height / 2);
-                    } else {
-                        sgSprite.locX.setTargetValue(wordList.getInt(0) * Globals.scriptScaleX);
-                        sgSprite.locY.setTargetValue(wordList.getInt(0) * Globals.scriptScaleY);
+                    const location = wordList.testWord(["center","centre","origin"]);
+                    switch(location) {
+                        case "centre":
+                        case "center":
+                            sgSprite.locX.setTargetValue(Globals.app.screen.width / 2);
+                            sgSprite.locY.setTargetValue(Globals.app.screen.height / 2);
+                            break;
+                        case "origin":
+                            sgSprite.locX.setTargetValue(0);
+                            sgSprite.locY.setTargetValue(0);
+                            break;
+                        default:
+                            sgSprite.locX.setTargetValue(wordList.getInt(0) * Globals.scriptScaleX);
+                            sgSprite.locY.setTargetValue(wordList.getInt(0) * Globals.scriptScaleY);
+                            break;
                     }
                     // is there a depth provided?
                     wordList.testWord("depth");
@@ -1108,6 +1116,13 @@ export class Scene {
                     }
                     if (!hidden) {
                         sgSprite.setVisibility(true);
+                    }
+                    if (groupSprite) {
+                        sgSprite.sgParent = groupSprite;
+                        sgSprite.sgParent.children.push(sgSprite);
+                        groupSprite.piSprite.addChild(sgSprite.piSprite);
+                    } else {
+                        Globals.root.addChild(sgSprite.piSprite);
                     }
                     sgSprite.placed = true;
                 } else {
@@ -1242,31 +1257,21 @@ export class Scene {
                                 const hidden = wordList.testWord("hidden");
                                 const sgSprite = new SGSprite(null, groupName, constants.SPRITE_GROUP);
                                 const group = new PIXI.Container();
-                                const superGroupSprite = wordList.getGroup(this.spriteScene);
-                                const width = Globals.scriptWidth;
-                                const width2 = width / 2;
-                                const height = Globals.scriptHeight;
-                                const height2 = height / 2;
-                                sgSprite.sizeX.setTargetValue(0);
-                                sgSprite.sizeY.setTargetValue(0);
-                                sgSprite.locX.setTargetValue(width2);
-                                sgSprite.locY.setTargetValue(height2);
-                                sgSprite.origX = 0;
-                                sgSprite.origY = 0;
-                                group.pivot.set(width2, height2);
+                                // const superGroupSprite = wordList.getGroup(this.spriteScene);
+                                // sgSprite.sizeX.forceValue(0);
+                                // sgSprite.sizeY.forceValue(0);
+                                // sgSprite.locX.forceValue(0);
+                                // sgSprite.locY.forceValue(0);
+                                // sgSprite.origX = 0;
+                                // sgSprite.origY = 0;
                                 sgSprite.depth = Globals.nextZ(0);
                                 group.zIndex = sgSprite.depth;
-                                // Add an invisble rectangle to ensure scaling and sizing works like others
-                                // const holder = new PIXI.Graphics().rect(0, 0, width, height);
-                                // holder.alpha = 0;
-                                // group.addChild(holder);
-                                // this group goes on top for now...
-                                if (superGroupSprite) {
-                                    sgSprite.sgParent = superGroupSprite;
-                                    superGroupSprite.piSprite.addChild(group);
-                                } else {
-                                    Globals.root.addChild(group);
-                                }
+                                // if (superGroupSprite) {
+                                //     sgSprite.sgParent = superGroupSprite;
+                                //     superGroupSprite.piSprite.addChild(group);
+                                // } else {
+                                //     Globals.root.addChild(group);
+                                // }
                                 sgSprite.loaded = true;
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(!hidden);
@@ -1290,12 +1295,6 @@ export class Scene {
                                 sgSprite.sgParent = groupSprite;
                                 sgSprite.sgParent.children.push(sgSprite);
                                 groupSprite.piSprite.reparentChild(sgSprite.piSprite);
-                                // Get the new group size
-                                const bounds = groupSprite.piSprite.getBounds();
-                                groupSprite.sizeX.forceValue(bounds.width);
-                                groupSprite.sizeY.forceValue(bounds.height);
-                                groupSprite.origX = bounds.width;
-                                groupSprite.origY = bounds.height;
                                 break;
                             }
                         default:
@@ -1378,8 +1377,6 @@ export class Scene {
                     let sgSprite = null;
                     const textCommand = wordList.getWord();
                     const textName = wordList.getWord();
-                    // Are we adding this to a group?
-                    const groupSprite = wordList.getGroup(this.spriteScene);
                     let textData = wordList.joinWords();
                     switch(textCommand) {
                         case "font":
@@ -1438,14 +1435,6 @@ export class Scene {
                             sgSprite.sizeY.setTargetValue(textSprite.height);                            
                             sgSprite.origX = textSprite.width;
                             sgSprite.origY = textSprite.height;
-                            if (groupSprite) {
-                                sgSprite.sgParent = groupSprite;
-                                sgSprite.sgParent.children.push(sgSprite);
-                                groupSprite.piSprite.addChild(textSprite);
-                                groupSprite.sizeFromBounds();
-                            } else {
-                                Globals.root.addChild(textSprite);
-                            }
                             sgSprite.tags.addTag(wordList.getTags());
                             sgSprite.loaded = true;
                             this.sprites.push(sgSprite);
@@ -1478,8 +1467,6 @@ export class Scene {
                         case"create":
                             {
                                 const graphicname = wordList.getWord();
-                                // Are we adding this to a group?
-                                const groupSprite = wordList.getGroup(this.spriteScene);
                                 wordList.testWord("as");
                                 const graphicType = wordList.getWord();
                                 let graphic = null;
@@ -1609,20 +1596,13 @@ export class Scene {
                                     if (graphic != null) {
                                         graphic.fill(this.graphicFill).stroke({width: this.graphicStrokeWidth, color: this.graphicStroke});
                                         const sgSprite = new SGSprite(null, graphicname, constants.SPRITE_GRAPHIC, this.defaultTags);
-                                        if (groupSprite) {
-                                            sgSprite.sgParent = groupSprite
-                                            sgSprite.sgParent.children.push(sgSprite);
-                                            groupSprite.piSprite.addChild(graphic);
-                                            groupSprite.sizeFromBounds();
-                                        } else {
-                                            Globals.root.addChild(graphic);
-                                        }
                                         sgSprite.piSprite = graphic;
+                                        const size = graphic.getSize();
                                         sgSprite.setVisibility(false);
-                                        sgSprite.sizeX.setTargetValue(graphic.width);
-                                        sgSprite.sizeY.setTargetValue(graphic.height);
-                                        sgSprite.origX = graphic.width;
-                                        sgSprite.origY = graphic.height;
+                                        sgSprite.sizeX.forceValue(size.width);
+                                        sgSprite.sizeY.forceValue(size.height);
+                                        sgSprite.origX = size.width;
+                                        sgSprite.origY = size.height;
                                         sgSprite.tags.addTag(wordList.getTags());
                                         sgSprite.loaded = true;
                                         this.sprites.push(sgSprite);

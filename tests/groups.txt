@@ -1,15 +1,17 @@
 stage size 800 600
 
 setup
+    log main:setup at $FRAME
     graphic create grid as grid
     place grid at centre
     group create planes
     load /assets/lego/plane.png as plane
-    sprite create plane1 in group planes from plane
-    sprite create plane2 in group planes from plane
-    place plane1 at 100 100
-flip plane1 horizontally
-    place plane2 at 100 -100
+    sprite create plane1 from plane
+    sprite create plane2 from plane
+    place plane1 in group planes at 0 -100
+    flip plane1 horizontally
+    place plane2 in group planes at 0 100
 
 begin
-   place planes at centre 0 width 120
+   log main:begin at $FRAME
+   place planes at centre
