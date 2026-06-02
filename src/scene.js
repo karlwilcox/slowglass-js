@@ -63,13 +63,14 @@ export class SceneText {
 **************************************************************************************************/
 
 export class Scene {
-    constructor(sceneText, name, autorun = false) {
+    constructor(sceneText, name) {
         this.sceneText = sceneText;
         this.name = name;
         this.interactive_index = 0;
         this.reset();
         this.load(sceneText);
-        this.state = autorun ? constants.SCENE_AUTORUN : constants.SCENE_LOADED;
+        this.state = constants.SCENE_LOADED;
+        this.runnable = false;
         // put new scenes at the front so they execute *before*
         // script that started them
         Globals.scenes.unshift(this);
@@ -395,6 +396,53 @@ export class Scene {
         return prefix;
     }
 
+    static manageLifecycle(scene, stateAction = false) {
+        // let message = `${scene.name} in state ${scene.state} with ${stateAction} `;
+        switch (stateAction) {
+            case constants.SCENE_PAUSE:
+                if (scene.state == constants.SCENE_RUNNING) {
+                    scene.state == constants.SCENE_PAUSED;
+                } else {
+                    Globals.log.error(`${scene.name} cannot pause (not running)`);
+                }
+                break;
+            case constants.SCENE_RESUME:
+                if (scene.state == constants.SCENE_PAUSED) {
+                    scene.state == constants.SCENE_RUNNING;
+                } else {
+                    Globals.log.error(`${scene.name} cannot resume (not paused)`);
+                }
+                break;
+            case constants.SCENE_MAKE_RUNNABLE:
+                scene.runnable = true;
+                break;
+            case constants.SCENE_NEXT_STATE:
+                switch (scene.state) {
+                    case constants.SCENE_LOADED: // Scene just been created
+                        scene.state = constants.SCENE_SETUP; // scene has completed setup
+                        break;
+                    case constants.SCENE_SETUP:
+                        if (scene.runnable) {
+                            scene.state = constants.SCENE_READY;
+                        }
+                        break;
+                    case constants.SCENE_READY:
+                        scene.state = constants.SCENE_RUNNING;
+                        break;
+                    case constants.SCENE_FINISHED:
+                        // delete the scene - make this static & pass in scene?
+                        break;
+                    case constants.SCENE_RUNNING:
+                    case constants.SCENE_PAUSED:
+                        break;
+                    default:
+                        break;
+                }
+                break;
+        }
+        // Globals.log.report(`${message} is now ${scene.state}`);
+    }
+
 /**************************************************************************************************
 
     ######  ########    ###    ########  ########   ### ###   
@@ -532,9 +580,6 @@ export class Scene {
         while (actionGroup.suspended == false && actionGroup.nextAction < actions.length ) {
             this.runAction(actionGroup.nextAction, actionGroup, now);
         }
-        // If we are suspended because a newGroup started return true so we can start
-        // executing the new scene as soon as possible
-        return (actionGroup.suspended != false && actionGroup.waitType == "newScene");
     }
 
 
@@ -879,7 +924,7 @@ export class Scene {
                     sgSprite.setVisibility(false);
                     sgSprite.tags.addTag(wordList.getTags());
                     this.sprites.push(sgSprite);
-                    actionGroup.suspend("newSprite", actionIndex);
+                    // actionGroup.suspend("newSprite", actionIndex);
                 }
                 break;
 
@@ -1062,11 +1107,11 @@ export class Scene {
                     wordList.testWord("depth");
                     sgSprite.setDepth("to", wordList.getInt(0));
                     // is there a size? (or just use image size)
-                    const dimensionType = wordList.testWord(["size","scale", "width", "height"]); 
+                    let dimensionType = wordList.testWord(["size","scale", "width", "height"]); 
+                    let dimension1 = 0;
+                    let dimension2 = 0;
                     let goodData = true;
                     if (dimensionType) {
-                        let dimension1 = 0;
-                        let dimension2 = 0;
                         switch (dimensionType) {
                             case "size":
                                 dimension1 = wordList.getInt(0);
@@ -1096,12 +1141,14 @@ export class Scene {
                         if (!goodData) {
                             break;
                         }
-                        if (!sgSprite.loaded) {
-                            // not loaded yet, so we don't know the size, ask for when loaded
-                            sgSprite.requestSize(dimensionType, dimension1, dimension2);
-                        } else { // just set the size we want
-                            sgSprite.applySize(dimensionType, dimension1, dimension2);
-                        }
+                    } else {
+                        dimensionType = "image";
+                    }
+                    if (!sgSprite.loaded) {
+                        // not loaded yet, so we don't know the size, ask for when loaded
+                        sgSprite.requestSize(dimensionType, dimension1, dimension2);
+                    } else { // just set the size we want
+                        sgSprite.applySize(dimensionType, dimension1, dimension2);
                     }
                     if (!hidden) {
                         sgSprite.setVisibility(true);
@@ -2194,8 +2241,9 @@ export class Scene {
                     }
                     const params = wordList.joinWords();
                     this.completionCallback = actionGroup.callback(1);
-                    const newScene = new Scene(sceneText, activeName, true);
+                    const newScene = new Scene(sceneText, activeName);
                     newScene.parameters = params;
+                    Scene.manageLifecycle(newScene, constants.SCENE_MAKE_RUNNABLE);
                     actionGroup.suspend("newScene", actionIndex);
                 }
                 break;
@@ -2238,6 +2286,7 @@ export class Scene {
                     this.completionCallback = actionGroup.callback(1);
                     const newScene = new Scene(sceneText, activeName);
                     newScene.parameters = params;
+                    actionGroup.suspend("newScene", actionIndex);
                 }
                 break;
 
@@ -2272,49 +2321,49 @@ export class Scene {
                     if (params) {
                         scene.parameters = params;
                     }
-                    scene.state = constants.SCENE_RUNNING;
+                    Scene.manageLifecycle(scene, constants.SCENE_MAKE_RUNNABLE);
                     actionGroup.suspend("newScene", actionIndex);
                 }
                 break;
 
-/**************************************************************************************************
+// /**************************************************************************************************
 
-    ######  ##        #######  ##    ## ######## 
-   ##    ## ##       ##     ## ###   ## ##       
-   ##       ##       ##     ## ####  ## ##       
-   ##       ##       ##     ## ## ## ## ######   
-   ##       ##       ##     ## ##  #### ##       
-   ##    ## ##       ##     ## ##   ### ##       
-    ######  ########  #######  ##    ## ######## 
+//     ######  ##        #######  ##    ## ######## 
+//    ##    ## ##       ##     ## ###   ## ##       
+//    ##       ##       ##     ## ####  ## ##       
+//    ##       ##       ##     ## ## ## ## ######   
+//    ##       ##       ##     ## ##  #### ##       
+//    ##    ## ##       ##     ## ##   ### ##       
+//     ######  ########  #######  ##    ## ######## 
 
-**************************************************************************************************/
+// **************************************************************************************************/
 
-            case "copy":
-            case "clone":
-                {
-                    const sceneName = wordList.getWord();
-                    if (sceneName == constants.MAIN_NAME) {
-                        Globals.log.error("Cannot duplicate main scene at line " + action.number);
-                        break;
-                    }
-                    wordList.testWord("as");
-                    const new_name = wordList.getWord();
-                    const scene = Scene.find(sceneName, false);
-                    if (scene === false) {
-                        Globals.log.error("Scene not found at line " + action.number);
-                        break;
-                    }
-                    if (Scene.find(new_name, false)) {
-                        Globals.log.error("Scene with that name already exists " + action.number);
-                        break;
-                    }
-                    // Everything checks out, make the copy
-                    const new_scene = new Scene(new_name);
-                    new_scene.content = scene.content; // this is the only bit we need to copy over
-                    // but can do others if we ever want to preserve variable states etc...?
-                    Globals.scenes.push(new_scene);
-                }
-                break;
+//             case "copy":
+//             case "clone":
+//                 {
+//                     const sceneName = wordList.getWord();
+//                     if (sceneName == constants.MAIN_NAME) {
+//                         Globals.log.error("Cannot duplicate main scene at line " + action.number);
+//                         break;
+//                     }
+//                     wordList.testWord("as");
+//                     const new_name = wordList.getWord();
+//                     const scene = Scene.find(sceneName, false);
+//                     if (scene === false) {
+//                         Globals.log.error("Scene not found at line " + action.number);
+//                         break;
+//                     }
+//                     if (Scene.find(new_name, false)) {
+//                         Globals.log.error("Scene with that name already exists " + action.number);
+//                         break;
+//                     }
+//                     // Everything checks out, make the copy
+//                     const new_scene = new Scene(new_name);
+//                     new_scene.content = scene.content; // this is the only bit we need to copy over
+//                     // but can do others if we ever want to preserve variable states etc...?
+//                     Globals.scenes.push(new_scene);
+//                 }
+//                 break;
 
 /**************************************************************************************************
 

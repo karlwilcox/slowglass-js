@@ -16,14 +16,19 @@ export const SPRITE_GROUP = "_GROUP_";
 
 // Scene states
 
-export const SCENE_UNLOADED = "_UNLOADED_";
 export const SCENE_LOADED = "_LOADED_";
-export const SCENE_AUTORUN = "_AUTORUN_";
+export const SCENE_SETUP = "_SETUP_";
 export const SCENE_READY = "_READY_";
 export const SCENE_STOPPED = "_STOPPED_";
 export const SCENE_RUNNING = "_RUNNING_";
 export const SCENE_PAUSED = "_PAUSED_";
 export const SCENE_FINISHED = "_FINISHED_";
+
+// Scene state actions
+export const SCENE_MAKE_RUNNABLE = "_RUNNABLE_";
+export const SCENE_PAUSE = "_PAUSE_";
+export const SCENE_RESUME = "_RESUME_";
+export const SCENE_NEXT_STATE = "_NEXT_";
 
 // scaling types
 export const SCALE_FIT = "_FIT_";

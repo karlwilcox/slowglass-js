@@ -8,7 +8,7 @@ setup
    put platform as background
 
 
-prepare swiss-clock 148 263 83 40  // size, x, y, darkness
+prepare swiss-clock 156 263 83 40  // size, x, y, darkness
 
 
 begin
@@ -21,16 +21,15 @@ log params = $PARAMETERS
         # Create group for the clock
         group create clock
         # get our local assets 
-        sprite create face in group clock load from /demo/swiss-clock/swiss-railway-clock.png 
-        sprite create secondhand in group clock load from /demo/swiss-clock/second-hand.png
-        sprite create hourhand in group clock load from /demo/swiss-clock/hour-hand.png
-        sprite create minutehand in group clock load from /demo/swiss-clock/minute-hand.png
+        sprite create face load from /demo/swiss-clock/swiss-railway-clock.png 
+        sprite create secondhand load from /demo/swiss-clock/second-hand.png
+        sprite create hourhand load from /demo/swiss-clock/hour-hand.png
+        sprite create minutehand load from /demo/swiss-clock/minute-hand.png
         # Initial sprite placement
-        place face at origin size 200 200 depth 200
-        place minutehand at origin depth 201
-        place hourhand at origin depth 202
-        place secondhand at origin depth 203
-// pause 1
+        place face in group clock at origin size 200 200 depth 200
+        place minutehand in group clock at origin depth 201
+        place hourhand in group clock at origin depth 202
+        place secondhand in group clock at origin depth 203
         # Now set the current time
         rotate secondhand to ($SECONDS * 6)
         rotate minutehand to ($MINUTES * 6)
@@ -41,10 +40,11 @@ log params = $PARAMETERS
         # Pick up the parameters passed in to us
         assign size xpos ypos darkness as $PARAMETERS
         # Clock is ready, now position it
+        place clock at $xpos $ypos depth 300
+
+after 1 second
         resize clock to $size $size
-        move clock to $xpos $ypos depth 300
         darken clock to $darkness
-        raise clock to 300
 
     each **:**:00
         # move both hands

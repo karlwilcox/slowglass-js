@@ -313,6 +313,7 @@ class SlowGlass {
                 }
                 const scene = new Scene(main, constants.MAIN_NAME);
                 scene.interactive_index = scene.actionGroups.length;
+                Scene.manageLifecycle(scene, constants.SCENE_MAKE_RUNNABLE);
                 scene.actionGroups.push(new Utils.ActionGroup());
             }
         }
@@ -355,7 +356,6 @@ class SlowGlass {
 
         // Run setup for the main scene
         this.update();
-        Scene.find(constants.MAIN_NAME).state = constants.SCENE_RUNNING;
 
         // Main loop
         Globals.app.ticker.add(this.update);
@@ -405,34 +405,19 @@ class SlowGlass {
         let nextRun = Defaults.TRIGGER_RATE;
         if (SlowGlass.nextAction_run < millis) {
             // why is this here?
-            if (Globals.app.screen.width != Globals.displayWidth) {
-                Globals.app.screen.width = Globals.displayWidth;
-            }
-            if (Globals.app.screen.height != Globals.displayHeight) {
-                Globals.app.screen.height = Globals.displayHeight;
-            }
+            // if (Globals.app.screen.width != Globals.displayWidth) {
+            //     Globals.app.screen.width = Globals.displayWidth;
+            // }
+            // if (Globals.app.screen.height != Globals.displayHeight) {
+            //     Globals.app.screen.height = Globals.displayHeight;
+            // }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                // If it has just been loaded, run the Setup trigger only
-                if (current.state == constants.SCENE_LOADED || current.state == constants.SCENE_AUTORUN) {
-                    let triggers = current.actionGroups[i].triggers;
-                    for ( let k = 0; k < triggers.length; k++) {
-                        if (triggers[k].constructor.name == "Setup") {
-                            triggers[k].fired();
-                            current.runGroup(i, millis);
-                            break;
-                        }
-                    }
-                    if (current.state == constants.SCENE_AUTORUN) {
-                        current.state = constants.SCENE_RUNNING;
-                    } else {
-                        current.state = constants.SCENE_READY;
-                    }
-                } else if (current.state == constants.SCENE_RUNNING) {
+                if (current.state != constants.SCENE_PAUSED) {
                     // we are only interested in running scenes 
                     // Found an active scene, now go through each action group
                     let firstAction = 0;
-                    for ( let j = 0; !newSceneStarted && j < current.actionGroups.length; j++ ) {
+                    for ( let j = 0; j < current.actionGroups.length; j++ ) {
                         let doRun = false;
                         const actionGroup = current.actionGroups[j];
                         // Is this a suspended group that can be restarted?
@@ -490,11 +475,18 @@ class SlowGlass {
                             }
                         }
                         if (doRun) {
-                            newSceneStarted = current.runGroup(j, millis, firstAction);
+                            current.runGroup(j, millis, firstAction);
+                            // if (current.suspended && current.waitType == "newScene") {
+                            if (current.suspended) {
+                                newSceneStarted = true;
+                                break;
+                            }
                         }
                     }
                     if (newSceneStarted) {
                         nextRun = Defaults.SPRITE_RATE; // next frame
+                    } else {
+                        Scene.manageLifecycle(current, constants.SCENE_NEXT_STATE);
                     }
                 }
             }
@@ -505,7 +497,7 @@ class SlowGlass {
             Globals.frameNo += 1;
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (current.state != constants.SCENE_RUNNING) {
+                if (current.state == constants.SCENE_PAUSED) {
                     continue;
                 }
                 // Found an active scene, now go through each sprite

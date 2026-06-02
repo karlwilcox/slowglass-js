@@ -1168,7 +1168,14 @@ export class SGSprite {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
                     // Only return sprites from scenes that are currently running
                     if (!(Globals.scenes[i].state == constants.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == name) {
-                        return(Globals.scenes[i].sprites[j]);
+                        const foundSprite = Globals.scenes[i].sprites[j];
+                        if (foundSprite.type == constants.SPRITE_GROUP) {
+                            // update size from group itself
+                            const groupSize = foundSprite.piSprite.getLocalBounds();
+                            foundSprite.sizeX.forceValue(groupSize.width);
+                            foundSprite.sizeY.forceValue(groupSize.height);
+                        }
+                        return foundSprite;
                     }
                 }
             }

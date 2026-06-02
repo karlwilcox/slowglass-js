@@ -1,6 +1,7 @@
 import { Parser } from "./parser";
 import * as Utils from "./utils.js";
 import { Globals } from "./globals.js";
+import * as constants from "./constants.js";
 
 export class Trigger {
     constructor(scene, timestamp, params) {
@@ -45,7 +46,7 @@ export class Begin extends Trigger {
     }
 
     fired(timestamp) {
-        if (this.expired) {
+        if (this.expired || this.scene.state != constants.SCENE_READY) {
             return false;
         }
         this.triggered = true;
@@ -72,7 +73,7 @@ export class Setup extends Trigger {
     }
 
     fired(timestamp) {
-        if (this.expired) {
+        if (this.expired || this.scene.state != constants.SCENE_LOADED) {
             return false;
         }
         this.triggered = true;
@@ -99,7 +100,7 @@ export class After extends Trigger {
     }
 
     fired(timestamp) {
-        if (this.expired) {
+        if (this.expired || this.scene.state != constants.SCENE_RUNNING) {
             return false;
         }
         // expand on first use
@@ -137,6 +138,9 @@ export class Every extends Trigger {
     }
 
     fired(timestamp) {
+        if (this.scene.state != constants.SCENE_RUNNING) {
+            return false;
+        }
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
@@ -172,6 +176,9 @@ export class When extends Trigger {
     }
 
     fired(timestamp) {
+        if (this.scene.state != constants.SCENE_RUNNING) {
+            return false;
+        }
         if (this.triggered)  {
             if (this.nextCheck > timestamp) {
                 // we have triggered recently, come back later
@@ -219,6 +226,9 @@ export class AtClass extends Trigger {
     }
 
     fired(timestamp) {
+        if (this.scene.state != constants.SCENE_RUNNING) {
+            return false;
+        }
         if (!this.valid) {
             return false;
         }
@@ -286,6 +296,9 @@ export class Each extends Trigger {
     }
 
     fired(timestamp) {
+        if (this.scene.state != constants.SCENE_RUNNING) {
+            return false;
+        }
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
@@ -348,15 +361,11 @@ export class AtEnd extends Trigger {
     }
 
     fired(timestamp) {
-        if (this.expired) {
+        if (this.expired || this.scene.state != constants.SCENE_FINISHED) {
             return false;
         }
         // triggered when the scene is stopped
-        if (this.scene.finished) {
-            this.expired = true;
-            this.scene.finished = false; // consume this event
-            return true;
-        } // else
-        return false;
+        this.expired = true;
+        return true;
     }
 }
