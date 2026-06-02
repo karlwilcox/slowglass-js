@@ -747,17 +747,17 @@ export class SGSprite {
         this.sizeY.setTargetValue(height, duration, now, callback);
     }
 
-    sizeFromBounds(message = "") {
+    origFromBounds(message = "") {
         if (this.type != constants.SPRITE_GROUP) {
             return;
         }
         // Get the new group size
         const bounds = this.piSprite.getLocalBounds();
-        Globals.log.report(`${message} local bounds ${bounds.width}  ${bounds.height}`);
-        const size = this.piSprite.getSize();
-        Globals.log.report(`${message} size ${size.width}  ${size.height}`);
-        this.sizeX.forceValue(bounds.width);
-        this.sizeY.forceValue(bounds.height);
+        // Globals.log.report(`${message} local bounds ${bounds.width}  ${bounds.height}`);
+        // const size = this.piSprite.getSize();
+        // Globals.log.report(`${message} size ${size.width}  ${size.height}`);
+        // this.sizeX.forceValue(bounds.width);
+        // this.sizeY.forceValue(bounds.height);
         this.origX = bounds.width / this.scaleX.value();
         this.origY = bounds.height / this.scaleY.value();
     }
@@ -902,6 +902,12 @@ export class SGSprite {
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {
+                    if (this.sizeX.value() <= 0) {
+                        this.sizeX.forceValue(this.origX);
+                    }
+                    if (this.sizeY.value() <= 0) {
+                        this.sizeY.forceValue(this.origY);
+                    }
                     const newX = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX;
                     const newY = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY;
                     if (newX <= 0 || newY <= 0) {
@@ -1088,6 +1094,12 @@ export class SGSprite {
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {
+                    if (this.sizeX.value() <= 0) {
+                        this.sizeX.forceValue(this.origX);
+                    }
+                    if (this.sizeY.value() <= 0) {
+                        this.sizeY.forceValue(this.origY);
+                    }
                     const newX = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX;
                     const newY = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY;
                     if (newX <= 0 || newY <= 0) {
@@ -1167,9 +1179,9 @@ export class SGSprite {
             if (Globals.scenes[i].name == scene) {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
                     // Only return sprites from scenes that are currently running
-                    if (!(Globals.scenes[i].state == constants.SCENE_STOPPED) && Globals.scenes[i].sprites[j].name == name) {
+                    if (!(Globals.scenes[i].state == constants.SCENE_PAUSED) && Globals.scenes[i].sprites[j].name == name) {
                         const foundSprite = Globals.scenes[i].sprites[j];
-                        if (foundSprite.type == constants.SPRITE_GROUP) {
+                        if (foundSprite.type == constants.SPRITE_GROUP && !foundSprite.placed) {
                             // update size from group itself
                             const groupSize = foundSprite.piSprite.getLocalBounds();
                             foundSprite.sizeX.forceValue(groupSize.width);

@@ -206,7 +206,7 @@ export class Scene {
                 text += ` at ${x} ${y} ${z}\n`;
                 const sx = sprite.sizeX.value();
                 const sy = sprite.sizeY.value();
-                text += `size ${sx} x ${sy} `;
+                text += `size ${sx} x ${sy} (${sprite.origX} ${sprite.origY})`;
                 if (sprite.sgParent) {
                     text += `child of ${sprite.sgParent.name}`;
                 }
@@ -1144,6 +1144,9 @@ export class Scene {
                     } else {
                         dimensionType = "image";
                     }
+                    if (sgSprite.type == constants.SPRITE_GROUP) {
+                        sgSprite.origFromBounds();
+                    }
                     if (!sgSprite.loaded) {
                         // not loaded yet, so we don't know the size, ask for when loaded
                         sgSprite.requestSize(dimensionType, dimension1, dimension2);
@@ -1160,6 +1163,9 @@ export class Scene {
                     } else {
                         Globals.root.addChild(sgSprite.piSprite);
                     }
+                    // if (sgSprite.type == constants.SPRITE_GROUP) {
+                    //     sgSprite.origFromBounds();
+                    // }
                     sgSprite.placed = true;
                 }
                 break;
@@ -1282,7 +1288,7 @@ export class Scene {
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(!hidden);
                                 sgSprite.tags.addTag(wordList.getTags());
-                                sgSprite.placed = true; // groups are always "placed"
+                                // sgSprite.placed = true; // groups are always "placed"
                                 this.sprites.push(sgSprite);                           
                             }
                             break;
