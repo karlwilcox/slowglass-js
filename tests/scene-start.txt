@@ -6,11 +6,13 @@ setup
 begin
     log main:begin at $FRAME
     start scene tester
+    log tester:my_var
 
 scene tester
     setup
         log tester:setup at $FRAME
+        lof setting tester:my_var to 100
+        let my_var be 100
 
     begin
         log tester:begin at $FRAME
-        

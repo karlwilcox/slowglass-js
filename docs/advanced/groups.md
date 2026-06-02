@@ -36,7 +36,7 @@ If the group is hidden the sprite will also be hidden.
 A group is itself just another type of sprite so you can nest them
 to any depth using the same construction:
 
-`place {group-name} in {super-group} at {xy} {y} {depth}`
+`place {group-name} in {super-group} at {x} {y} {depth}`
 
 ## Uses of Groups
 
@@ -65,6 +65,11 @@ want them in the scene and then use `group add` to put them into the
 group. You never need to place or move the group and apply your
 **darken** or **tint** (or whatever) commands to the group, which
 will affect all of the sprites at once.
+
+To ensure the group is active in the scene just place it at
+the origin, i.e.:
+
+`place {group-sprite} at origin`
 
 ## Groups and Group Members
 

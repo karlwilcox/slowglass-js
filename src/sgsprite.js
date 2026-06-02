@@ -52,6 +52,7 @@ export class SGImage {
         this.piImage = await PIXI.Assets.load(this.url);
         this.loading = false;
         if (this.callback) {
+            // Globals.log.report(`Image ${this.name} loaded`);
             this.callback(-1);
         }
         this.width = this.piImage.width;
@@ -71,7 +72,6 @@ export class SGImage {
                 for ( let j = 0; j < Globals.scenes[i].images.length; j++ ) {
                     if (Globals.scenes[i].images[j].name == name) {
                         if (Globals.scenes[i].images[j].loading) {
-                            return("loading");
                         } else {
                             return(Globals.scenes[i].images[j]);
                         }

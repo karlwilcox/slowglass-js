@@ -924,7 +924,6 @@ export class Scene {
                     sgSprite.setVisibility(false);
                     sgSprite.tags.addTag(wordList.getTags());
                     this.sprites.push(sgSprite);
-                    // actionGroup.suspend("newSprite", actionIndex);
                 }
                 break;
 
@@ -2250,7 +2249,7 @@ export class Scene {
                     const newScene = new Scene(sceneText, activeName);
                     newScene.parameters = params;
                     Scene.manageLifecycle(newScene, constants.SCENE_MAKE_RUNNABLE);
-                    actionGroup.suspend("newScene", actionIndex);
+                    actionGroup.suspend("newScene", actionIndex, newScene);
                 }
                 break;
 

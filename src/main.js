@@ -401,7 +401,7 @@ class SlowGlass {
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"
         // Could adjust this if needed in defaults
         let millis = Date.now();
-        let newSceneStarted = false;
+        let updateState = true;
         let nextRun = Defaults.TRIGGER_RATE;
         if (SlowGlass.nextAction_run < millis) {
             // why is this here?
@@ -439,10 +439,16 @@ class SlowGlass {
                                         doRun = !doRun;
                                     }
                                     break;
-                                case "newScene":
                                 case "newSprite":
-                                    // run again, we just waited for a new scene to start
-                                    doRun = true;
+                                    if (actionGroup.waitClause.loaded) {
+                                        doRun = true;
+                                    }
+                                    break;
+                                case "newScene":
+                                    // we are just waiting for a new scene to start
+                                    if (actionGroup.waitClause.state == constants.SCENE_RUNNING) {
+                                        doRun = true;
+                                    }
                                     break;
                             }
                             if (doRun) {
@@ -477,16 +483,18 @@ class SlowGlass {
                         if (doRun) {
                             current.runGroup(j, millis, firstAction);
                             // if (current.suspended && current.waitType == "newScene") {
-                            if (current.suspended) {
-                                newSceneStarted = true;
-                                break;
+                            if (actionGroup.suspended) {
+                                updateState = false;
+                                continue;
                             }
                         }
                     }
-                    if (newSceneStarted) {
-                        nextRun = Defaults.SPRITE_RATE; // next frame
-                    } else {
+                    if (updateState) {
+                        // Globals.log.report(`${current.name} running update`);
                         Scene.manageLifecycle(current, constants.SCENE_NEXT_STATE);
+                    } else {
+                        // Globals.log.report(`${current.name} skipping update`);
+                        nextRun = Defaults.SPRITE_RATE; // next frame
                     }
                 }
             }
