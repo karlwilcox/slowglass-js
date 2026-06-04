@@ -1,33 +1,33 @@
 # Cafe at night, slightly animated (after Van Gogh)
 
-display height 1920
-display width 1080
+script height 1920
+script width 1080
+
+stage size 540 960
 
 begin
-    let lampx = 367
-    let lampy = 1014
 
     # Load all our resources
-    load cafe.png
-    log cafe scene - https://commons.wikimedia.org/ Van Gogh Cafe Terrace At Night
-    load star1.png
-    load star2.png
-    load star3.png
-    load lamp.png
+    load /demo/cafe/cafe.png
+    # cafe scene from https://commons.wikimedia.org/ Van Gogh Cafe Terrace At Night
+    sprite create star1 load from /demo/cafe/star1.png
+    sprite create star2 load from /demo/cafe/star2.png
+    sprite create star3 load from /demo/cafe/star3.png
+    sprite create lamp load from /demo/cafe/lamp.png
+    then
 
     # Place them
     put cafe as background
-    place star1 at 747,376,10
-    place star2 at 881,60,20
-    place lamp at 367,1014,50
+    place star1 at 747 376 201
+    place star2 at 881 60 202
+    place star3 at 346 11 203
+    place lamp at 367 1014 204
 
-every frame
     # Twinkle those stars
-    if ($PERCENT > 33) set transparency of star1 to (50 * $CHANCE)
-    if ($PERCENT > 33) set transparency of star2 to (50 * $CHANCE)
-    if ($PERCENT > 33) set transparency of star3 to (50 * $CHANCE)
+    flicker star1
+    flicker star2
+    flicker star3
 
-every 0.4 seconds
     # Jiggle that candle
-    set transparency of lamp to (34 + (15 * $CHANCE))
-    move lamp by (5 - (10 * $CHANCE)) (5 - (10 * $CHANCE)) in 0.4 seconds
+    flicker lamp with chance 30
+    jiggle lamp 10 10 with chance 40

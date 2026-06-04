@@ -21,7 +21,7 @@ export class Globals {
     static displayColour = defaults.DISPLAY_COLOUR;
     static scriptWidth = defaults.DISPLAY_WIDTH;
     static scriptHeight = defaults.DISPLAY_HEIGHT;
-    static scriptScaleType = constants.SCALE_NONE;
+    static scriptScaleType = constants.SCALE_STRETCH;
     static scriptScaleX = 1;
     static scriptScaleY = 1;
     static lastKey = null;
@@ -101,7 +101,7 @@ export class Globals {
         Globals.displayHeight = defaults.DISPLAY_HEIGHT;
         Globals.scriptWidth = defaults.DISPLAY_WIDTH;
         Globals.scriptHeight = defaults.DISPLAY_HEIGHT;
-        Globals.scriptScaleType = constants.SCALE_NONE;
+        Globals.scriptScaleType = constants.SCALE_STRETCH;
         Globals.scriptScaleX = 1;
         Globals.scriptScaleY = 1;
         Globals.gravity = defaults.GRAVITY_PS2;

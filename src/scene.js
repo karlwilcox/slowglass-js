@@ -1098,8 +1098,8 @@ export class Scene {
                             sgSprite.locY.setTargetValue(0);
                             break;
                         default:
-                            sgSprite.locX.setTargetValue(wordList.getInt(0) * Globals.scriptScaleX);
-                            sgSprite.locY.setTargetValue(wordList.getInt(0) * Globals.scriptScaleY);
+                            sgSprite.locX.setTargetValue(wordList.getInt(0));
+                            sgSprite.locY.setTargetValue(wordList.getInt(0));
                             break;
                     }
                     // is there a depth provided?
@@ -1662,10 +1662,10 @@ export class Scene {
                     let y = 0;
                     let byOrTo = wordList.testWord( ["by","to"], "by");
                     if (direction !== false) {
-                        delta = wordList.getInt(0) * Globals.scriptScaleX;
+                        delta = wordList.getInt(0);
                     } else {
-                        x = wordList.getInt(0) * Globals.scriptScaleX;
-                        y = wordList.getInt(0) * Globals.scriptScaleY;
+                        x = wordList.getInt(0);
+                        y = wordList.getInt(0);
                     }
                     let inOrAt = wordList.testWord( ["in","at"], "in");
                     let duration = wordList.getDuration(0);
@@ -1745,7 +1745,7 @@ export class Scene {
             case "speed":
                 let spriteName = wordList.getSpriteName();
                 wordList.testWord("to");
-                let speed = wordList.getInt(0) * Globals.scriptScaleX;
+                let speed = wordList.getInt(0);
                 let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                 sgSprite.set_speed(speed);
                 // speed change is instantaneous
@@ -2078,8 +2078,8 @@ export class Scene {
                     }
                     const points = [];
                     for (let i = 0; i < 4; i++) {
-                        points.push(wordList.getFloat(0) * Globals.scriptScaleX);
-                        points.push(wordList.getFloat(0) * Globals.scriptScaleY);
+                        points.push(wordList.getFloat(0));
+                        points.push(wordList.getFloat(0));
                     }
                     let duration = wordList.getDuration(0);
                     sgSprite.setWarp(points, warpType, duration, now, actionGroup.callback());
@@ -2657,7 +2657,7 @@ export class Scene {
                     if (on_off == "stop") {
                         sgSprite.flicker(0,0);
                     } else {
-                        let flickerStrength = wordList.getInt(0,0,50) * Globals.scriptScaleX;
+                        let flickerStrength = wordList.getInt(0,0,50);
                         wordList.testWord("with");
                         wordList.testWord("chance");
                         let flickerChance = wordList.getInt(50);
@@ -2692,8 +2692,8 @@ export class Scene {
                     if (on_off == "stop") {
                         sgSprite.jiggle(0,0,0);
                     } else {
-                        let jiggleX = wordList.getInt(0) * Globals.scriptScaleX;
-                        let jiggleY = wordList.getInt(0) * Globals.scriptScaleY;
+                        let jiggleX = wordList.getInt(0);
+                        let jiggleY = wordList.getInt(0);
                         let jiggle_r = wordList.getInt(0);
                         wordList.testWord("with");
                         wordList.testWord("chance");

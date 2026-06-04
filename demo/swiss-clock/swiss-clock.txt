@@ -6,13 +6,11 @@ canvas height 600
 setup
   load /assets/backgrounds/station-platform.png as platform
    put platform as background
-
-
-prepare swiss-clock 118 263 83 40  // size, x, y, darkness
+    prepare swiss-clock
 
 
 begin
-    run swiss-clock 
+    run swiss-clock  118 263 83 40  // size, x, y, darkness
 
 
 scene swiss-clock
@@ -30,7 +28,7 @@ scene swiss-clock
         place hourhand in group clock at origin depth 202
         place secondhand in group clock at origin depth 203
 
-begin
+    begin
         # Pick up the parameters passed in to us
         assign size xpos ypos darkness as $PARAMETERS
         # Clock is ready, now position it

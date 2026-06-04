@@ -2,6 +2,7 @@
 import { Globals } from "./globals.js";
 import { SGSprite } from "./sgsprite.js";
 import * as constants from './constants.js';
+import defaults from "./defaults.js";
 
 export class WordList {
     constructor(input) {
@@ -266,6 +267,10 @@ export class WordList {
             case "tenth":
             case "tenths":
                 mult = 0.1;
+                break;
+            case "frame":
+            case "frames":
+                mult = defaults.SPRITE_RATE / 1000;
                 break;
             default:
                 found = false;

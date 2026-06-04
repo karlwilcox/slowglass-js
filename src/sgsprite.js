@@ -792,37 +792,37 @@ export class SGSprite {
                 // Are we in a specific location?
                 if (this.role != null) {
                     // Yes, but we need the image size to work out scaling
-                    const wdw_width = Globals.app.screen.width;
-                    const wdwHeight = Globals.app.screen.height;
-                    const aspectY = imgHeight / wdwHeight ;
-                    const aspectX = imgWidth / wdw_width ;
+                    const targetWidth = Globals.scriptWidth;
+                    const targetHeight = Globals.scriptHeight;
+                    const aspectY = imgHeight / targetHeight ;
+                    const aspectX = imgWidth / targetWidth ;
                     let depth = null;
                     switch ( this.role ) {
                         case "background": // centre, and scale to window size
                         case "backdrop": // centre, and scale to window size
-                            this.locX.setTargetValue(wdw_width / 2);
-                            this.locY.setTargetValue(wdwHeight / 2);
-                            this.sizeX.setTargetValue(wdw_width);
-                            this.sizeY.setTargetValue(wdwHeight);
+                            this.locX.setTargetValue(targetWidth / 2);
+                            this.locY.setTargetValue(targetHeight / 2);
+                            this.sizeX.setTargetValue(targetWidth);
+                            this.sizeY.setTargetValue(targetHeight);
                             depth = defaults.DEPTH_BACKGROUND;
                             break;
                         case "left":
                             this.locX.setTargetValue(imgWidth / 2);
-                            this.locY.setTargetValue(wdwHeight / 2);
+                            this.locY.setTargetValue(targetHeight / 2);
                             this.sizeX.setTargetValue(aspectY * imgWidth);
                             this.sizeY.setTargetValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_LEFT;
                             break;
                         case "right":
-                            this.locX.setTargetValue(wdw_width - (imgWidth / 2));
-                            this.locY.setTargetValue(wdwHeight / 2);
+                            this.locX.setTargetValue(targetWidth - (imgWidth / 2));
+                            this.locY.setTargetValue(targetHeight / 2);
                             this.sizeX.setTargetValue(aspectY * imgWidth);
                             this.sizeY.setTargetValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_RIGHT;
                             break;
                         case "top":
                         case "sky":
-                            this.locX.setTargetValue(wdw_width / 2);
+                            this.locX.setTargetValue(targetWidth / 2);
                             this.locY.setTargetValue(imgHeight / 2);
                             this.sizeX.setTargetValue(aspectX * imgWidth);
                             this.sizeY.setTargetValue(aspectX * imgHeight);
@@ -831,8 +831,8 @@ export class SGSprite {
                         case "bottom":
                         case "ground":
                         case "foreground":
-                            this.locX.setTargetValue(wdw_width / 2);
-                            this.locY.setTargetValue(wdwHeight - (imgHeight / 2));
+                            this.locX.setTargetValue(targetWidth / 2);
+                            this.locY.setTargetValue(targetHeight - (imgHeight / 2));
                             this.sizeX.setTargetValue(aspectX * imgWidth);
                             this.sizeY.setTargetValue(aspectX * imgHeight);
                             depth = this.role == "ground" ? defaults.DEPTH_GROUND : defaults.DEPTH_FOREGROUND;
@@ -993,7 +993,7 @@ export class SGSprite {
             const changeY = this.locY.updateValue();
             if (changeX || changeY) {
                 if (this.piSprite !== null ) { // image has been loaded
-                    this.piSprite.position.set(this.locX.value(), this.locY.value());
+                    this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
                 }
             }
         }
@@ -1006,9 +1006,9 @@ export class SGSprite {
         // Let's see if we have been thrown...?
         if (this.falling) {
             const fallingTime = (now - this.throwTime) / 1000; // elapsed time in seconds
-            const deltaX = this.thrownVx * fallingTime * Globals.scriptScaleX;
+            const deltaX = this.thrownVx * fallingTime;
             // gravity is negative because y grows downwards on a canvas
-            const deltaY = ((this.thrownVy * fallingTime) - (0.5 * scene.gravity * -1 * fallingTime * fallingTime)) * Globals.scriptScaleY;
+            const deltaY = ((this.thrownVy * fallingTime) - (0.5 * scene.gravity * -1 * fallingTime * fallingTime));
             if (((Math.abs(deltaX) > Globals.app.screen.width * 2) || (Math.abs(deltaY) > Globals.app.screen.height * 2)) ||
                 (scene.groundLevel && this.locY.value + deltaY > scene.groundLevel)) {
                 this.falling = false; // gone off the edge of the world or hit the ground
@@ -1021,7 +1021,7 @@ export class SGSprite {
             this.locX.setTargetValue(this.locX.value() + deltaX);
             this.locY.setTargetValue(this.locY.value() + deltaY);
             if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.position.set(this.locX.value(), this.locY.value());
+                this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
             }
         }
         // Update rotation angle
