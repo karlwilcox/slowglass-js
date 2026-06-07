@@ -1,0 +1,23 @@
+# Test of the various data schemes
+
+stage size 800 600
+
+setup
+    log main setup
+
+begin
+    log main begin
+    start datatest
+
+scene datatest
+    begin
+        let local be "local"
+        log local is $local
+        log global is $global
+endscene
+
+scene data
+    setup
+        let global be "global"
+endscene
+

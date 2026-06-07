@@ -1,0 +1,31 @@
+# Graphic elements test
+
+stage size 800 600
+
+setup
+    log expect grid overall
+    graphic create grid as grid
+    place grid at centre
+    log expect a black rectangle near top left
+    graphic create rect as rectangle 100 200
+    place rect at 150 150
+    log expect a white circle black outline at top centre
+    graphic fill white
+    graphic create circ as circle 20
+    place circ at 400 150
+    log expect a 5 sided polygon with thicker stroke
+    graphic stroke width 5
+    graphic create poly5 as polygon 5 50
+    place poly5 at 600 150
+    log expect red outline star at bottom left
+    graphic stroke red
+    graphic create star1 as star 6 150
+    place star1 at 150 400
+    log red ellipse at bottom middle
+    graphic fill red
+    graphic create elli as ellipse 80 60
+    place elli at 400 450
+    log expect empty polyline at bottom right
+    graphic fill none
+    graphic create poly2 as polyline 50 50  50 100 60 120 40 80 30 75
+    place poly2 at 600 450

@@ -283,6 +283,51 @@ export class WordList {
         return mult;
     }
 
+    getPointers() {
+        let value = [];
+        let prefix = "";
+        while (this.wordsLeft()) {
+            const word = this.getWord();
+            switch(word) {
+                case "top":
+                case "left":
+                case "right":
+                case "bottom":
+                    if (prefix == "") {
+                        prefix = word;
+                    } else {
+                        value.push(`${prefix}${word}`);
+                        prefix = "";
+                    }
+                    break;
+                case "middle":
+                case "centre":
+                case "center":
+                    if (prefix == "") {
+                        Globals.log.error("Bad location for bubble - " + word);
+                    } else {
+                        value.push(`${prefix}`);
+                        prefix = "";
+                    }
+                    break;
+                case "corner":
+                case "and":
+                    if (prefix != "") {
+                        value.push(`${prefix}`);
+                    }
+                    prefix = "";
+                    break;
+                default:
+                    Globals.log.error("Unknown location for bubble - " + word);
+                    break;
+            }
+        }
+        if (prefix != "") {
+            value.push(`${prefix}`);
+        }
+        return value;
+    }
+
     getDuration(def=0, requireIn=false) {
         let value = def;
         const hold = this.index;

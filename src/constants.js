@@ -5,8 +5,9 @@ export const FALSE_VALUE = "NO";
 export const NOT_FOUND = "NONE";
 export const NOT_LOADED = "INVALID";
 
-// Top level scene
+// Top level scenes
 export const MAIN_NAME = "main";
+export const DATA_NAME = "data";
 
 // Sprite types
 export const SPRITE_IMAGE = "_IMAGE_";

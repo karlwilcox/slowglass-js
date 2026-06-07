@@ -1,0 +1,89 @@
+# Julius Caeser Act 1 Scene 1 - By William Shakespeare
+
+stage size 1024 768
+
+setup
+    from /demo/julius-caeser
+    load forum.png as forum
+    then
+    put forum as background
+
+after 1
+    start scene move-crowd
+
+after 3
+    start scene move-murellus
+    start scene move-flavius
+
+scene move-crowd
+    setup
+        group create crowd
+        sprite create commoners load from commoners.png
+        sprite create carpenter load from carpenter.png
+        sprite create cobbler load from cobbler.png
+        place commoners in group crowd at origin depth 10
+        place carpenter in group crowd at 50 0 depth 20
+        place cobbler in group crowd at 70 5 depth 30
+        place crowd hidden at 60 420 depth 200
+    pause 1
+        resize crowd to width 150
+        show crowd
+
+
+pause 1
+        jiggle crowd 5 5
+        move crowd to 200 560 in 7 seconds
+        resize crowd to width 400 in 7 seconds
+        then
+        jiggle crowd stop
+endscene
+
+scene move-murellus
+    setup
+        make mur-view from
+            front 16 48 209 529
+            back 578 47 209 529
+            walk-r 328 883 258 528
+            walk-l 927 893 239 528
+            stand-r 48 890 229 525
+        enddata
+        load murellus.png as mur-imgs
+        then
+        sprite create murellus from mur-imgs view ${mur-view[walk-l]}
+        
+        
+    after 2 seconds
+        place murellus at 1050 600 depth 150 height 300
+        jiggle murellus 5 5
+        move murellus to 880 600 in 5 seconds
+        then
+        jiggle murellus stop
+endscene
+
+scene move-flavius
+    setup
+        load flavius.png as fla-imgs
+        sprite create flavius
+endscene
+
+scene data
+    setup
+    make lines from
+        1 Hence! Home, you idle creatures, get you home! // FLAVIUS
+        2 Is this a holiday? What, know you not,
+        3 Being mechanical, you ought not walk
+        4 Upon a laboring day without the sign
+        5 Of your profession?—Speak, what trade art thou?
+        6 Why, sir, a carpenter. // CARPENTER
+        7 Where is thy leather apron and thy rule? // MURELLUS
+        8 What dost thou with thy best apparel on?—
+        9 You, sir, what trade are you?
+        10 Truly, sir, in respect of a fine workman, I am // COBBLER
+        11 but, as you would say, a cobbler.
+        12 But what trade art thou? Answer me directly. // MURELLUS
+        13 A trade, sir, that I hope I may use with a safe // COBBLER
+        14 conscience, which is indeed, sir, a mender of bad soles.
+        15 What trade, thou knave? Thou naughty knave, what trade? // MURELLUS
+    enddata
+endscene
+    

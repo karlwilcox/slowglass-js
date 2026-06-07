@@ -85,9 +85,6 @@ class Variable {
 }
 
 export class VarList {
-    static key = null;
-    static lastKey = null;
-    static hemisphere = null;
 
     constructor(scene) {
         this.variables = [];
@@ -421,7 +418,7 @@ export class VarList {
         if (value === false && reference.property === false && varName.match(/\./)) { // should be a sprite name/property pair
             const parts = reference.name.split(/\./, 2);
             const sgSprite = SGSprite.getSprite(sceneName, parts[0], false);
-            if (sgSprite != null) {
+            if (!sgSprite) {
                 if (sgSprite.type == constants.SPRITE_IMAGE && (sgSprite.image === null || sgSprite.image == "loading")) {
                     return constants.NOT_LOADED;
                 }
@@ -513,7 +510,9 @@ export class VarList {
                     } else if (reference.property === false) {
                         value = this.variables[index].getValue(reference.key);
                     }
-                } 
+                } else if (Globals.dataScene) { // look in the data scene, if there is one
+                    value = Globals.dataScene.varList.getValue(varName);
+                }
             }
         }
         if (report && value === false) {

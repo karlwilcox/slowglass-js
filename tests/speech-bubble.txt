@@ -1,0 +1,9 @@
+# Speech bubble testing
+
+stage size 800 600
+
+setup
+    graphic fill white
+    graphic create speech1 as bubble 200 100 10
+    place bubble at centre
+    

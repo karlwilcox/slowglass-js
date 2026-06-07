@@ -128,3 +128,23 @@ time that the cue is tested.
 
 - Do **NOT** use variables on stage directions, these are read once when the
 script is created and so no variables will yet have been created.
+
+## The Data Scene
+
+If you create a scene called "data" it will be handled specially. You do
+not need to **start** the scene, it will be started for you automatically.
+
+Although you can do anything with this scene I recommend that you only
+use the _*setup*_ or _*begin*_ cues to create user variables.
+
+These variables will be available to **all** other scenes, effectively
+becoming global variables.
+
+A local variable with the same name will take priority and "hide" the
+global variable but if necessary you can still access the global
+variable with the construction:
+
+`${data:variable-name}`
+
+This scene is useful place to put large array initialisations, keeping them
+out of the way of the actual commands.

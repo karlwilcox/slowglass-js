@@ -19,8 +19,8 @@ export class Globals {
     static displayWidth = defaults.DISPLAY_WIDTH;
     static displayHeight = defaults.DISPLAY_HEIGHT;
     static displayColour = defaults.DISPLAY_COLOUR;
-    static scriptWidth = defaults.DISPLAY_WIDTH;
-    static scriptHeight = defaults.DISPLAY_HEIGHT;
+    static scriptWidth = 0;
+    static scriptHeight = 0;
     static scriptScaleType = constants.SCALE_STRETCH;
     static scriptScaleX = 1;
     static scriptScaleY = 1;
@@ -31,6 +31,7 @@ export class Globals {
     static corsProxy = defaults.CORS_PROXY;
     static uniqueCount = 1;
     static lastId = 0;
+    static dataScene = null;
 
     constructor() {
 
@@ -99,8 +100,8 @@ export class Globals {
         Globals.currentTrigger = "";
         Globals.displayWidth = defaults.DISPLAY_WIDTH;
         Globals.displayHeight = defaults.DISPLAY_HEIGHT;
-        Globals.scriptWidth = defaults.DISPLAY_WIDTH;
-        Globals.scriptHeight = defaults.DISPLAY_HEIGHT;
+        Globals.scriptWidth = 0;
+        Globals.scriptHeight = 0;
         Globals.scriptScaleType = constants.SCALE_STRETCH;
         Globals.scriptScaleX = 1;
         Globals.scriptScaleY = 1;

@@ -33,19 +33,19 @@ The image file located at the given URL will be loaded into memory ready for
 use in a sprite. If no name is given the basename of the file (i.e. without
 the extension or any folder names) will be used as the name.
 
-**Important Note** The load command is just a request to load the resource,
-which will be done asynchronously. Hence there may be a delay before the image
-is actually available. This is not a problem and you can still use the image to
-create sprites and modify all of their properties they will just not appear
-until the image has been loaded.
+Loading of images is completed asychronously but we often need to know image
+sizes in order to do scaling or placement calculations. For this reason
+execution of the current scene (only) is suspended until the image has been
+loaded. This is rather like every "load" command being followed by a "then".
 
-If it is important to you that the image is available then you can use the
-**then** command immediately after the **load** command which will cause
-execution to wait until the image is actually loaded and ready for use.
+If you don't want this behaviour (and you will take your own responsibilty
+for making sure that the images are loaded) then you can append:
 
-Similarly, if the URL does not exist or there is a server problem then sprites
-can still be created but will never appear. Check console messages for loading
-errors.
+`no (delay | waiting)` to the command.
+
+For example you can start the load of several large images, each followed
+by "no delay" and put a "then" command after them - this will allow all the
+images to be loaded in parallel before scene processing continues.
 
 ### Multi-frame Images
 
@@ -101,21 +101,32 @@ no check that the font-family exists so make sure that you get it right!
 
 `text font {font-family}`
 
+Select the text font size. At present there is no checking that this is a
+sensible value so please take care to get this correct.
+
+`text size {font-size}`
+
 Select the text colour, which should be
 a named web colour or a hex colour code preceeded by a hash symbol (#).
 
 `text colour {colour}`
 
-Select the text font size. At present
-there is no checking that this is a sensible value so please take
-care to get this correct.
+Alternatively you can set the fill and stroke separately with these
+commands.
 
-`text size {font-size}`
+`text fill {colour}`
+
+`text stroke {colour}`
 
 Select the desired text alignment. This only makes a big difference
 to multi-line text.
 
 `text align (left | right | center | centre)`
+
+Finally, you can also choose to wrap the text after a number of
+characters, for example to fit it within a speech bubble:
+
+`text wrap {number}`
 
 All text commands complete immediately.
 
@@ -135,11 +146,6 @@ placing the _*centre*_ of the text
 
 Adds the content as an additional line to the existing content. The height and width
 of the text sprite will be updated to take account of the new content.
-
-`text replace {sprite-name} {content...}`
-
-The existing text will be replaced with new content and the height and width
-of the text sprite will be updated to match.
 
 ### Future Intentions
 
@@ -170,7 +176,7 @@ over-written with a new value.
 
 `(shape | graphic) stroke width {number}`
 
-### Graphic Creation Commands
+### Basic Graphic Creation Commands
 
 `(shape | graphic) create {sprite-name} [as] (rect | rectangle) {width} {height} [{corner-radius}]`
 
@@ -190,6 +196,10 @@ Graphic creation does not include the rotation option as you can do this
 after placement with the **rotate** command, similarly with the rotation
 and position of the line, which will initially be drawn horizontally.
 
+All graphic commands complete immediately.
+
+### Special Graphics Creation Commands
+
 `(shape | graphic) create {sprite-name} [as] grid {x-spacing} {y-spacing}`
 
 This creates a 2 pixel wide grid with the given spacing that will occupy the
@@ -199,7 +209,15 @@ at least 10 pixels.
 This graphic is not expected to be especially useful but may be helpful when
 debugging placement issues.
 
-All graphic commands complete immediately.
+`(shape | graphic) create {sprite-name} [as] bubble {width} {height} {corner-radius} {pointers...}`
+
+This creates a rectangular speech bubble with rounded corners. You can also add
+up to 8 "pointers" to show who is speaking, just list them at the end. They are
+called(clockwise from the top) "top", "top right", "right", "bottom right",
+"bottom", "bottom left" and "left". You can have as many of these as you wish,
+and can use "and" to distinguish what might otherwise be ambiguous, e.g.
+"bottom and left" gives you two pointers.
+
 
 ## A Note On Size and Scaling
 

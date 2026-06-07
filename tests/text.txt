@@ -1,0 +1,25 @@
+# text testing
+
+stage size 800 600
+
+setup
+    graphic create grid as grid
+    place grid at centre
+    text create hello as Hello World!
+    place hello at 100 100
+    group create speech
+    text wrap 20
+    text align centre
+    text create flavius1 as Hence! Home you idle creatures, get you home!
+    place flavius in group speech at origin depth 20
+    pause 1
+    graphic fill white
+    graphic stroke width 2
+    graphic create bubble1 as bubble (${flavius.sx} + 50) (${flavius.sy} + 50) 30 bottom right
+    place bubble1 in group speech at origin depth 10
+    place speech at centre
+    text create flavius2 as Is this a holiday? What, know you not,
+    pause 2
+    delete sprite flavius
+    place flavius2 in group speech at origin depth 20
+

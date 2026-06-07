@@ -2,6 +2,7 @@ import { Parser } from "./parser";
 import * as Utils from "./utils.js";
 import { Globals } from "./globals.js";
 import * as constants from "./constants.js";
+import { SGSprite } from "./sgsprite.js";
 
 export class Trigger {
     constructor(scene, timestamp, params) {
@@ -367,5 +368,42 @@ export class AtEnd extends Trigger {
         // triggered when the scene is stopped
         this.expired = true;
         return true;
+    }
+}
+
+/**************************************************************************************************
+
+    ######  ##       ####  ######  ##    ## 
+   ##    ## ##        ##  ##    ## ##   ##  
+   ##       ##        ##  ##       ##  ##   
+   ##       ##        ##  ##       #####    
+   ##       ##        ##  ##       ##  ##   
+   ##    ## ##        ##  ##    ## ##   ##  
+    ######  ######## ####  ######  ##    ## 
+
+**************************************************************************************************/
+
+export class OnClick extends Trigger {
+    constructor(scene, timestamp, params) {
+        super(scene, timestamp, params);
+        // this.sgSprite = scene.getSprite(params); // for local only sprites
+    }
+
+    fired(timestamp) {
+        if (!this.sgSprite) {
+            this.sgSprite = SGSprite.getSprite(this.scene.name, this.params, false);
+            if (this.sgSprite) {
+                this.sgSprite.piSprite.eventMode = "dynamic";
+                this.sgSprite.piSprite.onclick = this.sgSprite.callback();
+            }
+        }
+        if (!this.sgSprite) {
+            return false; // not created yet
+        }
+        if (this.sgSprite.event) {
+            this.sgSprite.event = false;
+            return true;
+        } // else
+        return false;
     }
 }

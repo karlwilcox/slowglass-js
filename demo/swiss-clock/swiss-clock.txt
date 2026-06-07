@@ -4,8 +4,8 @@ canvas width 800
 canvas height 600
 
 setup
-  load /assets/backgrounds/station-platform.png as platform
-   put platform as background
+    load /assets/backgrounds/station-platform.png as platform
+    put platform as background
     prepare swiss-clock
 
 

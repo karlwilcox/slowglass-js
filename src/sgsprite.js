@@ -134,6 +134,7 @@ export class SGSprite {
         this.tags.addTag(tags); // default tags
         this.sgParent = null;
         this.children = [];
+        this.event = false; // For the onclick event
         // created yet?
         this.piSprite = null;
         this.enabled = true;
@@ -312,7 +313,7 @@ export class SGSprite {
             this.viewHeight.forceValue(this.viewHeight.value());
         } else {
             this.windowed = true;
-        // we set in motion up to two changes
+        // we set in motion up to 4 changes
         if (callback) {
             callback(4)
         }
@@ -756,11 +757,19 @@ export class SGSprite {
         // Globals.log.report(`${message} local bounds ${bounds.width}  ${bounds.height}`);
         // const size = this.piSprite.getSize();
         // Globals.log.report(`${message} size ${size.width}  ${size.height}`);
-        // this.sizeX.forceValue(bounds.width);
+        // // this.sizeX.forceValue(bounds.width);
         // this.sizeY.forceValue(bounds.height);
         this.origX = bounds.width / this.scaleX.value();
         this.origY = bounds.height / this.scaleY.value();
     }
+
+    callback() {
+        return (event) => {
+            this.event = event;
+        };
+    }
+
+
 
 /**************************************************************************************************
 
@@ -1198,7 +1207,7 @@ export class SGSprite {
         return(false);
     }
 
-    static remove_sprite(scene, name, report = false) {
+    static deleteSprite(scene, name, report = false) {
         if (!name) {
             return false;
         }

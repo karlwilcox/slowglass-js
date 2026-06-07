@@ -130,6 +130,15 @@ then all the other cues will be tested. For example:
 `pause for 1 second`
 `log ${scene-name}:{local-name}`
 
+## Automatically Started Scenes
+
+The "top level" scene will be given the name _*main*_ and will be started automatically,
+as will a scene that you create yourself with that name.
+
+Additionally, a scene with the name _*data*_ will also be started automatically -
+see the [/docs/variables/user.html](user variables) page for a discussion on how
+this scene can be used.
+
 ## Scene Duration and Deletion
 
 It is likely that you will find yourself creating two types of scenes - those
@@ -190,26 +199,6 @@ This will make it look like the scene was never called, so images will be reload
 
 Use the **reset** command if you are not going to use the scene again, or if it has
 loaded a lot of images and will not be used again for some time.
-
-## Duplicating Scenes
-
-You can create a copy of a scene with:
-
-`(copy | clone) {scene-name} as {new-name}`
-
-This will create a new version of the original scene which will have its own
-sprites, images and variables, as well as a new name, but all the actions
-and triggers will be duplicated. (Note that images are
-cached so there is no penalty for using the **load** command on multiple
-scenes). The new scene will not be running and must be specifically started with:
-
-`perform scene {new-scene}`
-
-It is **NOT** possible to duplicate the main scene.
-
-I'm not really sure where you might use this action but I wrote it as part
-of earlier iteration of scene management so I might as well leave it and document
-it here.
 
 ## Managing Multiple Scene Performances
 

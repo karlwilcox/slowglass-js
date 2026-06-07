@@ -84,7 +84,7 @@ class SlowGlass {
                 continue;
             }
             // ignore any punctuation used to show indenting
-            currentLine = currentLine.replace(/^[^a-zA-Z"\$]+/,"");
+            currentLine = currentLine.replace(/^[^a-zA-Z0-9"\$]+/,"");
             let words = Parser.splitWords(currentLine.toLowerCase());
             // ignore and as the first word (syntactic sugar)
             if (words[0] == 'and') {
@@ -296,6 +296,12 @@ class SlowGlass {
                 return false;
             } else {
                 // calculate overall scaling
+                if (Globals.scriptWidth == 0) { // was never set
+                    Globals.scriptWidth = Globals.displayWidth;
+                }
+                if (Globals.scriptHeight == 0) { // was never set
+                    Globals.scriptHeight = Globals.displayHeight;
+                }
                 switch (Globals.scriptScaleType) {
                     case constants.SCALE_STRETCH:
                         Globals.scriptScaleX = Globals.displayWidth / Globals.scriptWidth;
@@ -315,6 +321,13 @@ class SlowGlass {
                 scene.interactive_index = scene.actionGroups.length;
                 Scene.manageLifecycle(scene, constants.SCENE_MAKE_RUNNABLE);
                 scene.actionGroups.push(new Utils.ActionGroup());
+                // If there is a data scene, auto run that as well
+                const dataSceneText = SceneText.find(constants.DATA_NAME, false);
+                if (dataSceneText) {
+                    const dataScene = new Scene(dataSceneText, constants.DATA_NAME);
+                    Scene.manageLifecycle(dataScene, constants.SCENE_MAKE_RUNNABLE);
+                    Globals.dataScene = dataScene;
+                }
             }
         }
         return true;
@@ -439,8 +452,8 @@ class SlowGlass {
                                         doRun = !doRun;
                                     }
                                     break;
-                                case "newSprite":
-                                    if (actionGroup.waitClause.loaded) {
+                                case "newImage":
+                                    if (!actionGroup.waitClause.loading) {
                                         doRun = true;
                                     }
                                     break;

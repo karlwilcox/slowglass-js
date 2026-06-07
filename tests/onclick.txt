@@ -1,0 +1,14 @@
+# Onclick test
+
+stage size 800 600
+
+setup
+    graphic create box as rectangle 400 300
+    place box at centre
+
+begin
+    log starting...
+
+onclick box
+    log box was clicked!
+    
