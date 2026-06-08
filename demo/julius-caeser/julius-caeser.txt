@@ -1,21 +1,61 @@
 # Julius Caeser Act 1 Scene 1 - By William Shakespeare
 
 stage size 1024 768
+stage colour crimson
 
-setup
+
+begin
     from /demo/julius-caeser
+    # start scene titlecard "Julius Caeser" "Act I, Scene 1" "William Shakespeare"
+    # wait until ${titlecard:finished}
     load forum.png as forum
-    then
     put forum as background
+    graphic create grid as grid
+    place grid at centre depth 1000
+    start scene crowd
+    pause 2
+    start scene murellus
+    start scene flavius
+    pause 5
+    start scene conversation
 
-after 1
-    start scene move-crowd
+scene titlecard
+    setup
+        let finished be false
+        graphic fill crimson
+        graphic create backcloth as rectangle $WIDTH $HEIGHT
+        place backcloth at centre depth 1000
+        assign title part author as $PARAMS
+        text colour white
+        text fontsize 66
+        text create title as $title
+        text fontsize 56
+        text create part as $part
+        text fontsize 48
+        text create author as By $author
 
-after 3
-    start scene move-murellus
-    start scene move-flavius
+    begin
+        place title transparent at $CENTREX 150 depth 1001
+        fade title to 100 in 2 seconds
+        then
+        place part transparent at $CENTREX 300 depth 1002
+        fade part to 100 in 2 seconds
+        then
+        place author transparent at $CENTREX 450 depth 1003
+        fade author to 100 in 2 seconds
+        then
+        pause 2 seconds
+        fade author to 0 in 2 seconds
+        fade part to 0 in 2 seconds
+        fade title to 0 in 2 seconds
+        then
+        let finished be true
+        move backcloth to $CENTREX -$CENTREY in 5 seconds
+        then
+        delete scene
+endscene
 
-scene move-crowd
+scene crowd
     setup
         group create crowd
         sprite create commoners load from commoners.png
@@ -25,12 +65,11 @@ scene move-crowd
         place carpenter in group crowd at 50 0 depth 20
         place cobbler in group crowd at 70 5 depth 30
         place crowd hidden at 60 420 depth 200
-    pause 1
+        group measure crowd
         resize crowd to width 150
         show crowd
 
-
-pause 1
+    pause 4
         jiggle crowd 5 5
         move crowd to 200 560 in 7 seconds
         resize crowd to width 400 in 7 seconds
@@ -38,32 +77,31 @@ pause 1
         jiggle crowd stop
 endscene
 
-scene move-murellus
+scene murellus
     setup
-        make mur-view from
-            front 16 48 209 529
-            back 578 47 209 529
-            walk-r 328 883 258 528
-            walk-l 927 893 239 528
-            stand-r 48 890 229 525
-        enddata
         load murellus.png as mur-imgs
-        then
-        sprite create murellus from mur-imgs view ${mur-view[walk-l]}
+        sprite create walking from mur-imgs view 927 893 239 528
         
         
-    after 2 seconds
-        place murellus at 1050 600 depth 150 height 300
-        jiggle murellus 5 5
-        move murellus to 880 600 in 5 seconds
+    begin
+        place walking at 1050 600 depth 150 height 190
+        jiggle walking 5 5
+        move walking to 800 600 in 5 seconds
         then
-        jiggle murellus stop
+        jiggle walking stop
 endscene
 
-scene move-flavius
+scene flavius
     setup
         load flavius.png as fla-imgs
-        sprite create flavius
+        sprite create walking from fla-imgs view 895 454 230 473
+
+    after 1 second
+        place walking at 1080 600 depth 151 height 220
+        jiggle walking 5 5
+        move walking to 850 600 in 4 seconds
+        then
+        jiggle walking stop
 endscene
 
 scene data
@@ -87,3 +125,23 @@ scene data
     enddata
 endscene
     
+notes
+
+        make mur-view from
+            front 16 48 209 529
+            back 578 47 209 529
+            walk-r 328 883 258 528
+            walk-l 927 893 239 528
+            stand-r 48 890 229 525
+        enddata
+
+        make flavius from
+            front 63 32 181 526
+            back 563 32 181 526
+            right 1120 38 230 437
+            walk-r 895 454 230 473
+            side 327 29 156 530
+            run 1077 950 330 458
+        enddata
+
+endnotes

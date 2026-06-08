@@ -17,24 +17,25 @@ end of the line and any content between /\* and \*/.
 * **end scene** - ends current scene
 * **finish** - stop processing commands (everything else ignored)
 * **end file** - same as above
-* **include** {file} - read file as if inserted at this point
-* **display height/width** {value} - sets window dimensions
-* **display size** {width} {height} - sets window dimensions
+* **include** {file} - read file as if inserted at this point (TO BE DONE)
+* **(canvas | stage | display) height/width** {value} - sets window dimensions
+* **(canvas | stage | display) size** {width} {height} - sets window dimensions
 * **display fullscreen** - full screen window (TBD)
 * **scale** (fit \| stretch \| none) - how to adapt script scale to display
 * **gravity** {integer} - force of gravity in pixels per second
 * **ground** {integer} - y coordinate of ground level
 * **script width** {integer} - assumed width for this script
 * **script height** {integer} - assumed height for this script
+* **script size {integer} {integer} - assumed size for this script
 
 ## Triggers
 
 * **begin** - runs on scene load (or file load if at top level)
 * **after** {duration} - runs after duration has elapsed from scene start
-* **on key** {key} -runs when key is pressed
-* **on click** - runs when any mouse key is pressed
+* **on key** {key} -runs when key is pressed (TBD)
+* **on click** {sprite-name} - runs when named sprite receives a left click
 * **at** time {timecode} - runs when time of day matches the timecode
-* **atend** - runs when the scene is stopped, just prior to deletion
+* **atend** - runs when the scene is finished, just prior to deletion
 * **each** time {timecode} - runs when time of day matches timecode (including wild cards)
 * **every** {duration} - runs after duration has elapsed from scene start and repeats
 * **when** (expression) - Evaluated once per second, runs once when the Python expression becomes truthy
@@ -48,7 +49,6 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 * **(log \| print)** {text...} - write text to console (or page element)
 * **echo** (on \| off \| flip) - log expanded and evaluated commands prior to executing them
-* **wait** {duration} - do nothing for given time (safe to use, not busy wait)
 * **finish** - stop application
 * **list** (scenes \| all) - basic information on all scenes to console
 * **list** (scene \| sprites \| images \| actions) \[{scene-name}\] - detailed information to console
@@ -67,22 +67,20 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 * **run** \[scene\] {active-name} \[with parameters {parameters...}\] - start scene executing
 * **start** \[scene\] {scene-name} \[named as {active-name}\] \[with paramters\] \[{parameters...}\] - prepare and run scene, pass information
 * **stop** \[{active-name}\] - stop current scene or named scene (removes all images)
-* **scene width** {integer} - assumed width of this scene (TBD)
-* **scene height** {integer} - assumed width of this scene (TBD)
 * **reset scene** \[{active-name}\] - put scene back into the original state
 
 ## Sprite Management
 
 * **reset sprite** {sprite-name} - set all sprite aspects back to their original state
 * **sprite create** \[named {sprite-name}\] \[in {group-name}\] load from {url} - creates a sprite directly from an image
-* **sprite create** \[named {sprite-name}\] \[in {group-name}\] from {resource-name} \[view {x} {y} {w} {h}\] - creates a sprite, hidden, needs to be placed
+* **sprite create** \[named {sprite-name}\] \[in {group-name}\] from {resource-name} \[view {x} {y} {w} {h}\] - creates a sprite, needs to be placed
 * **replace** {sprite-name} \[with\] {resource-name} - change the sprite image leaving all other aspects unchanged
 * **with** {scene-name} - sprite names without a prefix assumed to in the named scene
 * **reset with** - sprite names without a prefix assumed to be in the current scene (the default behaviour)
 
 ## Sprite Placement
 
-* **place** {sprite-name} \[hidden\] at {x},{y} \[depth {z}\] \[size\|scale\] \[{w},{h}\] - place an image on to the screen
+* **place** {sprite-name} \[(hidden | transparent)\] at {x},{y} \[depth {z}\] \[size\|scale\] \[{w},{h}\] - place an image on to the screen
 * **put** {resource-name} as (background \| backdrop \| top \| bottom \| left \| right \| ground \| sky \| foreground \| frame) \[at\] \[depth {z}\] - place an image on to the screen in a fixed location
 * **raise/lower** {sprite-name} **to** {value} - set depth of image on screen to value
 * **raise/lower** {sprite-name} **by** {value} - change depth of image on screen up or down the set of images
@@ -154,11 +152,10 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 ## Text Commands
 
 * **text create** {text-name} \[in {group-name}\] {text...} - create a named text item
-* **text replace** {text-name} {text...} - changes the displayed text
-* **text add** {text-name} {text...} - Adds the displayed text as additional line
 * **text font** {font-name} - sets font face (no checking)
 * **text size** {integer} - sets font size (no checking)
 * **text align** (left \| centre \| right) - sets font alignment
+* **text wrap** {integer} - wrap text at this point, 0 to disable
 * **text colour** {colour} - sets fill and stroke to named colour or hex code
 * **text fill** {colour} - sets fill to named colour or hex code
 * **text stroke** {colour} - sets stroke to named colour or hex code
@@ -172,7 +169,8 @@ and other aspects of appearance can be changed after the text item has been crea
 * **graphic create** {graphic-name} \[in {group-name}\] as circle {radius}
 * **graphic create** {graphic-name} \[in {group-name}\] as line {height} (rotate as required)
 * **graphic create** {graphic-name} \[in {group-name}\] as star {num-points} {outer-radius} \[{inner-radius}\]
-* **graphic create** {graphic-name} \[in {group-name}\] as circle {x-radius} {y-radius} (rotate as required)
+* **graphic create** {graphic-name} \[in {group-name}\] as ellipse {x-radius} {y-radius} (rotate as required)
+* **graphic create** {graphic-name} \[in {group-name}\] as bubble {height} {width} {radius} {pointers...}
 * **graphic create** {graphic-name} \[in {group-name}\] as grid {x-size} {y-size} (covers whole display)
 * **graphic stroke** {graphic-name} {colour} - sets fill to named colour or hex code
 * **graphic fill** {graphic-name} {colour} - sets fill to named colour or hex code
@@ -191,13 +189,10 @@ The word 'shape' can be used instead of 'graphic'.
 * **group create** {group-name} \[size {width} {height}\] - create a named empty group, needs to be placed
 * **group add** {sprite-name} to {group-name} - add named sprites to the group (removes them from scene)
 
-If you do not provide a group size it will be notionally the same size as the display.
-The named group can now be used as an image source for sprites, e.g. "place
-named-group at x,y,z" and all sprite commands operate on the whole group,
-however individual sprites within the group can still be operated on by name.
-
 ## Flow Control
 
+* **pause** {duration} - do nothing for given time (safe to use, not busy wait)
+* **wait (until | while)** {condition} - suspend execution until condition is true/false
 * **for** {variable-name} **in** {values...}
 * **for** {variable-name} **range** {N..M}
 * **(endfor \| next)** - assign each value to variable in turn
@@ -209,14 +204,14 @@ however individual sprites within the group can still be operated on by name.
 ## Logical Expressions
 
 * **(false \| no \| n \| none \| 0 \| 0.0)** - are all false, everything else is true
-* **{value1} (is \| equals \| = \| ==) {value2} - Javascript equality test
-* **{value1} (not \| != \| !==) {value2} - Javascript inequality test
-* **{value1} (> \| \< \| >= \| \<=) {value2} - Javascript comparison
+* **{value1} (is \| equals \| = \| ==) {value2}** - Javascript equality test
+* **{value1} (not \| != \| !==) {value2}** - Javascript inequality test
+* **{value1} (> \| \< \| >= \| \<=) {value2}** - Javascript comparison
 
 ## Mathematical Expressions
 
 Anything in round brackets is assumed to be a mathemtical expression and on use will be
-replaced by its evaluated result. _*Before*- evaluation all variables will be expanded
+replaced by its evaluated result. _*Before*_ evaluation all variables will be expanded
 to their values.
 
 All the standard operator symbols are supported,
@@ -225,7 +220,7 @@ including ! and ^ for factorial and power. Brackets can be nested to any depth.
 supported:
 
 * sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh - trigonmetric, angles in degrees
-* Mod log ln - modulus & logarithms (not capitals)
+* Mod log ln - modulus & logarithms (note capitals)
 
 ## Variable Creation
 
@@ -233,16 +228,20 @@ supported:
 * **assign** {variable-names...} **as** {values...} - set multiple variables at once
 * **choose** {variable-name} from {values...} - randomly assign one of the values
 * **match** {variable-name} **to** {search-string} \[at (start \| end)\] **from** {values...} - set variable to all the values that match
+* **make** {variable-name} from** - assign array key / values from following lines
+* **enddata** - end of array assignment
 * **increment** {variable-name} - if it looks like a number
 * **deccrement** {variable-name} - if it looks like a number
 
 All variables start with $, use braces '{}' to isolate variable names within strings
 or if the variable name contains a '.' character. Unset variables evaluate to "NONE".
 
-Variables are local to scenes, to access variables in other scenes use ${scene-name:variable-name}.
+Variables are local to scenes, to access variables in other scenes use
+${scene-name:variable-name}. Variables in the scene named 'data' are also
+global.
 
 Variables in commands are evaluated every time the command is invoked, variables in triggers are expanded when the
-trigger is tested. Variables can **NOT** be used in directives
+trigger is tested. Variables can **NOT** be used in stage directions
 
 ## Built-in Variables
 
@@ -278,7 +277,6 @@ trigger is tested. Variables can **NOT** be used in directives
 * $RANDOMX, $RANDOMY - random values somewhere within the current window
 * $KEY - key currently being pressed (None if none pressed)
 * $LASTKEY - last key that was pressed
-* $CLICKX, $CLICKY - x & y coordinates of the last time the mouse was clicked
 * $SCENENAME - name of the current scene
 * $PARAMETERS - values passed to this scene on start
 * ${scene-name:SPRITES} - list of all sprite names in named scene
@@ -287,6 +285,7 @@ trigger is tested. Variables can **NOT** be used in directives
 * $SCENES - list of all scene names
 * $VARIABLES - list of all variables in the current scene ONLY
 * $UNIQUE - incrementing number guaranteed to be unique in this run
+* $FRAME - 1 based count of frames rendered so far
 
 ## Sprite properties
 
@@ -298,6 +297,8 @@ by a '.' and one of the following:
 * size.x, sx - current width
 * size.y,  sy - current height
 * s - current speed (pixels per second) TBD
+* click.x, cx - coordinate of last click on this sprite
+* click.y, cy - coordinate of last click on this sprite
 * depth, z - current depth
 * angle - current rotation
 * visible - true/false visibity

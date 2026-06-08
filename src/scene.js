@@ -424,6 +424,9 @@ export class Scene {
             case constants.SCENE_MAKE_RUNNABLE:
                 scene.runnable = true;
                 break;
+            case constants.SCENE_FINISH:
+                scene.state = constants.SCENE_FINISHED;
+                break;
             case constants.SCENE_NEXT_STATE:
                 switch (scene.state) {
                     case constants.SCENE_LOADED: // Scene just been created
@@ -438,10 +441,23 @@ export class Scene {
                         scene.state = constants.SCENE_RUNNING;
                         break;
                     case constants.SCENE_FINISHED:
-                        // delete the scene - make this static & pass in scene?
+                        scene.state = constants.SCENE_DELETE_ME;
                         break;
                     case constants.SCENE_RUNNING:
                     case constants.SCENE_PAUSED:
+                        break;
+                    case constants.SCENE_DELETE_ME:
+                        for (let i = 0; i < scene.sprites.length; i++) {
+                            if (scene.sprites[i]) {
+                                scene.sprites[i].piSprite.destroy();
+                            }
+                        }
+                        for (let i = 0; i < Globals.scenes; i++) {
+                            if (scene === Globals.scenes[i]) {
+                                Globals.scenes.splice(i,1);
+                                break;
+                            }
+                        }
                         break;
                     default:
                         break;
@@ -511,7 +527,7 @@ export class Scene {
                     switch (on_word) {
                         case 'key':
                             wordList.testWord("press");
-                            trigger = new Triggers.Trigger("ONKEY", wordList.joinWords());
+                            trigger = new Triggers.OnKey(this, timestamp, wordList.joinWords());
                             break;
                         case 'keypress':
                             trigger = new Triggers.Trigger("ONKEY", wordList.joinWords());
@@ -1101,7 +1117,8 @@ export class Scene {
                         break;
                     }
                     const hidden = wordList.testWord("hidden");
-                    const groupSprite = wordList.getGroup(this.spriteScene);
+                    const transparent = wordList.testWord("transparent");
+                    const groupSprite = wordList.getInGroup(this.spriteScene);
                     let height = 0;
                     let width = 0;
                     // is there a location for the sprite?
@@ -1169,12 +1186,14 @@ export class Scene {
                     } else { // just set the size we want
                         sgSprite.applySize(dimensionType, dimension1, dimension2);
                     }
-                    if (sgSprite.type == constants.SPRITE_GROUP) {
-                        sgSprite.origFromBounds();
-                    }
                     if (hidden) {
                         sgSprite.setVisibility(false);
                     }
+                    if (transparent) {
+                        sgSprite.setTransparency(0, 0, "to");
+                    }
+                    // update things *before* display, so it doesn't flash up at 0,0
+                    sgSprite.update(this, now);
                     if (groupSprite) {
                         sgSprite.sgParent = groupSprite;
                         sgSprite.sgParent.children.push(sgSprite);
@@ -1183,6 +1202,9 @@ export class Scene {
                         Globals.root.addChild(sgSprite.piSprite);
                     }
                     sgSprite.placed = true;
+                    if (sgSprite.type == constants.SPRITE_GROUP) {
+                        actionGroup.suspend("placeGroup", actionIndex, sgSprite);
+                    }
                 }
                 break;
 
@@ -1300,9 +1322,10 @@ export class Scene {
                                 const hidden = wordList.testWord("hidden");
                                 const sgSprite = new SGSprite(null, groupName, constants.SPRITE_GROUP);
                                 const group = new PIXI.Container();
+                                group.enableRenderGroup();
                                 sgSprite.depth = Globals.nextZ(0);
                                 group.zIndex = sgSprite.depth;
-                                sgSprite.loaded = true;
+                                // sgSprite.loaded = true;
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(!hidden);
                                 sgSprite.tags.addTag(wordList.getTags());
@@ -1318,7 +1341,7 @@ export class Scene {
                                     Globals.log.error("Sprite not found" + action.number);
                                     break;
                                 }
-                                const groupSprite = wordList.getGroup(this.spriteScene);
+                                const groupSprite = wordList.getInGroup(this.spriteScene);
                                 if (!groupSprite) {
                                     break;
                                 }
@@ -1327,6 +1350,13 @@ export class Scene {
                                 groupSprite.piSprite.reparentChild(sgSprite.piSprite);
                                 break;
                             }
+                        case "measure":
+                                const groupSprite = wordList.getGroup(this.spriteScene);
+                                if (!groupSprite) {
+                                    break;
+                                }
+                                groupSprite.setFromBounds("all");
+                                break;
                         default:
                             Globals.log.error("Unknown group command at line " + action.number);
                         }
@@ -1403,7 +1433,6 @@ export class Scene {
                         sgSprite = new SGSprite(null, textName, constants.SPRITE_TEXT, this.defaultTags);
                         sgSprite.piSprite = textImage;
                         sgSprite.piSprite.anchor = 0.5;
-                        sgSprite.piSprite.visible = false;
                         sgSprite.sizeX.setTargetValue(textImage.width);
                         sgSprite.sizeY.setTargetValue(textImage.height);                            
                         sgSprite.origX = textImage.width;
@@ -1433,7 +1462,6 @@ export class Scene {
                     const sgSprite = new SGSprite(null, graphicName, constants.SPRITE_GRAPHIC, this.defaultTags);
                     sgSprite.piSprite = graphic;
                     const size = graphic.getSize();
-                    // sgSprite.setVisibility(false);
                     sgSprite.sizeX.forceValue(size.width);
                     sgSprite.sizeY.forceValue(size.height);
                     sgSprite.origX = size.width;
@@ -1606,6 +1634,11 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
+                    if (toOrBy == "reset") {
+                        sgSprite.sizeX.setTargetValue(sgSprite.origX);
+                        sgSprite.sizeY.setTargetValue(sgSprite.origY);
+                        break;
+                    }
                     let dimensionType = wordList.testWord(["size", "width", "height"], "size"); 
                     let dimension1 = 0;
                     let dimension2 = 0;
@@ -1773,21 +1806,19 @@ export class Scene {
                             this.varList.delete(item, false);
                             break;
                         case "scene":
-                            if (item == constants.MAIN_NAME) {
+                            if (!item) {
+                                Scene.manageLifecycle(this, constants.SCENE_FINISH);
+                            } else if (item == constants.MAIN_NAME) {
                                 Globals.log.error("Cannot delete main scene on line " + action.number);
                             } else {
                                 for (let i = 0; i < Globals.scenes.length; i++) {
                                     if (Globals.scenes[i].name == item) { // delete this one
-                                        if (Globals.scenes[i].state != constants.SCENE_STOPPED) {
-                                            Globals.log.error("Cannot delete running scene on line " + action.number);
-                                        } else {
-                                            Globals.scenes.splice(i,1);
-                                            break;
-                                        }
+                                        Scene.manageLifecycle(Globals.scenes[i], constants.SCENE_FINISH);
+                                        break;
                                     }
                                 }
-                                // Not an error if scene doesn't exist
                             }
+                            // Not an error if scene doesn't exist
                             break;
                         default:
                             Globals.log.error("Unknown deletion type on line " + action.number);

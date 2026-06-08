@@ -9,6 +9,5 @@ setup
 begin
     log starting...
 
-onclick box
-    log box was clicked!
-    
+on click box
+    log box was clicked at ${box.cx} ${box.cy}

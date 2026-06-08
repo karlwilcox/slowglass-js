@@ -24,10 +24,15 @@ centre of the screen:
 `place {sprite-name} at (centre | center) [depth] {z}`
 
 If you want to make additional changes to the sprite (e.g. to
-gradually fade it into view) you can place it on the canvas
+resize it, skew it etc.) you can place it on the canvas
 without it being visible like this:
 
 `place {sprite-name} hidden at {x} {y}`
+
+Similarly, if you want to fade your sprite into view then you
+can use the command form:
+
+`place {sprite-name} transparent at {x} {y}`
 
 If you want the sprite to be a different size to the original you
 have several options. At the simplest, just give the size in pixels:

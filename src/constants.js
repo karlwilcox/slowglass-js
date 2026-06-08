@@ -24,12 +24,14 @@ export const SCENE_STOPPED = "_STOPPED_";
 export const SCENE_RUNNING = "_RUNNING_";
 export const SCENE_PAUSED = "_PAUSED_";
 export const SCENE_FINISHED = "_FINISHED_";
+export const SCENE_DELETE_ME = "_DELETE";
 
 // Scene state actions
 export const SCENE_MAKE_RUNNABLE = "_RUNNABLE_";
 export const SCENE_PAUSE = "_PAUSE_";
 export const SCENE_RESUME = "_RESUME_";
 export const SCENE_NEXT_STATE = "_NEXT_";
+export const SCENE_FINISH = "_FINISH_";
 
 // scaling types
 export const SCALE_FIT = "_FIT_";

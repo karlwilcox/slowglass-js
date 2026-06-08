@@ -365,7 +365,7 @@ export class AtEnd extends Trigger {
         if (this.expired || this.scene.state != constants.SCENE_FINISHED) {
             return false;
         }
-        // triggered when the scene is stopped
+        // triggered when the scene is "deleted"
         this.expired = true;
         return true;
     }
@@ -402,6 +402,33 @@ export class OnClick extends Trigger {
         }
         if (this.sgSprite.event) {
             this.sgSprite.event = false;
+            return true;
+        } // else
+        return false;
+    }
+}
+
+/**************************************************************************************************
+
+    #######  ##    ## ##    ## ######## ##    ## 
+   ##     ## ###   ## ##   ##  ##        ##  ##  
+   ##     ## ####  ## ##  ##   ##         ####   
+   ##     ## ## ## ## #####    ######      ##    
+   ##     ## ##  #### ##  ##   ##          ##    
+   ##     ## ##   ### ##   ##  ##          ##    
+    #######  ##    ## ##    ## ########    ##    
+
+**************************************************************************************************/
+
+export class OnKey extends Trigger {
+    constructor(scene, timestamp, params) {
+        super(scene, timestamp, params);
+        this.key = params.charAt(0);
+    }
+
+    fired(timestamp) {
+        if (this.key == Globals.lastKey) {
+            Globals.lastKey = null;
             return true;
         } // else
         return false;

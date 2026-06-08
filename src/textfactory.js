@@ -46,7 +46,7 @@ export class TextFactory {
                 break;
             case "fontsize":
             case "size":
-                this.textFont = wordList.joinWords();
+                this.textSize = wordList.getInt(24);
                 break;
             case "align":
                 this.textAlign = wordList.joinWords();

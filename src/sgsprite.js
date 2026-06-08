@@ -134,7 +134,10 @@ export class SGSprite {
         this.tags.addTag(tags); // default tags
         this.sgParent = null;
         this.children = [];
+        // click events
         this.event = false; // For the onclick event
+        this.clickX = 0;
+        this.clickY = 0;
         // created yet?
         this.piSprite = null;
         this.enabled = true;
@@ -239,6 +242,12 @@ export class SGSprite {
         this.locX.setTargetValue(x)
         this.locY.setTargetValue(y);
         this.setDepth("to", depth);
+    }
+
+    updatePosition() {
+        if (this.piSprite !== null ) { // image has been loaded
+            this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
+        }
     }
 
     setDepth(depth_type, value="to") {
@@ -748,24 +757,40 @@ export class SGSprite {
         this.sizeY.setTargetValue(height, duration, now, callback);
     }
 
-    origFromBounds(message = "") {
+    setFromBounds(what) {
         if (this.type != constants.SPRITE_GROUP) {
             return;
         }
         // Get the new group size
         const bounds = this.piSprite.getLocalBounds();
+        switch(what) {
+            case "orig":
+                this.origX = bounds.width / this.scaleX.value();
+                this.origY = bounds.height / this.scaleY.value();
+                break;
+            case "size":
+                this.sizeX.forceValue(bounds.width);
+                this.sizeY.forceValue(bounds.height);
+                break;
+            case "all":
+                this.sizeX.forceValue(bounds.width);
+                this.sizeY.forceValue(bounds.height);
+                this.origX = bounds.width / this.scaleX.value();
+                this.origY = bounds.height / this.scaleY.value();
+                break;
+        }
         // Globals.log.report(`${message} local bounds ${bounds.width}  ${bounds.height}`);
         // const size = this.piSprite.getSize();
         // Globals.log.report(`${message} size ${size.width}  ${size.height}`);
         // // this.sizeX.forceValue(bounds.width);
         // this.sizeY.forceValue(bounds.height);
-        this.origX = bounds.width / this.scaleX.value();
-        this.origY = bounds.height / this.scaleY.value();
     }
 
     callback() {
         return (event) => {
-            this.event = event;
+            this.clickX = Math.round(event.global.x);
+            this.clickY = Math.round(event.global.y);
+            this.event = true;
         };
     }
 
@@ -929,6 +954,12 @@ export class SGSprite {
                 this.loaded = true;
                 // End image loading updates
             } // else, still loading, try again later
+        } else if (this.type == constants.SPRITE_GROUP && this.placed && !this.loaded) {
+                // A group has been placed but we haven't calculated the size yet
+                this.setFromBounds("all");
+                this.applySize(this.dimensionType, this.dimension1, this.dimension2,
+                            "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
+                this.loaded = true;
         }
         if (loadOnly) {
             return;

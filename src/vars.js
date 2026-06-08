@@ -422,6 +422,8 @@ export class VarList {
                 if (sgSprite.type == constants.SPRITE_IMAGE && (sgSprite.image === null || sgSprite.image == "loading")) {
                     return constants.NOT_LOADED;
                 }
+                return constants.NOT_FOUND;
+            } else {
                 switch(parts[1]) {
                     case 'x':
                     case 'loc.x':
@@ -456,6 +458,14 @@ export class VarList {
                     case 'sy':
                     case 'size.y':
                         value = sgSprite.sizeY.value();
+                        break;
+                    case 'cx':
+                    case 'click.x':
+                        value = sgSprite.clickX;
+                        break;
+                    case 'cy':
+                    case 'click.y':
+                        value = sgSprite.clickY;
                         break;
                     case 'pivot.x':
                     case 'px':

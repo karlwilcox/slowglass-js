@@ -356,9 +356,12 @@ class SlowGlass {
             height: Globals.displayHeight,
         });
 
+        // Make canvas focusable
+        Globals.app.canvas.tabIndex = 1000;
+        Globals.app.canvas.focus();
         // Add canvas to page
-        document.onkeydown = function(e) {Globals.event("onkeydown", e.key);};
-        document.onkeyup = function(e) {Globals.event("onkeyup", e.key);};
+        Globals.app.canvas.onkeydown = function(e) {Globals.event("onkeydown", e.key);};
+        Globals.app.canvas.onkeyup = function(e) {Globals.event("onkeyup", e.key);};
         const pixi = document.getElementById(SlowGlass.sg_id);
         pixi.appendChild(Globals.app.canvas);
 
@@ -460,6 +463,12 @@ class SlowGlass {
                                 case "newScene":
                                     // we are just waiting for a new scene to start
                                     if (actionGroup.waitClause.state == constants.SCENE_RUNNING) {
+                                        doRun = true;
+                                    }
+                                    break;
+                                case "placeGroup":
+                                    // A group has been placed, wait for all sprites to update
+                                    if (actionGroup.waitClause.loaded) {
                                         doRun = true;
                                     }
                                     break;

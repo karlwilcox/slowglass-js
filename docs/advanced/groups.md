@@ -87,16 +87,28 @@ on dimensions.
 
 ## Group Dimensions
 
-How "big" is a group? The dimensions of a group are considered to be those of
-a rectangle just big enough to contain all of the group, wherever you have placed
-them. This means that if you move or scale or change the size of a group member
-the dimensions of the group _*may*_ change. As you **resize** or **scale** the
-group the program will calculate a new size, and also try to maintain
-the original size for the purpose of resize or scale **reset**.
+How "big" is a group? The dimensions of a group are considered to be those of a
+rectangle just big enough to contain all of the members of the group, wherever
+you have placed them. This means that if you add group members, or move or
+scale or change the size of a group member the dimensions of the group _*may*_
+change.
 
-So for example, if you scale a group down, then move one of its members "outside"
-the existing group, then scale it back up again the group will actually be larger,
-at least for simple scale / move / scale chains like this.
+This is not a problem if you want to scale the group, or give it an absolute
+size but it can be an issue if you want to size the group proportionally (i.e.
+with a given height or width and the other dimension scaled to maintain the
+proportions).
+
+**Before** sizing a group proportionally, place and size all the group members,
+how you want them to be arranged and then the run the command:
+
+`group measure {group-name}`
+
+This will calculate the surrounding rectangle so that we know for sure
+that the "starting size" of the group is. This also sets the dimensions
+for any subsequent `resize {group-name} reset` commands.
+
+If you want to begin with a group resized proportionally then place it
+**hidden**, measure it, resize it and then make it visible with `show`.
 
 ## Groups and Depth
 
