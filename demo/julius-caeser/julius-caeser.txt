@@ -3,6 +3,8 @@
 stage size 1024 768
 stage colour crimson
 
+setup
+    let speech_pause be 3
 
 begin
     from /demo/julius-caeser
@@ -13,11 +15,79 @@ begin
     graphic create grid as grid
     place grid at centre depth 1000
     start scene crowd
-    pause 2
     start scene murellus
     start scene flavius
     pause 5
     start scene conversation
+
+scene conversation
+    setup
+        make lines from
+            1 Hence! Home, you idle creatures, get you home! // FLAVIUS
+            2 Is this a holiday? What, know you not,
+            3 Being mechanical, you ought not walk
+            4 Upon a laboring day without the sign
+            5 Of your profession?—Speak, what trade art thou?
+            6 Why, sir, a carpenter. // CARPENTER
+            7 Where is thy leather apron and thy rule? // MURELLUS
+            8 What dost thou with thy best apparel on?—
+            9 You, sir, what trade are you?
+            10 Truly, sir, in respect of a fine workman, I am // COBBLER
+            11 but, as you would say, a cobbler.
+            12 But what trade art thou? Answer me directly. // MURELLUS
+            13 A trade, sir, that I hope I may use with a safe // COBBLER
+            14 conscience, which is indeed, sir, a mender of bad soles.
+            15 What trade, thou knave? Thou naughty knave, what trade? // MURELLUS
+        enddata    
+        graphic fill white
+        graphic stroke black
+        graphic stroke width 3
+        text fill black
+        text wrap 20
+        text fontsize 24
+        graphic create flav-speech as bubble 240 120 30 bottom right
+        let flav_pos be 550 300
+        graphic create carp-speech as bubble 240 120 30 bottom left
+        let carp_pos be 600 300
+        graphic create mur-speech as bubble 240 120 30 bottom
+        let mur_pos be 750 250
+
+    begin
+        place flav-speech hidden at $flav_pos depth 200
+        call flavius-speak 1 2 3 4 5
+        # Carpenter only has one line, just do it
+        move crowd:carpenter right 100 in 1 seconds
+        then
+        text create words as ${lines[6]}
+        place carp-speech at $carp_pos depth 204
+        place words at $carp_pos depth 205
+        pause $main:speech_pause
+        delete sprite words
+        delete sprite carp-speech
+        call murellus-speak 7 8 9
+        move crowd:cobbler right 150 in 1 second
+
+    on call flavius-speak
+        show flav-speech
+        for line in $ARGS
+            text create words as ${lines[$line]}
+            place words at $flav_pos depth 202
+            pause $main:speech_pause
+            delete sprite words
+        next 
+        hide flav-speech
+
+    on call murellus-speak
+        show mur-speech
+        for line in $ARGS
+            text create words as ${lines[$line]}
+            place words at $mur_pos depth 202
+            pause $main:speech_pause
+            delete sprite words
+        next 
+        hide mur-speech
+endscene
+
 
 scene titlecard
     setup
@@ -69,10 +139,10 @@ scene crowd
         resize crowd to width 150
         show crowd
 
-    pause 4
+    pause 2
         jiggle crowd 5 5
-        move crowd to 200 560 in 7 seconds
-        resize crowd to width 400 in 7 seconds
+        move crowd to 200 560 in 8 seconds
+        resize crowd to width 400 in 8 seconds
         then
         jiggle crowd stop
 endscene
@@ -82,11 +152,10 @@ scene murellus
         load murellus.png as mur-imgs
         sprite create walking from mur-imgs view 927 893 239 528
         
-        
-    begin
-        place walking at 1050 600 depth 150 height 190
+    after 1 second
+        place walking at 1050 560 depth 151 height 420
         jiggle walking 5 5
-        move walking to 800 600 in 5 seconds
+        move walking to 900 560 in 5 seconds
         then
         jiggle walking stop
 endscene
@@ -96,35 +165,14 @@ scene flavius
         load flavius.png as fla-imgs
         sprite create walking from fla-imgs view 895 454 230 473
 
-    after 1 second
-        place walking at 1080 600 depth 151 height 220
+    begin
+        place walking at 1080 560 depth 150 height 400
         jiggle walking 5 5
-        move walking to 850 600 in 4 seconds
+        move walking to 740 560 in 4 seconds
         then
         jiggle walking stop
 endscene
 
-scene data
-    setup
-    make lines from
-        1 Hence! Home, you idle creatures, get you home! // FLAVIUS
-        2 Is this a holiday? What, know you not,
-        3 Being mechanical, you ought not walk
-        4 Upon a laboring day without the sign
-        5 Of your profession?—Speak, what trade art thou?
-        6 Why, sir, a carpenter. // CARPENTER
-        7 Where is thy leather apron and thy rule? // MURELLUS
-        8 What dost thou with thy best apparel on?—
-        9 You, sir, what trade are you?
-        10 Truly, sir, in respect of a fine workman, I am // COBBLER
-        11 but, as you would say, a cobbler.
-        12 But what trade art thou? Answer me directly. // MURELLUS
-        13 A trade, sir, that I hope I may use with a safe // COBBLER
-        14 conscience, which is indeed, sir, a mender of bad soles.
-        15 What trade, thou knave? Thou naughty knave, what trade? // MURELLUS
-    enddata
-endscene
-    
 notes
 
         make mur-view from

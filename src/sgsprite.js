@@ -904,8 +904,15 @@ export class SGSprite {
                         dynamic: true,
                         });
                     texture.source.wrapMode = "mirror-repeat";
-                    this.sizeX.setTargetValue(this.viewWidth.value());
-                    this.sizeY.setTargetValue(this.viewHeight.value());
+                    this.origX = this.viewWidth.value();
+                    this.origY = this.viewHeight.value();
+                    if (this.dimensionType && this.dimensionType != "image") { // been given a different size
+                        this.applySize(this.dimensionType, this.dimension1, this.dimension2,
+                                    "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
+                    } else { // use window size
+                        this.sizeX.setTargetValue(this.viewWidth.value());
+                        this.sizeY.setTargetValue(this.viewHeight.value());
+                    }
                 }
                 if (this.warped && typeof PIXI.PerspectiveMesh === "function") {
                     this.piSprite = new PIXI.PerspectiveMesh({
@@ -1019,8 +1026,8 @@ export class SGSprite {
                     this.piSprite.texture.frame = new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
                                     this.viewWidth.value(), this.viewHeight.value());
                     this.piSprite.texture.update();
-                    this.sizeX.setTargetValue(this.viewWidth.value());
-                    this.sizeY.setTargetValue(this.viewHeight.value());
+                    // this.sizeX.setTargetValue(this.viewWidth.value());
+                    // this.sizeY.setTargetValue(this.viewHeight.value());
                     forceUpdate = true;
                 }
             }

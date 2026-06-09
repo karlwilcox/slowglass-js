@@ -303,10 +303,13 @@ export class VarList {
             case "LASTID":
                 return Globals.lastId;
             case "FINISHED":
-                return Utils.boolAsString(this.currentGroup.isFinished());
+                return Utils.boolAsString(this.currentGroup.allPriorFinished());
             case "PARAMS":
             case "PARAMETERS":
                 return this.scene.parameters;
+            case "ARGS":
+            case "ARGUMENTS":
+                return this.scene.args;
             case "ELAPSED":
                 return Math.floor((Date.now() - Globals.startTime) / 1000);
             case "MILLIS":
@@ -520,9 +523,9 @@ export class VarList {
                     } else if (reference.property === false) {
                         value = this.variables[index].getValue(reference.key);
                     }
-                } else if (Globals.dataScene) { // look in the data scene, if there is one
-                    value = Globals.dataScene.varList.getValue(varName);
-                }
+                } // else if (Globals.dataScene) { // look in the data scene, if there is one
+                //     value = Globals.dataScene.varList.getValue(varName);
+                // }
             }
         }
         if (report && value === false) {
@@ -592,7 +595,7 @@ export class VarList {
                 } else {
                     // Case: $varName
                     const start = j;
-                    while (j < input.length && /[a-zA-Z0-9_:#]/.test(input[j])) {
+                    while (j < input.length && /[a-zA-Z0-9_:#-]/.test(input[j])) {
                         j++;
                     }
                     varName = input.slice(start, j);

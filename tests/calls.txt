@@ -1,0 +1,23 @@
+# Call testing
+
+stage size 800 600
+
+setup
+    log starting...
+
+begin
+    log calling tester
+    call tester one two three
+    log tester called
+
+on call tester
+    log I am tester $ARGS
+    pause 1
+    log 1
+    pause 1
+    log 2
+    pause 1
+    log 3
+
+    
+    

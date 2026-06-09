@@ -443,8 +443,11 @@ class SlowGlass {
                                 case "pause":
                                     doRun = millis > actionGroup.waitClause;
                                     break;
+                                case 'call':
+                                    doRun = actionGroup.waitClause.allActionsFinished();
+                                    break;
                                 case "then":
-                                    doRun = actionGroup.isFinished();
+                                    doRun = actionGroup.allPriorFinished();
                                     break;
                                 case "until":
                                 case "while":

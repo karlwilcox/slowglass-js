@@ -1,0 +1,11 @@
+# icon test
+
+stage size 800 600
+
+setup
+    graphic fill red
+    graphic create play as icon playpause 100
+
+begin
+    place play at centre
+    

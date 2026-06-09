@@ -209,6 +209,17 @@ at least 10 pixels.
 This graphic is not expected to be especially useful but may be helpful when
 debugging placement issues.
 
+`(shape | graphic) create {sprite-name} as icon {icon-name} {size...}`
+
+I have included a small number of built-in icons for UI control. The
+icon-name can be any of:
+
+`soundon, soundoff, playpause, stop, forward, rewind, next, previous`
+
+These icons are quite small so best to give them your required size. They
+follow the same fill as other graphics but the stroke width and colour
+are ignored.
+
 `(shape | graphic) create {sprite-name} [as] bubble {width} {height} {corner-radius} {pointers...}`
 
 This creates a rectangular speech bubble with rounded corners. You can also add
@@ -217,7 +228,6 @@ called(clockwise from the top) "top", "top right", "right", "bottom right",
 "bottom", "bottom left" and "left". You can have as many of these as you wish,
 and can use "and" to distinguish what might otherwise be ambiguous, e.g.
 "bottom and left" gives you two pointers.
-
 
 ## A Note On Size and Scaling
 

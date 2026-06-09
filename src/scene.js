@@ -73,6 +73,7 @@ export class Scene {
         this.load(sceneText);
         this.state = constants.SCENE_LOADED;
         this.runnable = false;
+        this.args = "";
         // put new scenes at the front so they execute *before*
         // script that started them
         Globals.scenes.unshift(this);
@@ -529,8 +530,8 @@ export class Scene {
                             wordList.testWord("press");
                             trigger = new Triggers.OnKey(this, timestamp, wordList.joinWords());
                             break;
-                        case 'keypress':
-                            trigger = new Triggers.Trigger("ONKEY", wordList.joinWords());
+                        case 'call':
+                            trigger = new Triggers.OnCall(this, timestamp, wordList.joinWords());
                             break;
                         case 'mouse':
                         case 'click':
@@ -541,6 +542,18 @@ export class Scene {
                             Globals.log.error("Unknown trigger type on " + on_word + " at line " + lineNo);
                             break;
                         }
+                    break;
+                case 'onkey':
+                    wordList.testWord("press");
+                    trigger = new Triggers.OnKey(this, timestamp, wordList.joinWords());
+                    break;
+                case 'oncall':
+                    trigger = new Triggers.OnCall(this, timestamp, wordList.joinWords());
+                    break;
+                case 'onmouse':
+                case 'onclick':
+                    wordList.testWord("click");
+                    trigger = new Triggers.OnClick(this, timestamp, wordList.joinWords());
                     break;
                 case 'at':
                     wordList.testWord("time");
@@ -601,9 +614,14 @@ export class Scene {
         let actions = actionGroup.actions;
         this.varList.currentGroup = actionGroup;
         actionGroup.nextAction = start; // start at the top
-        actionGroup.startCounting();
+        if (start == 0) {
+            actionGroup.startCounting();
+        }
         while (actionGroup.suspended == false && actionGroup.nextAction < actions.length ) {
             this.runAction(actionGroup.nextAction, actionGroup, now);
+        }
+        if (actionGroup.nextAction >= actions.length) { // we are done
+            actionGroup.endCounting();
         }
     }
 
@@ -655,7 +673,7 @@ export class Scene {
         wordList.testWord(["and","set","sprite"]);
         let command = wordList.getWord().toLowerCase();
 
-        if (!["pause", "endif", "repeat", "then", "endfrom", "endwith"].includes(command) && wordList.wordsLeft() < 1) {
+        if (!["pause", "endif", "repeat", "then", "endfrom", "endwith", "endfor", "next", "enddata"].includes(command) && wordList.wordsLeft() < 1) {
             Globals.log.error(`Missing ${command} data at line ${action.number}`);
             return;
         }
@@ -1505,7 +1523,7 @@ export class Scene {
                         break; 
                     }
                     let callback = false;
-                    if (duration > 1) {
+                    if (duration > 0) {
                         callback = actionGroup.callback()
                     }
                     switch ( direction ) {
@@ -2904,6 +2922,41 @@ export class Scene {
                 // only happens after a succesful if clause so can just ignore
                 break;
 
+/**************************************************************************************************
+
+    ######     ###    ##       ##       
+   ##    ##   ## ##   ##       ##       
+   ##        ##   ##  ##       ##       
+   ##       ##     ## ##       ##       
+   ##       ######### ##       ##       
+   ##    ## ##     ## ##       ##       
+    ######  ##     ## ######## ######## 
+
+**************************************************************************************************/
+
+            case "call":
+                {
+                    const callName = wordList.getWord();
+                    const args = wordList.joinWords();
+                    let found = false;
+                    for (let i = 0; i < this.actionGroups.length; i++) {
+                        for (let j = 0; j < this.actionGroups[i].triggers.length; j++) {
+                            const trigger = this.actionGroups[i].triggers[j];
+                            if (trigger.callName == callName) {
+                                this.args = args;
+                                trigger.called = true;
+                                found = this.actionGroups[i];
+                                break;
+                            }
+                        }
+                    }
+                    if (!found) {
+                        Globals.log.error("No call found for " + callName);
+                    } else {
+                        actionGroup.suspend("call", actionIndex, found);
+                    }
+                    break;
+                }
 
 /**************************************************************************************************
 
@@ -2924,7 +2977,7 @@ export class Scene {
                 break;
 
             case 'then':
-                if (!actionGroup.isFinished()) {
+                if (!actionGroup.allPriorFinished()) {
                     actionGroup.suspend("then", actionIndex);
                 }
                 break;

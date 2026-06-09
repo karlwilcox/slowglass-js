@@ -157,6 +157,7 @@ export class ActionGroup {
         this.actions = [];
         this.anyTrigger = true;
         this.unfinishedCount = 0;
+        this.allDone = false;
         this.stack = [];
         this.suspended = false;
         this.nextAction = 0; // for looping
@@ -175,8 +176,12 @@ export class ActionGroup {
         this.triggers.push(trigger);
     }
 
-    isFinished() {
-        return (this.unfinishedCount <= 0);
+    allPriorFinished() {
+        return (this.unfinishedCount);
+    }
+
+    allActionsFinished() {
+        return (this.unfinishedCount <= 0 && this.allDone);
     }
 
     suspend(type, actionLine, clause = "") {
@@ -195,6 +200,11 @@ export class ActionGroup {
     startCounting() {
         this.triggered = true;
         this.unfinishedCount = 0;
+        this.allDone = false;
+    }
+
+    endCounting() {
+        this.allDone = true;
     }
 
     list() {
@@ -522,3 +532,4 @@ export class Location {
         this.lon = lon;
     }
 }
+

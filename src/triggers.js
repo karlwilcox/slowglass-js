@@ -434,3 +434,31 @@ export class OnKey extends Trigger {
         return false;
     }
 }
+
+/**************************************************************************************************
+
+    #######  ##    ##  ######     ###    ##       ##       
+   ##     ## ###   ## ##    ##   ## ##   ##       ##       
+   ##     ## ####  ## ##        ##   ##  ##       ##       
+   ##     ## ## ## ## ##       ##     ## ##       ##       
+   ##     ## ##  #### ##       ######### ##       ##       
+   ##     ## ##   ### ##    ## ##     ## ##       ##       
+    #######  ##    ##  ######  ##     ## ######## ######## 
+
+**************************************************************************************************/
+
+export class OnCall extends Trigger {
+    constructor(scene, timestamp, params) {
+        super(scene, timestamp, params);
+        this.callName = params;
+        this.called = false;
+    }
+
+    fired(timestamp) {
+        if (this.called) {
+            this.called = false;
+            return true;
+        } // else
+        return false;
+    }
+}
