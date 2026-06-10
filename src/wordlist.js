@@ -349,6 +349,14 @@ export class WordList {
         return value;
     }
 
+    getRate(def = 0) {
+        let value = this.getFloat(def);
+        this.testWord(["pixels","pps"]);
+        this.testWord("per");
+        value *= this.getTimeUnitMultiplier();
+        return value;
+    }
+
     getInGroup(sceneName) {
         let groupSprite = null;
         this.testWord(["in","to"]);

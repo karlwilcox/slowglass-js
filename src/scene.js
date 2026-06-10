@@ -957,7 +957,7 @@ export class Scene {
                             break;
                         }
                     }
-                    sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
+                    sgSprite = new SGSprite(this, imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
                     if (wordList.testWord("view")) {
                         const x = wordList.getInt(0);
                         const y = wordList.getInt(0);
@@ -1294,7 +1294,7 @@ export class Scene {
                     if (!SGImage.getImage(this.name, imageName)) {
                         break;
                     }
-                    let sgSprite = new SGSprite(imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
+                    let sgSprite = new SGSprite(this, imageName, spriteName, constants.SPRITE_IMAGE, this.defaultTags);
                     sgSprite.role = role;
                     wordList.testWord(["as","at"]);
                     if (wordList.testWord("depth")) {
@@ -1338,7 +1338,7 @@ export class Scene {
                                     break; // already exists, but not an error
                                 } 
                                 const hidden = wordList.testWord("hidden");
-                                const sgSprite = new SGSprite(null, groupName, constants.SPRITE_GROUP);
+                                const sgSprite = new SGSprite(this, null, groupName, constants.SPRITE_GROUP);
                                 const group = new PIXI.Container();
                                 group.enableRenderGroup();
                                 sgSprite.depth = Globals.nextZ(0);
@@ -1448,7 +1448,7 @@ export class Scene {
                     let sgSprite = null;
                     const {textName, textImage} = this.textFactory.create(wordList);
                     if (textImage != null) {
-                        sgSprite = new SGSprite(null, textName, constants.SPRITE_TEXT, this.defaultTags);
+                        sgSprite = new SGSprite(this, null, textName, constants.SPRITE_TEXT, this.defaultTags);
                         sgSprite.piSprite = textImage;
                         sgSprite.piSprite.anchor = 0.5;
                         sgSprite.sizeX.setTargetValue(textImage.width);
@@ -1477,7 +1477,7 @@ export class Scene {
             case "shape":
                 const { graphicName, graphic } = this.graphicFactory.create(wordList);
                 if (graphic != null) {
-                    const sgSprite = new SGSprite(null, graphicName, constants.SPRITE_GRAPHIC, this.defaultTags);
+                    const sgSprite = new SGSprite(this, null, graphicName, constants.SPRITE_GRAPHIC, this.defaultTags);
                     sgSprite.piSprite = graphic;
                     const size = graphic.getSize();
                     sgSprite.sizeX.forceValue(size.width);
@@ -1507,23 +1507,29 @@ export class Scene {
                     let spriteName = wordList.getSpriteName();
                     const direction = wordList.testWord(["horizontally","hor","h","vertically","vert","v","up","down","left","right"]);
                     let delta = 0;
+                    let timeValue = 0;
                     let x = 0;
                     let y = 0;
-                    let byOrTo = wordList.testWord( ["by","to"], "by");
+                    let byOrTo = wordList.testWord( ["by","to","at"], "by");
                     if (direction !== false) {
                         delta = wordList.getInt(0);
                     } else {
                         x = wordList.getInt(0);
                         y = wordList.getInt(0);
                     }
-                    let inOrAt = wordList.testWord( ["in","at"], "in");
-                    let duration = wordList.getDuration(0);
-                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    const inOrAt = wordList.testWord( ["in","at"]);
+                    if (inOrAt == "in") {
+                        timeValue = wordList.getDuration(0, false);
+                    } else { // == "at"
+                        timeValue = wordList.getRate(0);
+                    }
+
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
                     }
                     let callback = false;
-                    if (duration > 0) {
+                    if (timeValue > 0) {
                         callback = actionGroup.callback()
                     }
                     switch ( direction ) {
@@ -1531,22 +1537,22 @@ export class Scene {
                         case "hor":
                         case "h":
                         case "right":
-                            sgSprite.move(delta, false, byOrTo, inOrAt, duration, now, callback);
+                            sgSprite.move(delta, false, byOrTo, inOrAt, timeValue, now, callback);
                             break;
                         case "left":
-                            sgSprite.move(delta * -1, false, byOrTo, inOrAt, duration, now, callback);
+                            sgSprite.move(delta * -1, false, byOrTo, inOrAt, timeValue, now, callback);
                             break;
                         case "vertically":
                         case "vert":
                         case "v":
                         case "down":
-                            sgSprite.move(false, delta, byOrTo, inOrAt, duration, now, callback);
+                            sgSprite.move(false, delta, byOrTo, inOrAt, timeValue, now, callback);
                             break;
                         case "up":
-                            sgSprite.move(false, delta * -1, byOrTo, inOrAt, duration, now, callback);
+                            sgSprite.move(false, delta * -1, byOrTo, inOrAt, timeValue, now, callback);
                             break;
                         default:
-                            sgSprite.move(x, y, byOrTo, inOrAt, duration, now, callback);
+                            sgSprite.move(x, y, byOrTo, inOrAt, timeValue, now, callback);
                             break;
                     }
                 }
@@ -1592,13 +1598,35 @@ export class Scene {
 **************************************************************************************************/
 
             case "speed":
-                let spriteName = wordList.getSpriteName();
-                wordList.testWord("to");
-                let speed = wordList.getInt(0);
-                let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
-                sgSprite.set_speed(speed);
-                // speed change is instantaneous
+                {
+                    const spriteName = wordList.getSpriteName();
+                    wordList.testWord("to");
+                    const speedX = wordList.getInt(0);
+                    const speedY = wordList.getInt(0);
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (sgSprite) {
+                        sgSprite.move(speedX, speedY, "at", "", 0, now);
+                    }
+                    // speed change is instantaneous
+                }
                 break;
+
+            case "accelerate":
+            case "accel":
+                {
+                    const spriteName = wordList.getSpriteName();
+                    wordList.testWord("at");
+                    const accelX = wordList.getInt(0);
+                    const accelY = wordList.getInt(0);
+                    wordList.testWord("for");
+                    const duration = wordList.getDuration(0);
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (sgSprite) {
+                        sgSprite.accelerate(accelX, accelY, duration);
+                    }
+                }
+                break;
+
 
 /**************************************************************************************************
 
@@ -1960,7 +1988,7 @@ export class Scene {
                     wordList.testWord( ["deg","degs","degrees"]);
                     wordList.testWord( "with");
                     wordList.testWord( ["force","velocity","speed"]);
-                    let initialVelocity = wordList.getInt( 10);
+                    let initialVelocity = wordList.getInt(100);
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
@@ -1968,7 +1996,7 @@ export class Scene {
                     if (stop_or_at == "stop") {
                         sgSprite.throw("stop");
                     } else {
-                        sgSprite.throw(angle, initialVelocity, now, actionGroup.callback());
+                        sgSprite.throw(angle, initialVelocity, now);
                     }
                 }
                 break;
@@ -2281,7 +2309,7 @@ export class Scene {
                     } else if (AudioManager.exists(item)) {
                         AudioManager.delete(item);
                     } else {
-                        const scene = Scene.find(item);
+                        const scene = Scene.find(item, false);
                         if (scene !== false) {
                             scene.stop(false);
                         } else {

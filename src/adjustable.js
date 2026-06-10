@@ -1,21 +1,17 @@
 
 
 export class Adjustable {
-    constructor(inValue, minValue, maxValue, wrap) {
+    constructor(inValue, minValue = Number.MIN_SAFE_INTEGER, maxValue = Number.MAX_SAFE_INTEGER, wrap = true) {
         if (arguments.length < 4) {
             wrap = false;
         }
         // values and limits
         this.currentValue = inValue;
         this.targetValue = inValue;
+        this.hasTarget = false;
         this.deltaValue = 0;
-        if (arguments.length >= 3) {
-            this.lowerLimit = minValue;
-            this.upperLimit = maxValue;
-        } else {
-            this.lowerLimit = Number.MIN_SAFE_INTEGER;
-            this.upperLimit = Number.MAX_SAFE_INTEGER;
-        }
+        this.lowerLimit = minValue;
+        this.upperLimit = maxValue;
         // status
         this.lastAdjustment = 0;
         this.changing = false;
@@ -47,14 +43,14 @@ export class Adjustable {
         return this.deltaValue;
     }
 
-    sway_stop() {
+    swayStop() {
         this.swayLimit = 0;
         this.swayStep = 0;
         this.swayRate = 0;
         this.swayChance = 0;
     }
 
-    sway_start(limit, rate, chance) {
+    swayStart(limit, rate, chance) {
         this.swayLimit = limit;
         this.swayRate = rate * 1000; // convert to milliseconds
         this.swayChance = chance;
@@ -65,33 +61,33 @@ export class Adjustable {
 
     stop() {
         if (typeof this.positionCallback === "function") {
-            this.positionCallback("stop");
+            this.positionCallback(-1);
         }
         if (typeof this.accelerationCallback === "function") {
             this.accelerationCallback("stop");
         }
         this.deltaValue = 0;
+        this.accelerationRate = 0;
         this.changing = false;
     }
 
-    set_speed(delta) {
-        if (Math.abs(delta) > 0) {
-            this.deltaValue = delta;
-            this.changing = true;
+    setSpeed(delta) {
+        this.deltaValue = delta / 1000; // We work in millis here
+        if (!this.changing) {
+            this.changing = Math.abs(delta) > 0;
         }
     }
 
-    accelerate(rate, seconds, timestamp, callback) {
-        if (arguments.length == 1) {
-            seconds = 0;
+    setAcceleration(rate, seconds = 0) {
+        this.accelerationRate = rate / 1000; // We work in millis here
+        this.accelerationTime = seconds;
+        if (!this.changing) {
+            this.changing = Math.abs(rate) > 0;
         }
-        if (arguments.length == 2) {
-            timestamp = Date.now();
-        }
-        if (arguments.length > 3) {
-            this.accelerationCallback = callback;
-        }
-        this.accelerationRate = rate;
+    }
+
+    adjustDelta(newDelta) {
+        this.deltaValue += newDelta;
     }
 
     // adjust(delta) {
@@ -118,16 +114,11 @@ export class Adjustable {
         this.changing = true;
      }
 
-    setTargetValue(target, seconds, timestamp, callback) {
-        if (arguments.length == 1) {
-            seconds = 0;
-        }
-        if (arguments.length == 2) {
+    setTargetValue(target, seconds = 0, timestamp = null, callback = false) {
+        if (timestamp == null) {
             timestamp = Date.now();
         }
-        if (arguments.length > 3) {
-            this.positionCallback = callback;
-        }
+        this.positionCallback = callback;
         if (target < this.lowerLimit) {
             target = this.lowerLimit;
         } else if (target > this.upperLimit) {
@@ -137,11 +128,13 @@ export class Adjustable {
         if (seconds == 0) {
             this.currentValue = target;
             this.deltaValue = 0;
+            this.hasTarget = false;
             if (this.positionCallback) {
                 this.positionCallback(-1);
                 this.positionCallback = false;
             }
         } else {
+            this.hasTarget = true;
             this.deltaValue = (this.targetValue - this.currentValue) / (seconds * 1000);
             this.lastAdjustment = timestamp;
         }
@@ -190,9 +183,9 @@ export class Adjustable {
             return updated;
         }
         // Are we there yet?
-        if (((this.deltaValue < 0) && (this.currentValue < this.targetValue)) // undershot
+        if (this.hasTarget && (((this.deltaValue < 0) && (this.currentValue < this.targetValue)) // undershot
             || ((this.deltaValue > 0) && (this.currentValue > this.targetValue)) // overshot
-            || (Math.abs(this.currentValue - this.targetValue) <= this.deltaValue)) { // almost there
+            || (Math.abs(this.currentValue - this.targetValue) <= this.deltaValue))) { // almost there
             this.currentValue = this.targetValue;
             this.deltaValue = 0;
             this.changing = false;
@@ -201,6 +194,10 @@ export class Adjustable {
                 this.positionCallback = false;
             }
         } else {
+            // Accelerate!
+            if (this.accelerationRate != 0) {
+                this.deltaValue += this.accelerationRate / (thisAdjustment - this.lastAdjustment);
+            }
             this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);
             this.lastAdjustment = thisAdjustment;
         }

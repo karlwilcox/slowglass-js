@@ -482,6 +482,9 @@ export class VarList {
                     case 'rotation':
                         value = sgSprite.angle.value();
                         break;
+                    case 'falling':
+                        value = Utils.boolAsString(sgSprite.falling);
+                        break;
                     case 'visible':
                         value = Utils.boolAsString(sgSprite.visible);
                         break;

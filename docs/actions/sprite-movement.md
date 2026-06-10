@@ -6,7 +6,11 @@ These commands affect the position and movement of a named sprite.
 
 ## Move
 
-`move {sprite-name}`(by | to) {x} {y} [(in | at) {duration}]`
+This is quite a flexible command so will be covered in parts.
+
+### Move to a Given Point
+
+`move {sprite-name} (to | by) {x} {y} \[in {duration}\]\`
 
 Moves the sprite to the given location (**to**} or to a location relative
 to the existing location (**by**). This can happen immediately or over a
@@ -16,6 +20,47 @@ The locations, x and y are integers - they can be negative and can out outside
 the currently visible area.
 
 The command completes when the movement has been accomplished.
+
+### Move in a Given Direction
+
+`move {sprite-name} {direction} {distance} \[in {duration}\]`
+
+Direction may be one of horizontally, vertically, up, down, left or right,
+with the distance in pixels. This can happen immediately or over a given duration.
+
+### Move at a Given Rate
+
+Instead of giving a duration to the above commands you specify a rate to
+move at, in pixels per second, e.g.
+
+`move {sprite-name} left 100 at 10 pixels per second`
+
+Time units default to seconds if not given.
+
+Alternatively, if you want to start a sprite moving without a particular
+goal then you can just say:
+
+`move {sprite-name} at {x} {y}`
+
+Where x and y are integers representing pixels per second, either can be zero.
+An alternative form of the move with exactly the same effect is:
+
+`speed {sprite-name} {x} {y}`
+
+## Accelerate
+
+In addition to setting a movement rate (speed) you can also set the
+acceleration rate in both dimensions:
+
+`accelerate {sprite-name} at {x} {y}`
+
+As above, x and y are integers that represent acceleration in
+pixels per second per second, either can be negative. You can
+also use the abbreviation **accel**.
+
+See also the **throw** command below.
+
+TBD - accelerating for a given duration or to a target speed.
 
 ## Scroll
 
@@ -32,7 +77,7 @@ example moving clouds across the sky.
 
 If the scrolled window reaches the edge of the underlying texture
 then it will be repeated as a mirror repeat and hence may appear
-seemless. If you want ot take advantage of this then use tileable
+seemless. If you want to take advantage of this then use tileable
 textures.
 
 ## Rotate

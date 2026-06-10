@@ -105,7 +105,6 @@ export class Globals {
         Globals.scriptScaleType = constants.SCALE_STRETCH;
         Globals.scriptScaleX = 1;
         Globals.scriptScaleY = 1;
-        Globals.gravity = defaults.GRAVITY_PS2;
         Globals.lastKey = null;
         Globals.key = null;
         Globals.lastId = 0;

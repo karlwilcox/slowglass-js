@@ -515,10 +515,8 @@ class SlowGlass {
                         }
                     }
                     if (updateState) {
-                        // Globals.log.report(`${current.name} running update`);
                         Scene.manageLifecycle(current, constants.SCENE_NEXT_STATE);
                     } else {
-                        // Globals.log.report(`${current.name} skipping update`);
                         nextRun = Defaults.SPRITE_RATE; // next frame
                     }
                 }

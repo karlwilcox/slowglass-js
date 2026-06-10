@@ -118,12 +118,13 @@ export class SGImage {
 **************************************************************************************************/
 
 export class SGSprite {
-    constructor(imageName, spriteName = imageName, type = constants.SPRITE_IMAGE, tags = []) {
+    constructor(scene, imageName, spriteName = imageName, type = constants.SPRITE_IMAGE, tags = []) {
         // We duplicated a lot of sprite properties so that we can manipulate independently
         // of whether the PI sprite has been created yet (e.g. waiting for the image to
         // load) and also in case we want to switch to a different rendering engine at a
         // future date.
         // Identification
+        this.scene = scene;
         this.type = type;
         this.loaded = false;
         this.placed = false;
@@ -144,6 +145,7 @@ export class SGSprite {
         // location
         this.locX = new Adjustable(0);
         this.locY = new Adjustable(0);
+        this.falling = false;
         // rotation
         this.angle = new Adjustable(0,0,360);
         // depth
@@ -205,12 +207,6 @@ export class SGSprite {
         // flashing
         this.flashCount = 0;
         this.nextFlash = 0;
-        // thrown
-        this.throwVx = 0;
-        this.throwVy = 0; 
-        this.throwTime = 0;
-        this.falling = false;
-        this.throwCallback = null;
         // bluriness
         this.bluriness = new Adjustable(0,0,100);
         this.blurFilter = null;
@@ -278,7 +274,14 @@ export class SGSprite {
         this.skewY.setTargetValue(newY, duration, now, callback);
     }
 
+    stop() {
+        this.locX.stop();
+        this.locY.stop();
+    }
+
     move(newX, newY, toOrBy, inOrAt, duration, now, callback = false) {
+        this.locX.hasTarget = true;
+        this.locY.hasTarget = true;
         if (toOrBy == "by") {
             if (newX === false) {
                 newX = 0;
@@ -288,6 +291,12 @@ export class SGSprite {
             }
             newX += this.locX.value();
             newY += this.locY.value();
+        } else if (toOrBy == "at") {
+            this.locX.setSpeed(newX);
+            this.locY.setSpeed(newY);
+            this.locX.hasTarget = false;
+            this.locY.hasTarget = false;
+            return;
         } else { // to
             if (newX === false) {
                 newX = this.locX.value();
@@ -296,21 +305,37 @@ export class SGSprite {
                 newY = this.locY.value();
             }
         }
-        if (inOrAt == "at") { // duration is really rate here
-            const xDuration = Math.abs(this.locX.value() - newX) / duration; 
-            const yDuration = Math.abs(this.locY.value() - newY) / duration; 
-            const newDuration = Math.max(xDuration, yDuration);
-            this.locX.setTargetValue(newX, newDuration, now, callback);
-            this.locY.setTargetValue(newY, newDuration, now, callback);
-        } else {
-            this.locX.setTargetValue(newX, duration, now, callback);
-            this.locY.setTargetValue(newY, duration, now, callback);
-            // we set in motion up to two changes
-        }
-        if (callback) {
-            callback(2)
+        if (duration) {
+            if (inOrAt == "at") { // duration is really rate here
+                const xDuration = Math.abs(this.locX.value() - newX) / duration; 
+                const yDuration = Math.abs(this.locY.value() - newY) / duration; 
+                const newDuration = Math.max(xDuration, yDuration);
+                this.locX.setTargetValue(newX, newDuration, now, callback);
+                this.locY.setTargetValue(newY, newDuration, now, callback);
+                // we set in motion up to two changes
+                if (callback) {
+                    callback(2)
+                }
+            } else if (inOrAt == "in") {
+                // we set in motion up to two changes
+                if (callback) {
+                    callback(2)
+                }
+                this.locX.setTargetValue(newX, duration, now, callback);
+                this.locY.setTargetValue(newY, duration, now, callback);
+            }
+        } else { // just change it
+            this.locX.setTargetValue(newX);
+            this.locY.setTargetValue(newY);
+            this.locX.hasTarget = false;
+            this.locY.hasTarget = false;
         }
         this.enabled = true;
+    }
+
+    accelerate(accelX, accelY, duration) {
+        this.locX.setAcceleration(accelX, duration);
+        this.locY.setAcceleration(accelY, duration);
     }
 
     setView(x, y, w, h, dur_type, duration, now, callback = false) {
@@ -461,17 +486,17 @@ export class SGSprite {
 
     wave(max, rate, chance) {
         if (chance < 1 || max < 1) {
-            this.skewY.sway_stop();
+            this.skewY.swayStop();
         } else {
-            this.skewY.sway_start(max, chance);
+            this.skewY.swayStart(max, chance);
         }
     }
 
     sway(max, rate, chance) {
         if (chance < 1 || max < 1) {
-            this.skewX.sway_stop();
+            this.skewX.swayStop();
         } else {
-            this.skewX.sway_start(max, rate, chance);
+            this.skewX.swayStart(max, rate, chance);
         }
     }
 
@@ -494,11 +519,11 @@ export class SGSprite {
                 this.throwCallback();
             }
         } else {
-            this.falling = true;
             const radians = angle * Math.PI / 180;
-            this.thrownVx = initialVelocity * Math.sin(radians);
-            this.thrownVy = initialVelocity * Math.cos(radians) * -1; // y grows downwards
-            this.throwTime = now;
+            this.locX.setSpeed(initialVelocity * Math.sin(radians));
+            this.locY.setSpeed(initialVelocity * Math.cos(radians) * -1); // y grows downwards
+            this.locY.setAcceleration(this.scene.gravity); // y grows downwards
+            this.falling = true;
         }
     }
 
@@ -1045,31 +1070,18 @@ export class SGSprite {
             }
         }
         // Bounds checking
-        if ((Math.abs(this.locX.value()) > (Globals.width * defaults.BOUNDS_X))
-              || (Math.abs(this.locY.value()) > (Globals.width * defaults.BOUNDS_Y)) ) {
-            this.enabled = false;
+        if (Math.abs(this.locX.value() * Globals.scriptScaleX) > (Globals.displayWidth * defaults.BOUNDS_X)
+              || Math.abs(this.locY.value() *Globals.scriptScaleY) > (Globals.displayHeight * defaults.BOUNDS_Y))  {
+            this.falling = false; 
+            this.locX.stop();
+            this.locY.stop();
             return;
         }    
-        // Let's see if we have been thrown...?
-        if (this.falling) {
-            const fallingTime = (now - this.throwTime) / 1000; // elapsed time in seconds
-            const deltaX = this.thrownVx * fallingTime;
-            // gravity is negative because y grows downwards on a canvas
-            const deltaY = ((this.thrownVy * fallingTime) - (0.5 * scene.gravity * -1 * fallingTime * fallingTime));
-            if (((Math.abs(deltaX) > Globals.app.screen.width * 2) || (Math.abs(deltaY) > Globals.app.screen.height * 2)) ||
-                (scene.groundLevel && this.locY.value + deltaY > scene.groundLevel)) {
-                this.falling = false; // gone off the edge of the world or hit the ground
-                this.visible = false; 
-                this.enabled = false;
-                if (this.throwCallback != null) {
-                    this.throwCallback();
-                }
-            }
-            this.locX.setTargetValue(this.locX.value() + deltaX);
-            this.locY.setTargetValue(this.locY.value() + deltaY);
-            if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
-            }
+        // thrown and hit the ground
+        if (this.falling && this.scene.groundLevel && this.locY.value() > this.scene.groundLevel) {
+            this.falling = false; 
+            this.locX.stop();
+            this.locY.stop();
         }
         // Update rotation angle
         {

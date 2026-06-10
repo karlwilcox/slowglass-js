@@ -32,6 +32,7 @@ current group of triggered actions.
 
 - ${sprite-name}.role - if the sprite has been **put** in a particular role this\
 variable will contain the name of that role, e.g. "background"
+- ${sprite-name}.fallign - whether the sprite has been thrown and not yet hit the ground
 
 ## More
 
