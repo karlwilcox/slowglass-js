@@ -105,3 +105,14 @@ This cue is activated when the current scene is stopped (either
 by an action in the scene itself or from "outside"). It allows
 you to do any clean up or final actions. (This cue will never be
 active for the top level scene as it cannot be stopped).
+
+## On Call
+
+`on call {routine-name}`
+
+This cue is activated by another action, **call**, with the same
+routine name. It acts rather like a procedure call in other
+languages and processing of the "calling" actions is suspended
+until the called routine completes. For further disucssion
+see the **call** action in [/docs/flow-control.html](the Flow
+Control) page.

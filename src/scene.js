@@ -406,7 +406,6 @@ export class Scene {
     }
 
     static manageLifecycle(scene, stateAction = false) {
-        // let message = `${scene.name} in state ${scene.state} with ${stateAction} `;
         switch (stateAction) {
             case constants.SCENE_PAUSE:
                 if (scene.state == constants.SCENE_RUNNING) {
@@ -448,24 +447,14 @@ export class Scene {
                     case constants.SCENE_PAUSED:
                         break;
                     case constants.SCENE_DELETE_ME:
-                        for (let i = 0; i < scene.sprites.length; i++) {
-                            if (scene.sprites[i]) {
-                                scene.sprites[i].piSprite.destroy();
-                            }
-                        }
-                        for (let i = 0; i < Globals.scenes; i++) {
-                            if (scene === Globals.scenes[i]) {
-                                Globals.scenes.splice(i,1);
-                                break;
-                            }
-                        }
+                        return true;
                         break;
                     default:
                         break;
                 }
                 break;
         }
-        // Globals.log.report(`${message} is now ${scene.state}`);
+        return false;
     }
 
 /**************************************************************************************************
@@ -673,10 +662,12 @@ export class Scene {
         wordList.testWord(["and","set","sprite"]);
         let command = wordList.getWord().toLowerCase();
 
-        if (!["pause", "endif", "repeat", "then", "endfrom", "endwith", "endfor", "next", "enddata"].includes(command) && wordList.wordsLeft() < 1) {
+        if (!["endif", "repeat", "then", "endfrom", "endwith", "endfor", "next", "enddata","break","breakpoint"].includes(command) && wordList.wordsLeft() < 1) {
             Globals.log.error(`Missing ${command} data at line ${action.number}`);
             return;
         }
+        
+        // Single word commands
 
         switch(command) {
 
@@ -856,7 +847,7 @@ export class Scene {
                     let tags = [];
                     wordList.testWord(["tag","tags"]);
                     while (wordList.wordsLeft()) {
-                        tags.push(wordList.getWord);
+                        tags.push(wordList.getWord());
                     }
                     this.defaultTags = tags;
                 }
@@ -1622,7 +1613,7 @@ export class Scene {
                     const duration = wordList.getDuration(0);
                     const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (sgSprite) {
-                        sgSprite.accelerate(accelX, accelY, duration);
+                        sgSprite.accelerate(accelX, accelY, duration, actionGroup.callback());
                     }
                 }
                 break;
@@ -1818,15 +1809,16 @@ export class Scene {
                 }
                 break;
 
+
 /**************************************************************************************************
 
-########  ######## ##     ##  #######  ##     ## ######## 
-##     ## ##       ###   ### ##     ## ##     ## ##       
-##     ## ##       #### #### ##     ## ##     ## ##       
-########  ######   ## ### ## ##     ## ##     ## ######   
-##   ##   ##       ##     ## ##     ##  ##   ##  ##       
-##    ##  ##       ##     ## ##     ##   ## ##   ##       
-##     ## ######## ##     ##  #######     ###    ######## 
+   ########  ######## ##       ######## ######## ######## 
+   ##     ## ##       ##       ##          ##    ##       
+   ##     ## ##       ##       ##          ##    ##       
+   ##     ## ######   ##       ######      ##    ######   
+   ##     ## ##       ##       ##          ##    ##       
+   ##     ## ##       ##       ##          ##    ##       
+   ########  ######## ######## ########    ##    ######## 
 
 **************************************************************************************************/
 
@@ -3024,6 +3016,25 @@ export class Scene {
                 }
                 break;
 
+/**************************************************************************************************
+
+   ########  ########  ########    ###    ##    ## ########   #######  #### ##    ## ######## 
+   ##     ## ##     ## ##         ## ##   ##   ##  ##     ## ##     ##  ##  ###   ##    ##    
+   ##     ## ##     ## ##        ##   ##  ##  ##   ##     ## ##     ##  ##  ####  ##    ##    
+   ########  ########  ######   ##     ## #####    ########  ##     ##  ##  ## ## ##    ##    
+   ##     ## ##   ##   ##       ######### ##  ##   ##        ##     ##  ##  ##  ####    ##    
+   ##     ## ##    ##  ##       ##     ## ##   ##  ##        ##     ##  ##  ##   ###    ##    
+   ########  ##     ## ######## ##     ## ##    ## ##         #######  #### ##    ##    ##    
+
+**************************************************************************************************/
+
+            case "break":
+            case "breakpoint":
+                const when = wordList.testWord(["now","endgroup","endupdate"],"now");
+                // To do later
+                debugger;
+                break;
+                
 /**************************************************************************************************
 
    ##       ####  ######  ######## 

@@ -24,7 +24,7 @@ export const SCENE_STOPPED = "_STOPPED_";
 export const SCENE_RUNNING = "_RUNNING_";
 export const SCENE_PAUSED = "_PAUSED_";
 export const SCENE_FINISHED = "_FINISHED_";
-export const SCENE_DELETE_ME = "_DELETE";
+export const SCENE_DELETE_ME = "_DELETE_";
 
 // Scene state actions
 export const SCENE_MAKE_RUNNABLE = "_RUNNABLE_";

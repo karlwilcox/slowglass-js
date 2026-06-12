@@ -317,6 +317,8 @@ export class VarList {
                 return (Date.now() - Globals.startTime);
             case "UNIQUE":
                 return Globals.unique();
+            case "INSTANCE":
+                return this.scene.instance;
             case "FRAME":
             case "FRAMENO":
                 return Globals.frameNo;

@@ -78,9 +78,17 @@ export class Adjustable {
         }
     }
 
-    setAcceleration(rate, seconds = 0) {
+    setAcceleration(rate, seconds = 0, callback = false) {
         this.accelerationRate = rate / 1000; // We work in millis here
-        this.accelerationTime = seconds;
+        if (seconds > 0) {
+            this.accelerationTime = seconds * 1000;
+            if (callback) {
+                callback(2);
+                this.accelerateCallback = callback;
+            }
+        } else {
+            this.accelerationTime = false;
+        }
         if (!this.changing) {
             this.changing = Math.abs(rate) > 0;
         }
@@ -89,17 +97,6 @@ export class Adjustable {
     adjustDelta(newDelta) {
         this.deltaValue += newDelta;
     }
-
-    // adjust(delta) {
-    //     let newValue = this.value + delta;
-    //     // but check limits
-    //     if ( newValue < this.lowerLimit ) {
-    //         newValue = this.wrap ? this.upperLimit : this.lowerLimit;
-    //     } else if ( newValue > this.upperLimit ) {
-    //         newValue = this.wrap ? this.lowerLimit : this.upperLimit;
-    //     }
-    //     this.value = this.newValue;
-    // }
 
     // Some things need to be kept in step (e.g. size and scale) without triggering
     // an update, so do it here.
@@ -197,6 +194,16 @@ export class Adjustable {
             // Accelerate!
             if (this.accelerationRate != 0) {
                 this.deltaValue += this.accelerationRate / (thisAdjustment - this.lastAdjustment);
+            }
+            if (this.accelerationTime !== false) {
+                this.accelerationTime -= (thisAdjustment - this.lastAdjustment);
+                if (this.accelerationTime <= 0) {
+                    if (this.accelerateCallback) {
+                        this.accelerateCallback(-1);
+                    }
+                    this.accelerationTime = false;
+                    this.accelerationRate = 0;
+                }
             }
             this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);
             this.lastAdjustment = thisAdjustment;

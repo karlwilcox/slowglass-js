@@ -103,16 +103,17 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 ## Sprite Movement
 
-* **move** {sprite-name} to {x},{y} \[in {duration}\] - Move image to a new location on screen in a given time
-* **move** {sprite-name} (horizontally \| vertically) to {delta} \[in {duration}\] - Move image along an axis in a given time
-* **move** {sprite-name} (horizontally \| vertically) **by** {delta} \[in {duration}\] - Move image along an axis in a given time
-* **move** {sprite-name} to {x},{y} \[at {speed}\] - Move image to a new location on screen at a given speed TBD
-* **move** {sprite-name} **by** {x},{y} \[in {duration}\] - Move image relative to current position a given time
-* **move** {sprite-name} **by** {x},{y} \[at {speed}\] - Move image relative to current position at a given speed TBD
-* set **speed** of {sprite-name} to {speed} \[in {duration}\] - set the speed of image (acclerate/slow if duration given) TBD
-* **rotate** {sprite-name} **to** {value} - turn image on screen to the given angle (degrees clockwise, 0 at top)
-* **rotate** {sprite-name} **by** {value} - turn image on screen by given angle (degrees clockwise)
-* **pause/resume** {sprite-name} - pause or resume all current changes to an image (does not change visibility)
+* **move** {sprite-name} to {x},{y} \[in {duration}\] - Move sprite to a new location on screen in a given time
+* **move** {sprite-name} (horizontally \| vertically) to {delta} \[in {duration}\] - Move sprite along an axis in a given time
+* **move** {sprite-name} (horizontally \| vertically) **by** {delta} \[in {duration}\] - Move sprite along an axis in a given time
+* **move** {sprite-name} to {x},{y} \[at {speed}\] - Move sprite to a new location on screen at a given speed
+* **move** {sprite-name} **by** {x},{y} \[in {duration}\] - Move sprite relative to current position a given time
+* **move** {sprite-name} **by** {x},{y} \[at {speed}\] - Move sprite relative to current position at a given speed
+* **move** {sprite-name} **at** {x},{y} - Move sprite at a given speed
+* set **speed** of {sprite-name} to {speed} \[in {duration}\] - set the speed of sprite (acclerate/slow if duration given) TBD
+* **rotate** {sprite-name} **to** {value} - turn sprite on screen to the given angle (degrees clockwise, 0 at top)
+* **rotate** {sprite-name} **by** {value} - turn sprite on screen by given angle (degrees clockwise)
+* **pause/resume** {sprite-name} - pause or resume all current changes to an sprite (does not change visibility)
 * **throw** {sprite-name} at {angle} \[with speed\] {speed} - throw the sprite in the given direction with the given speed
 * **throw** {sprite-name} stop - stop thrown motion
 * **drop** {sprite-name} - convenience function, same as throw {sprite} at 180, 0
@@ -120,16 +121,16 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 ## Sprite Sizing
 
-* **resize** {sprite-name} **to** {w},{h} \[in {duration}\] - change size of image on screen to given dimensions
-* **scale** {sprite-name} **to** {x%},{y%} \[in {duration}\] - change size of image on screen by given proportions of the original image size
-* **scale** {sprite-name} **by** {x%},{y%} \[in {duration}\] - change size of image on screen by given proportions of the current image size
+* **resize** {sprite-name} **to** {w},{h} \[in {duration}\] - change size of sprite on screen to given dimensions
+* **scale** {sprite-name} **to** {x%},{y%} \[in {duration}\] - change size of sprite on screen by given proportions of the original sprite size
+* **scale** {sprite-name} **by** {x%},{y%} \[in {duration}\] - change size of sprite on screen by given proportions of the current sprite size
 * **flip** {sprite-name} (horizontally \| vertically) - flips sprite around given axis without changing position
 
 ## Sprite Appearance
 
-* **fade** {sprite-name} (to \| by \| up \| down) {value} \[in {duration}\] - set image transparency (0 = solid, 100 = transparent)
-* **darken** {sprite-name} to {value} \[in {duration}\] - make image darker (0 = no change, 100 = solid black)
-* **lighten** {sprite-name} to {value} \[in {duration}\] - make image lighter (0 = no change, 100 = solid white) (TBD)
+* **fade** {sprite-name} (to \| by \| up \| down) {value} \[in {duration}\] - set sprite transparency (0 = solid, 100 = transparent)
+* **darken** {sprite-name} to {value} \[in {duration}\] - make sprite darker (0 = no change, 100 = solid black)
+* **lighten** {sprite-name} to {value} \[in {duration}\] - make sprite lighter (0 = no change, 100 = solid white) (TBD)
 * **blur** {sprite-name} (to \| by \| up \| down) {value} \[in {duration}\] - make blurry (0 = unchanged, 100 = very blurry)
 * **tint** {sprite-name} to {colour} - tint with named colour or hex code
 

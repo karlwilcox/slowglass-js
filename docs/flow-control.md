@@ -63,16 +63,32 @@ it will repeat as long as the condition is true.
 
 Repeat loops can be nested as many times as you like.
 
+## Calling a Routine
+
+A set of actions, sometimes referred as a routine can be invoked by
+using the following action:
+
+`call {routine-name} {arguments...}`
+
+Elsewhere in the scene there should be a set of actions headed by
+an **on call** cue, with the same name. This action causes processing
+of the current set of actions to be suspended and those of the called
+routine actioned, until all are complete.
+
+Any arguments passed to the called routine are available in the built-in
+variable $ARGS / $ARGUMENTS.
+
+Called routines can be nested to any depth but be careful not to make
+recursive calls, these are not not prevented and will cause the program
+to crash.
+
+Call routines provide another mechanism to repeat a set of actions,
+but rather than repeating a fixed number of times they can be
+used from various points in the script.
+
 ## Combining Flow Control
 
 As noted above, flow control commands cen be nested to any depth. They can
 also be combined in any way that you need, however recall that one of the
 design goals of Slow Glass is simplicity, so very complex, deeply nested
 code is probably not helpful!
-
-## A Note on Starting Scenes
-
-If you start a scene within a loop this will try to start a new scene
-so  you need to give it a new name each time (perhaps by using the 
-loop counter in the name).
- 

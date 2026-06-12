@@ -419,6 +419,7 @@ class SlowGlass {
         let millis = Date.now();
         let updateState = true;
         let nextRun = Defaults.TRIGGER_RATE;
+        let deletedScenes = [];
         if (SlowGlass.nextAction_run < millis) {
             // why is this here?
             // if (Globals.app.screen.width != Globals.displayWidth) {
@@ -507,7 +508,6 @@ class SlowGlass {
                         }
                         if (doRun) {
                             current.runGroup(j, millis, firstAction);
-                            // if (current.suspended && current.waitType == "newScene") {
                             if (actionGroup.suspended) {
                                 updateState = false;
                                 continue;
@@ -515,7 +515,9 @@ class SlowGlass {
                         }
                     }
                     if (updateState) {
-                        Scene.manageLifecycle(current, constants.SCENE_NEXT_STATE);
+                        if (Scene.manageLifecycle(current, constants.SCENE_NEXT_STATE)) {
+                            deletedScenes.push(i);
+                        }
                     } else {
                         nextRun = Defaults.SPRITE_RATE; // next frame
                     }
@@ -523,12 +525,24 @@ class SlowGlass {
             }
             SlowGlass.nextAction_run = millis + nextRun;
         }
+        // delete any scenes that have finished
+        for (let j = 0; j < deletedScenes.length; j++) {
+            const sceneNumber = deletedScenes[j];
+            const scene = Globals.scenes[sceneNumber];
+            for (let i = 0; i < scene.sprites.length; i++) {
+                if (scene.sprites[i]) {
+                    scene.sprites[i].piSprite.destroy();
+                }
+            }
+            Globals.scenes.splice(sceneNumber,1);
+        }
+
         // But sprites can be updated up to every frame if we want...
         if (SlowGlass.next_spriteUpdate < millis) {
             Globals.frameNo += 1;
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
-                if (current.state == constants.SCENE_PAUSED) {
+                if (current.state != constants.SCENE_RUNNING) {
                     continue;
                 }
                 // Found an active scene, now go through each sprite

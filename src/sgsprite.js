@@ -333,9 +333,9 @@ export class SGSprite {
         this.enabled = true;
     }
 
-    accelerate(accelX, accelY, duration) {
-        this.locX.setAcceleration(accelX, duration);
-        this.locY.setAcceleration(accelY, duration);
+    accelerate(accelX, accelY, duration, callback = false) {
+        this.locX.setAcceleration(accelX, duration, callback);
+        this.locY.setAcceleration(accelY, duration, callback);
     }
 
     setView(x, y, w, h, dur_type, duration, now, callback = false) {

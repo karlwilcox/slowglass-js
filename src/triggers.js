@@ -390,6 +390,9 @@ export class OnClick extends Trigger {
     }
 
     fired(timestamp) {
+        if (this.scene.state != constants.SCENE_RUNNING) {
+            return false;
+        }
         if (!this.sgSprite) {
             this.sgSprite = SGSprite.getSprite(this.scene.name, this.params, false);
             if (this.sgSprite) {
@@ -427,6 +430,9 @@ export class OnKey extends Trigger {
     }
 
     fired(timestamp) {
+        if (this.scene.state != constants.SCENE_RUNNING) {
+            return false;
+        }
         if (this.key == Globals.lastKey) {
             Globals.lastKey = null;
             return true;
