@@ -5,8 +5,9 @@ import * as constants from './constants.js';
 import defaults from "./defaults.js";
 
 export class WordList {
-    constructor(input) {
+    constructor(input, lineNo = 0) {
         this.index = 0;
+        this.lineNo = lineNo;
         const result = [];
         let current = '';
         let currentWord = "";
@@ -274,7 +275,7 @@ export class WordList {
                 break;
             default:
                 found = false;
-                Globals.log.error("Unknown time unit - " + candidate );
+                Globals.log.error(`Unknown time unit - ${candidate} on line ${this.lineNo}`);
                 break;
         }
         if (found) {
@@ -304,7 +305,7 @@ export class WordList {
                 case "centre":
                 case "center":
                     if (prefix == "") {
-                        Globals.log.error("Bad location for bubble - " + word);
+                        Globals.log.error(`Bad location for bubble - ${word} on line ${this.lineNo}`);
                     } else {
                         value.push(`${prefix}`);
                         prefix = "";
@@ -318,7 +319,7 @@ export class WordList {
                     prefix = "";
                     break;
                 default:
-                    Globals.log.error("Unknown location for bubble - " + word);
+                    Globals.log.error(`Unknown location for bubble - ${word} on line ${this.lineNo}`);
                     break;
             }
         }
@@ -366,7 +367,7 @@ export class WordList {
             if (groupName) {
                 groupSprite = SGSprite.getSprite(sceneName, groupName, true);
                 if (groupSprite && groupSprite.type != constants.SPRITE_GROUP) {
-                    Globals.log.error("Not a group at line " + action.number);
+                    Globals.log.error("Not a group at line " + this.lineNo);
                 }
             }
         }
@@ -380,11 +381,45 @@ export class WordList {
         if (groupName) {
             groupSprite = SGSprite.getSprite(sceneName, groupName, true);
             if (groupSprite && groupSprite.type != constants.SPRITE_GROUP) {
-                Globals.log.error("Not a group at line " + action.number);
+                Globals.log.error("Not a group at line " + this.lineNo);
             }
         }
         return groupSprite;
     }
+
+    getSizeRequest(def) {
+        let dimensionType = this.testWord(["size", "scale", "width", "height", "reset"], def); 
+        let dimension1 = 0;
+        let dimension2 = 0;
+        switch (dimensionType) {
+            case "width":
+            case "height":
+                dimension1 = this.getInt(0);
+                if (dimension1 <= 0) {
+                    Globals.log.error("Need positive size for height or width at line " + this.lineNo);
+                }
+                break;
+            case "scale":
+                dimension1 = this.getPercent("0");
+                dimension2 = this.getPercent(dimension1);
+                if (dimension1 <= 0 || dimension2 <= 0) {
+                    Globals.log.error("Need positive sizes for both scale dimensions at line " + this.lineNo);
+                }
+                break;
+            case "reset":
+            case "image":
+                break;
+            case "size":
+            default:
+                dimension1 = this.getInt(0);
+                dimension2 = this.getInt(0);
+                if (dimension1 <= 0 || dimension2 <= 0) {
+                    Globals.log.error("Need positive sizes for both size dimensions at line " + this.lineNo);
+                }
+                break;
+        }
+        return {dimensionType, dimension1, dimension2};
+    }
               
-            
+
 }

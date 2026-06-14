@@ -477,7 +477,7 @@ export class Scene {
         for (let i = 0; i < sceneText.content.length; i++) {
             let trigger = null;
             const lineNo = sceneText.content[i].number;
-            const wordList = new WordList(sceneText.content[i].text);
+            const wordList = new WordList(sceneText.content[i].text, lineNo);
             const keyword = wordList.getWord();
             // First look for triggers
             switch(keyword.toLowerCase()) {
@@ -1159,49 +1159,8 @@ export class Scene {
                     wordList.testWord("depth");
                     sgSprite.setDepth("to", wordList.getInt(0));
                     // is there a size? (or just use image size)
-                    let dimensionType = wordList.testWord(["size","scale", "width", "height"]); 
-                    let dimension1 = 0;
-                    let dimension2 = 0;
-                    let goodData = true;
-                    if (dimensionType) {
-                        switch (dimensionType) {
-                            case "size":
-                                dimension1 = wordList.getInt(0);
-                                dimension2 = wordList.getInt(0);
-                                if (dimension1 <= 0 || dimension2 <= 0) {
-                                    Globals.log.error("Need positive sizes for both dimensions at line " + action.number);
-                                    goodData = false;
-                                }
-                                break;
-                            case "scale":
-                                dimension1 = wordList.getPercent("0");
-                                dimension2 = wordList.getPercent(dimension1);
-                                if (dimension1 <= 0 || dimension2 <= 0) {
-                                    Globals.log.error("Need positive sizes for both dimensions at line " + action.number);
-                                    goodData = false;
-                                }
-                                break;
-                            case "width":
-                            case "height":
-                                dimension1 = wordList.getInt(0);
-                                if (dimension1 <= 0) {
-                                    Globals.log.error("Need positive size for height or width at line " + action.number);
-                                    goodData = false;
-                                }
-                                break;
-                        }
-                        if (!goodData) {
-                            break;
-                        }
-                    } else {
-                        dimensionType = "image";
-                    }
-                    if (!sgSprite.loaded) {
-                        // not loaded yet, so we don't know the size, ask for when loaded
-                        sgSprite.requestSize(dimensionType, dimension1, dimension2);
-                    } else { // just set the size we want
-                        sgSprite.applySize(dimensionType, dimension1, dimension2);
-                    }
+                    const {dimensionType, dimension1, dimension2 } = wordList.getSizeRequest("image");
+                    sgSprite.requestSize(dimensionType, dimension1, dimension2);
                     if (hidden) {
                         sgSprite.setVisibility(false);
                     }
@@ -1209,7 +1168,6 @@ export class Scene {
                         sgSprite.setTransparency(0, 0, "to");
                     }
                     // update things *before* display, so it doesn't flash up at 0,0
-                    sgSprite.update(this, now);
                     if (groupSprite) {
                         sgSprite.sgParent = groupSprite;
                         sgSprite.sgParent.children.push(sgSprite);
@@ -1218,6 +1176,7 @@ export class Scene {
                         Globals.root.addChild(sgSprite.piSprite);
                     }
                     sgSprite.placed = true;
+                    sgSprite.update(this, now);
                     if (sgSprite.type == constants.SPRITE_GROUP) {
                         actionGroup.suspend("placeGroup", actionIndex, sgSprite);
                     }
@@ -1672,55 +1631,23 @@ export class Scene {
 
             case "resize":
                 {
-                    let spriteName = wordList.getSpriteName();
-                    let toOrBy = wordList.testWord( ["to","by", "reset"], "to");
+                    const spriteName = wordList.getSpriteName();
+                    const toOrBy = wordList.testWord( ["to","by"], "to");
+                    const relative = (toOrBy == "by");
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
                     }
-                    if (toOrBy == "reset") {
-                        sgSprite.sizeX.setTargetValue(sgSprite.origX);
-                        sgSprite.sizeY.setTargetValue(sgSprite.origY);
-                        break;
+                    const {dimensionType, dimension1, dimension2 } = wordList.getSizeRequest("size");
+                    const inOrAt = wordList.testWord( ["in","at"]);
+                    let duration = 0;
+                    let rate = 0;
+                    if (inOrAt == "in") {
+                        duration = wordList.getDuration(0);
+                    } else { // inOrAt == "at"
+                        rate = wordList.getRate(0);
                     }
-                    let dimensionType = wordList.testWord(["size", "width", "height"], "size"); 
-                    let dimension1 = 0;
-                    let dimension2 = 0;
-                    switch (dimensionType) {
-                        case "width":
-                        case "height":
-                            dimension1 = wordList.getInt(0);
-                            break;
-                        case "size":
-                        default:
-                            dimension1 = wordList.getInt(0);
-                            dimension2 = wordList.getInt(0);
-                            break;
-                    }
-                    if (dimensionType == "size") {
-                        // Fixups if we don't get both dimensions
-                         if (dimension1 <= 0 && dimension2 <= 0) {
-                            Globals.log.error(`Bad resize for ${spriteName}`);
-                        break;
-                         } else if (dimension1 <= 0) {
-                            dimensionType = "height";
-                            dimension1 = dimension2;
-                         } else if (dimension2 <= 0) {
-                            dimensionType = "width";
-                         }
-                    }
-                    let inOrAt = wordList.testWord( ["in","at"]);
-                    let duration = wordList.getDuration(0);
-                    // sgSprite.update(this.name, now);
-                    if (toOrBy == "reset") {
-                        sgSprite.resetSize();
-                    } else if (!sgSprite.loaded) {
-                        // not loaded yet, so we don't know the size, ask for when loaded
-                        sgSprite.requestSize(dimensionType, dimension1, dimension2, duration, now, actionGroup.callback());
-                    } else { // just set the size we want
-                        sgSprite.applySize(dimensionType, dimension1, dimension2,
-                                toOrBy, inOrAt, duration, now, actionGroup.callback());
-                    }
+                    sgSprite.requestSize(dimensionType, dimension1, dimension2, relative, rate, duration, now, actionGroup.callback());
                 }
                 break;
 

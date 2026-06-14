@@ -151,18 +151,21 @@ export class SGSprite {
         this.angle = new Adjustable(0,0,360);
         // depth
         this.depth = 0;
-        // size
+        // Current size
         this.sizeX = new Adjustable(0);
         this.sizeY = new Adjustable(0);
+        // Original size
         this.origX = 0; // set on creation
         this.origY = 0;
-        // requested size on placement (deferred sizing)
-        this.dimensionType = false;
+        // requested size
+        this.sizeType = false;
         this.dimension1 = 0;
         this.dimension2 = 0;
-        this.deferredDuration = 0;
-        this.deferredNow = 0;
-        this.deferredCallback = null;
+        this.sizeDuration = 0;
+        this.sizeStart = 0;
+        this.sizeCallback = false;
+        this.sizeRelative = false;
+        this.sizeRate = 0;
         // scale
         this.scaleX = new Adjustable(1);
         this.scaleY = new Adjustable(1);
@@ -226,13 +229,28 @@ export class SGSprite {
         // this.logged = false;
     }
 
-    requestSize(type, x, y = 0, duration = 0, now = 0, callback = false) {
-        this.dimensionType = type;
+    /*
+     * The request type can be any of:
+     * image - image default size
+     * width - width, heigth maintains aspect ratio
+     * height - height, width maintains aspect ratio
+     * size - specific size
+     * reset - restore original width and height
+     * false - dummy value meaning change has been actioned
+    */
+    requestSize(type, x, y = 0, relative = false, rate = 0, duration = 0, now = 0, callback = false) {
+        this.sizeType = type;
         this.dimension1 = x;
         this.dimension2 = y;
-        this.deferredDuration = duration;
-        this.deferredNow = now;
-        this.deferredCallback = callback;
+        this.sizeRelative = relative;
+        this.sizeRate = 0;
+        this.sizeDuration = duration;
+        this.sizeStart = now;
+        this.sizeCallback = callback;
+        // we set in motion up to two changes
+        if (duration > 0 && callback) {
+            callback(2);
+        }
     }
 
     setPosition(x, y, depth = 0) {
@@ -564,28 +582,6 @@ export class SGSprite {
         }
     }
 
-    resize(newX, newY, toOrBy, inOrAt, duration, now, callback = false) {
-        if (newX == 0) {
-            newX = this.origX * newY / this.origY;
-        }
-        if (newY == 0) {
-            newY = this.origY * newX / this.origX;
-        }
-        if (toOrBy == "by") {
-            newX += this.sizeX.value();
-            newY += this.sizeY.value();
-        }
-        if (inOrAt == "at") {
-            // (future: rate-based resizing)
-        }
-        // we set in motion up to two changes
-        if (callback) {
-            callback(2)
-        }
-        this.sizeX.setTargetValue(newX, duration, now, callback);
-        this.sizeY.setTargetValue(newY, duration, now, callback);
-    }
-
     resetSize() {
         this.sizeX.setTargetValue(this.origX);
         this.sizeY.setTargetValue(this.origY);
@@ -746,42 +742,47 @@ export class SGSprite {
         this.piSprite.setCorners(...this.getWarpCorners());
     }
 
-    applySize(dimensionType, dimension1, dimension2, 
-                toOrBy = null, inOrAt = null, duration = 0, now = 0, callback = false) {
+    applySize() {
         let width = 0;
         let height = 0;
-        // we set in motion up to two changes
-        if (callback) {
-            callback(2)
-        }
-        switch (dimensionType) {
+        switch (this.sizeType) {
             case "size":
-                width = dimension1;
-                height = dimension2;
-                if (toOrBy == "by") {
+                width = this.dimension1;
+                height = this.dimension2;
+                if (this.relative) {
                     width += this.sizeX.value();
                     height += this.sizeY.value();
                 }
                 break;
             case "width":
-                width = dimension1;
-                height = (this.origX / this.origY) * width;
+                width = this.dimension1;
+                height = (width / this.origX) * this.origY;
                 break;
             case "height":
-                height = dimension1;
-                width = (this.origX / this.origY) * height;
+                height = this.dimension1;
+                width = (height / this.origY) * this.origX;
+                break;
+            case "scale":
+                width = (this.dimension1 / 100) * this.origX;
+                height = (this.dimension2 / 100) * this.origY;
                 break;
             case "image":
-                width = dimension1;
-                height = dimension2;
+                width = this.dimension1;
+                height = this.dimension2;
+                break;
+            case "reset":
+                width = this.origX;
+                height = this.origY;
+                break;
             default: 
                 break;
         }
-        if (inOrAt == "at") {
+        if (this.sizeRate) {
             // (future: rate-based resizing)
         }
-        this.sizeX.setTargetValue(width, duration, now, callback);
-        this.sizeY.setTargetValue(height, duration, now, callback);
+        this.sizeX.setTargetValue(width, this.sizeDuration, this.sizeStart, this.sizeCallback);
+        this.sizeY.setTargetValue(height, this.sizeDuration, this.sizeStart, this.sizeCallback);
+        this.sizeType = false; // mark as actioned
     }
 
     setFromBounds(what) {
@@ -847,11 +848,13 @@ export class SGSprite {
                 this.enabled = false;
                 return;
             }
-            if (image != "loading") { // now ready
+            if (image != "loading" && this.sizeType) { // now ready and we have a size request pending
                 const imgWidth = image.piImage.width;
                 const imgHeight = image.piImage.height;
                 this.sizeX.setTargetValue(imgWidth); // might get overwritten later
                 this.sizeY.setTargetValue(imgHeight);
+                this.origX = imgWidth;
+                this.origY = imgHeight;
                 // Are we in a specific location?
                 if (this.role != null) {
                     // Yes, but we need the image size to work out scaling
@@ -905,13 +908,12 @@ export class SGSprite {
                         this.depth = depth;
                     }
                 } else { // set size as per request
-                    if (this.dimensionType == "image") {
+                    if (this.sizeType == "image") {
                         this.dimension1 = imgWidth;
                         this.dimension2 = imgHeight;
                     }
-                    this.applySize(this.dimensionType, this.dimension1, this.dimension2,
-                                "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
-                } // else we set the size from the image earlier
+                    this.applySize();
+                }
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = fullTexture;
                 if (image.cols > 0) {
@@ -968,8 +970,8 @@ export class SGSprite {
                 this.piSprite.zIndex = this.depth;
                 this.piSprite.tint = this.currentTint();
                 // Set size for reset
-                this.origX = this.sizeX.value();
-                this.origY = this.sizeY.value();
+                // this.origX = this.sizeX.value();
+                // this.origY = this.sizeY.value();
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {
@@ -1153,13 +1155,17 @@ export class SGSprite {
         // And we can't do anything if the image isn't loaded as we don't
         // know its size yet
         if (this.placed) {
-        // {
+            // Have we had a size change requested?
+            if (this.sizeType) {
+                this.applySize();
+                forceUpdate = true;
+            }
             const changeSX = this.scaleX.updateValue();
             const changeSY = this.scaleY.updateValue();
             // update size
             const changeX = this.sizeX.updateValue();
             const changeY = this.sizeY.updateValue();
-            if (this.piSprite != null && (forceUpdate || changeSX || changeSY || changeX || changeY)) {
+            if ((forceUpdate || changeSX || changeSY || changeX || changeY)) {
                 if (this.warped) {
                     this.applyWarpCorners();
                 } else {
