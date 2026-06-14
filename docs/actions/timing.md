@@ -34,9 +34,9 @@ actions that belong to a particular trigger). All other action groups
 and scenes will continue processing. You can use **then** as many times
 as you like to string together a sequence of actions.
 
-## Pause
+## Wait for a time
 
-`pause [for] {number} [{duration}]`
+`wait [for] {number} [{duration}]`
 
 This command starts a timer running for the specified duration.
 
@@ -47,14 +47,14 @@ specific delays between actions, for example the structure here:
 
 ```
 ...do things...
-pause 3 seconds
+wait for 3 seconds
 ...do more things...
 ```
 
 Will ensure that all the first set of things complete, wait for 3 seconds and then
 start executing more things.
 
-## Wait
+## Wait for a condition
 
 This command is similar to **then** but instead of waiting for previous
 commands to complete the conditions for restarting can be more

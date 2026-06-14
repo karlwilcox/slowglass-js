@@ -12,14 +12,14 @@ setup
     text align centre
     text create flavius1 as Hence! Home you idle creatures, get you home!
     place flavius in group speech at origin depth 20
-    pause 1
+    wait for 1
     graphic fill white
     graphic stroke width 2
     graphic create bubble1 as bubble (${flavius.sx} + 50) (${flavius.sy} + 50) 30 bottom right
     place bubble1 in group speech at origin depth 10
     place speech at centre
     text create flavius2 as Is this a holiday? What, know you not,
-    pause 2
+    wait for 2
     delete sprite flavius
     place flavius2 in group speech at origin depth 20
 

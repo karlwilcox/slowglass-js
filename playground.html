@@ -121,7 +121,7 @@ title               : "Slow Glass Playground"
         }
 
         function clearScript() {
-            document.getElementById("url_input").value = "";
+            document.getElementById("sg_script").value = "";
         }
 
         function clearAction() {
@@ -140,6 +140,16 @@ title               : "Slow Glass Playground"
             document.getElementById("sg_messages").value = "";
         }
 
-        window.onload = function() { slowGlass.setDrawingParent("sg_div"); slowGlass.setMessageParent("sg_messages"); };
+        function completionCallback() {
+            return (url) => {
+                document.getElementById("url_input").value = url;
+            };
+        }
+
+        window.onload = function() { 
+            slowGlass.setDrawingParent("sg_div"); 
+            slowGlass.setMessageParent("sg_messages"); 
+            slowGlass.onCompletion(completionCallback());
+        };
     </script>
 

@@ -48,7 +48,7 @@ export class SGImage {
         }
     }
 
-    async load_image() {
+    async loadImage() {
         this.piImage = await PIXI.Assets.load(this.url);
         this.loading = false;
         if (this.callback) {
@@ -88,7 +88,7 @@ export class SGImage {
         if (frameNo > numFrames) {
             frameNo = 1;
         } else if (frameNo < 1) {
-            frameNo = numFrames - 1;
+            frameNo = numFrames;
         }
         return frameNo;
     }
@@ -146,6 +146,7 @@ export class SGSprite {
         this.locX = new Adjustable(0);
         this.locY = new Adjustable(0);
         this.falling = false;
+        this.landed = false;
         // rotation
         this.angle = new Adjustable(0,0,360);
         // depth
@@ -180,7 +181,7 @@ export class SGSprite {
         this.lastScrollX = 0;
         this.lastScrollY = 0;
         // Frame based animation
-        this.currentFrame = 0;
+        this.currentFrame = 1;
         this.lastFrame = 0;
         this.animationRate = 0;
         this.lastFrameChange = 0;
@@ -524,6 +525,7 @@ export class SGSprite {
             this.locY.setSpeed(initialVelocity * Math.cos(radians) * -1); // y grows downwards
             this.locY.setAcceleration(this.scene.gravity); // y grows downwards
             this.falling = true;
+            this.landed = false;
         }
     }
 
@@ -848,6 +850,8 @@ export class SGSprite {
             if (image != "loading") { // now ready
                 const imgWidth = image.piImage.width;
                 const imgHeight = image.piImage.height;
+                this.sizeX.setTargetValue(imgWidth); // might get overwritten later
+                this.sizeY.setTargetValue(imgHeight);
                 // Are we in a specific location?
                 if (this.role != null) {
                     // Yes, but we need the image size to work out scaling
@@ -900,13 +904,14 @@ export class SGSprite {
                     if (this.depth == null ) {
                         this.depth = depth;
                     }
-                } else if (this.dimensionType == "image") { // set size from the image
-                    this.sizeX.setTargetValue(imgWidth);
-                    this.sizeY.setTargetValue(imgHeight);
                 } else { // set size as per request
+                    if (this.dimensionType == "image") {
+                        this.dimension1 = imgWidth;
+                        this.dimension2 = imgHeight;
+                    }
                     this.applySize(this.dimensionType, this.dimension1, this.dimension2,
                                 "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
-                }
+                } // else we set the size from the image earlier
                 const fullTexture = new PIXI.Texture(image.piImage);
                 let texture = fullTexture;
                 if (image.cols > 0) {
@@ -977,7 +982,7 @@ export class SGSprite {
                     const newX = this.sizeX.value() * this.scaleX.value() * Globals.scriptScaleX;
                     const newY = this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY;
                     if (newX <= 0 || newY <= 0) {
-                        Globals.log.error("trying to set zero size on load");
+                        Globals.log.error("trying to set zero size on load of " + this.name);
                     } else {
                         this.piSprite.setSize(newX, newY);
                     }
@@ -1004,27 +1009,30 @@ export class SGSprite {
             this.piSprite.scale.set(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
             this.flipChange = false;
         }
-        // Are we animated?
-        if (this.animationRate > 0) {
-            if ((now - this.lastFrameChange) > 1000 / this.animationRate) {
-                this.currentFrame += 1;
-                this.lastFrameChange = now;
-            }
-        }
-        // Do we need to update the frame?
-        if (this.image != null && this.currentFrame != this.lastFrame) {
-            if (this.image.cols < 1) {
-                Globals.log.error("Image has no frames in sprite " + this.name);
-            } else {
-                this.currentFrame = this.image.constrainFrame(this.currentFrame);
-                const viewRectangle = this.image.makeCellRect(this.currentFrame);
-                if (this.piSprite !== null) {
-                    this.piSprite.texture.frame = viewRectangle;
-                    this.piSprite.texture.update();
-                    forceUpdate = true;
+        if (this.image != null && this.image.cols > 0) {
+            // Are we animated?
+            if (this.animationRate > 0) {
+                if ((now - this.lastFrameChange) > 1000 / this.animationRate) {
+                    this.currentFrame += 1;
+                    this.lastFrameChange = now;
                 }
             }
-            this.lastFrame = this.currentFrame;
+            // Do we need to update the frame?
+            if (this.currentFrame != this.lastFrame) {
+                Globals.log.report(`Advancing from ${this.lastFrame} to ${this.currentFrame}`);
+                if (this.image.cols < 1) {
+                    Globals.log.error("Image has no frames in sprite " + this.name);
+                } else {
+                    this.currentFrame = this.image.constrainFrame(this.currentFrame);
+                    const viewRectangle = this.image.makeCellRect(this.currentFrame);
+                    if (this.piSprite !== null) {
+                        this.piSprite.texture.frame = viewRectangle;
+                        this.piSprite.texture.update();
+                        forceUpdate = true;
+                    }
+                }
+                this.lastFrame = this.currentFrame;
+            }
         }
         // Is our window moving?
         if (this.windowed) {
@@ -1073,13 +1081,15 @@ export class SGSprite {
         if (Math.abs(this.locX.value() * Globals.scriptScaleX) > (Globals.displayWidth * defaults.BOUNDS_X)
               || Math.abs(this.locY.value() *Globals.scriptScaleY) > (Globals.displayHeight * defaults.BOUNDS_Y))  {
             this.falling = false; 
+            this.landed = true;
             this.locX.stop();
             this.locY.stop();
             return;
         }    
         // thrown and hit the ground
-        if (this.falling && this.scene.groundLevel && this.locY.value() > this.scene.groundLevel) {
+        if (this.falling && this.locY.value() > this.scene.groundLevel) {
             this.falling = false; 
+            this.landed = true;
             this.locX.stop();
             this.locY.stop();
         }

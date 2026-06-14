@@ -4,7 +4,7 @@ stage size 1024 768
 stage colour crimson
 
 setup
-    let speech_pause be 3
+    let speech_wait for be 3
 
 begin
     from /demo/julius-caeser
@@ -17,7 +17,7 @@ begin
     start scene crowd
     start scene murellus
     start scene flavius
-    pause 5
+    wait for 5
     start scene conversation
 
 scene conversation
@@ -61,7 +61,7 @@ scene conversation
         text create words as ${lines[6]}
         place carp-speech at $carp_pos depth 204
         place words at $carp_pos depth 205
-        pause $main:speech_pause
+        wait for $main:speech_wait for
         delete sprite words
         delete sprite carp-speech
         call murellus-speak 7 8 9
@@ -72,7 +72,7 @@ scene conversation
         for line in $ARGS
             text create words as ${lines[$line]}
             place words at $flav_pos depth 202
-            pause $main:speech_pause
+            wait for $main:speech_wait for
             delete sprite words
         next 
         hide flav-speech
@@ -82,7 +82,7 @@ scene conversation
         for line in $ARGS
             text create words as ${lines[$line]}
             place words at $mur_pos depth 202
-            pause $main:speech_pause
+            wait for $main:speech_wait for
             delete sprite words
         next 
         hide mur-speech
@@ -114,7 +114,7 @@ scene titlecard
         place author transparent at $CENTREX 450 depth 1003
         fade author to 100 in 2 seconds
         then
-        pause 2 seconds
+        wait for 2 seconds
         fade author to 0 in 2 seconds
         fade part to 0 in 2 seconds
         fade title to 0 in 2 seconds
@@ -139,7 +139,7 @@ scene crowd
         resize crowd to width 150
         show crowd
 
-    pause 2
+    wait for 2
         jiggle crowd 5 5
         move crowd to 200 560 in 8 seconds
         resize crowd to width 400 in 8 seconds

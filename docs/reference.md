@@ -30,16 +30,17 @@ end of the line and any content between /\* and \*/.
 
 ## Triggers
 
-* **begin** - runs on scene load (or file load if at top level)
+* **setup** - runs on scene load (or file load if at top level)
+* **begin** - runs after scene load (or file load if at top level)
 * **after** {duration} - runs after duration has elapsed from scene start
-* **on key** {key} -runs when key is pressed (TBD)
+* **on key** {key} -runs when key is pressed
 * **on click** {sprite-name} - runs when named sprite receives a left click
 * **at** time {timecode} - runs when time of day matches the timecode
 * **atend** - runs when the scene is finished, just prior to deletion
 * **each** time {timecode} - runs when time of day matches timecode (including wild cards)
 * **every** {duration} - runs after duration has elapsed from scene start and repeats
-* **when** (expression) - Evaluated once per second, runs once when the Python expression becomes truthy
-* **while** (expression) - Evaluated once per second, runs every time the Python expression is truthy
+* **when** (condition) - Evaluated once per second, runs once when the condition becomes true
+* **on call** {routine-name} - runs when invoked by the **call** action
 
 ## Commands
 
@@ -49,10 +50,11 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 
 * **(log \| print)** {text...} - write text to console (or page element)
 * **echo** (on \| off \| flip) - log expanded and evaluated commands prior to executing them
-* **finish** - stop application
+* **finish** \[{url}\] - stop application, pass back suggested URL
 * **list** (scenes \| all) - basic information on all scenes to console
 * **list** (scene \| sprites \| images \| actions) \[{scene-name}\] - detailed information to console
 * **debug** {integer} {text...} - if a top level variable called DEBUGLEVEL exists and is lower than the number given print the text to console
+* **breakpoint** (now \| group \| update) -
 
 ## Resource Management
 
@@ -68,6 +70,7 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 * **start** \[scene\] {scene-name} \[named as {active-name}\] \[with paramters\] \[{parameters...}\] - prepare and run scene, pass information
 * **stop** \[{active-name}\] - stop current scene or named scene (removes all images)
 * **reset scene** \[{active-name}\] - put scene back into the original state
+* **call** {routine-name} - execute the actions in the routine, then continue
 
 ## Sprite Management
 
@@ -113,7 +116,7 @@ In most cases unnecessary words can be omitted, the minimum phrasing is shown in
 * set **speed** of {sprite-name} to {speed} \[in {duration}\] - set the speed of sprite (acclerate/slow if duration given) TBD
 * **rotate** {sprite-name} **to** {value} - turn sprite on screen to the given angle (degrees clockwise, 0 at top)
 * **rotate** {sprite-name} **by** {value} - turn sprite on screen by given angle (degrees clockwise)
-* **pause/resume** {sprite-name} - pause or resume all current changes to an sprite (does not change visibility)
+* **pause/resume** {sprite-name} - pause or resume all current changes to an sprite (does not change visibility) TBD
 * **throw** {sprite-name} at {angle} \[with speed\] {speed} - throw the sprite in the given direction with the given speed
 * **throw** {sprite-name} stop - stop thrown motion
 * **drop** {sprite-name} - convenience function, same as throw {sprite} at 180, 0
@@ -192,7 +195,7 @@ The word 'shape' can be used instead of 'graphic'.
 
 ## Flow Control
 
-* **pause** {duration} - do nothing for given time (safe to use, not busy wait)
+* **wait for** {duration} - do nothing for given time (safe to use, not busy wait)
 * **wait (until | while)** {condition} - suspend execution until condition is true/false
 * **for** {variable-name} **in** {values...}
 * **for** {variable-name} **range** {N..M}

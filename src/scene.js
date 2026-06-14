@@ -96,7 +96,7 @@ export class Scene {
         this.spriteScene = this.name;
         // this.parameters = defaults.NOTFOUND;
         this.gravity = defaults.GRAVITY_PS2;
-        this.groundLevel = false;
+        this.groundLevel = Globals.displayHeight;
         // Graphic creation
         this.graphicFactory = new GraphicFactory();
         // Text creation
@@ -611,6 +611,10 @@ export class Scene {
         }
         if (actionGroup.nextAction >= actions.length) { // we are done
             actionGroup.endCounting();
+            if (Globals.breakpointCondition == "group") {
+                Globals.breakpointCondition = false;
+                debugger;
+            }
         }
     }
 
@@ -662,7 +666,8 @@ export class Scene {
         wordList.testWord(["and","set","sprite"]);
         let command = wordList.getWord().toLowerCase();
 
-        if (!["endif", "repeat", "then", "endfrom", "endwith", "endfor", "next", "enddata","break","breakpoint"].includes(command) && wordList.wordsLeft() < 1) {
+        if (!["endif", "repeat", "then", "endfrom", "endwith", "endfor", "next", 
+            "enddata","break","breakpoint","wait"].includes(command) && wordList.wordsLeft() < 1) {
             Globals.log.error(`Missing ${command} data at line ${action.number}`);
             return;
         }
@@ -779,7 +784,7 @@ export class Scene {
                         const sgImage = new SGImage(prefix + filename, name, actionGroup.callback(), cellX, cellY);
                         sgImage.tags.addTag(wordList.getTags());
                         this.images.push(sgImage);
-                        sgImage.load_image();
+                        sgImage.loadImage();
                         if (sync) {
                             actionGroup.suspend("newImage", actionIndex, sgImage);
                         }
@@ -938,7 +943,7 @@ export class Scene {
                         imageName = Globals.unique("image");
                         sgImage = new SGImage(prefix + filename, imageName, actionGroup.callback());
                         this.images.push(sgImage);
-                        sgImage.load_image();
+                        sgImage.loadImage();
                     } else { // which (already loaded) image to use?
                         imageName = wordList.getWord();
                         if (!spriteName) {
@@ -1078,6 +1083,7 @@ export class Scene {
                     }
                     const byOrTo = wordList.testWord(["to", "by"],"by");
                     let frame = wordList.getInt(1);
+                    const oldFrame = sgSprite.currentFrame;
                     if (byOrTo == "by") {
                         if (command == "reverse") {
                             frame *= -1;
@@ -1086,6 +1092,7 @@ export class Scene {
                     } else {
                         sgSprite.currentFrame = frame;
                     }
+                    Globals.log.report("Advance from " + oldFrame + " to " + sgSprite.currentFrame);
                 }
                 break;
 
@@ -1825,7 +1832,6 @@ export class Scene {
             case "remove":
             case "erase":
             case "delete":
-            case "finish":
                 {
                     const type = wordList.testWord(["sprite","audio","sound","var","variable","scene"]);
                     const item = wordList.getWord();
@@ -2991,29 +2997,41 @@ export class Scene {
 **************************************************************************************************/
 
             case 'pause':
-                wordList.testWord("for");
-                let duration = wordList.getDuration(5);
-                actionGroup.suspend("pause", actionIndex, now + (1000 * duration));
                 break;
 
             case 'then':
-                if (!actionGroup.allPriorFinished()) {
-                    actionGroup.suspend("then", actionIndex);
-                }
+                actionGroup.suspend("then", actionIndex);
                 break;
 
             case 'wait':
-                if (wordList.wordsLeft() > 0) { 
-                    const waitType = wordList.testWord(["until","while"]);
-                    if (!waitType) {
-                        Globals.log.error("Unknown wait condition at " + action.number);
+                    const waitType = wordList.testWord(["until","while","for"],"for");
+                    if (waitType == "for") {
+                        let duration = wordList.getDuration(5);
+                        actionGroup.suspend("pause", actionIndex, now + (1000 * duration));
                         break;
-                    }
+                    } // else
                     let rawWords = action.text.split(/ +/).slice(2).join(' ');
                     actionGroup.suspend(waitType, actionIndex, rawWords);
-                } else {
-                    Globals.log.error("Missing wait condition at line " + action.number);
+                break;
+
+/**************************************************************************************************
+
+   ######## #### ##    ## ####  ######  ##     ## 
+   ##        ##  ###   ##  ##  ##    ## ##     ## 
+   ##        ##  ####  ##  ##  ##       ##     ## 
+   ######    ##  ## ## ##  ##   ######  ######### 
+   ##        ##  ##  ####  ##        ## ##     ## 
+   ##        ##  ##   ###  ##  ##    ## ##     ## 
+   ##       #### ##    ## ####  ######  ##     ## 
+
+**************************************************************************************************/
+
+            case "finish":
+                const url = wordList.joinWords();
+                if (Globals.completionCallback) {
+                    Globals.completionCallback(url);
                 }
+                window.slowGlass.cleanUp();
                 break;
 
 /**************************************************************************************************
@@ -3030,9 +3048,12 @@ export class Scene {
 
             case "break":
             case "breakpoint":
-                const when = wordList.testWord(["now","endgroup","endupdate"],"now");
-                // To do later
-                debugger;
+                const when = wordList.testWord(["now","group","update"],"now");
+                if (when == now) {
+                    debugger;
+                } else {
+                    Globals.breakpointCondition = when;
+                }
                 break;
                 
 /**************************************************************************************************

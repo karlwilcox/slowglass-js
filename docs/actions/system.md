@@ -15,11 +15,21 @@ This command completes immediately.
 
 ## Finish
 
-`Finish`
+`Finish [{url}]`
 
 Rather abruptly just stop the app.
 
-No further completion events happen.
+No further completion events happen, however if the calling page has set up
+a completion call back it will be invoked with the given URL as an argument.
+In this way scripts can be chained together if required, for example to
+have one act of a play follow another.
+
+## Breakpoint (for development only)
+
+`breakpoint (now | group | update)`
+
+Cause a debugger breakpoint immediately, at the end of the group
+of actions or before the next update.
 
 ## Get
 

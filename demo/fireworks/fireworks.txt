@@ -23,36 +23,44 @@ setup
     place right-tree at 780 200 depth  251
 
 every 3 seconds
-    pause (1 + (4 * $CHANCE)) seconds
+    wait for (1 + (4 * $CHANCE)) seconds
     start firework1
 
 scene firework1
    begin
         from /demo/fireworks
-        load firework1-1.png as firework1
+        load firework-1.png as firework1 cells 4 by 1
         make launch-site be (600 * $CHANCE)
         # launch from anywhere between 100 and 600 but tend to point towards the centre
         make start-angle be ((((${launch-site} / 600) * 50) - 25) * -1)
         make launch-angle be (${start-angle} + (-20 + (40 * $CHANCE)))
-        make launch-speed be (200 + (160 * $CHANCE))
-        make big-size be (100 + $PERCENT)
+        make launch-speed be (120 + (80 * $CHANCE))
+        make big-size be (100 + (2 * $PERCENT))
         choose tint from red lightcyan lawngreen yellow orangered gold tomato
         sprite create firework1 from firework1
-        place firework1 at (100 + ${launch-site}) 450 depth 220 size 10 10
+        place firework1 at (100 + ${launch-site}) 450 depth 220 size 50 50
         tint firework1 $tint
-        rotate firework1 (350 * $CHANCE)
-        resize firework1 to ${big-size} ${big-size} in 3 seconds
-        jiggle firework1 10 10 100
+        rotate firework1 $launch-angle
         launch firework1 at ${launch-angle} with force ${launch-speed}
-    after 1 second
+        resize firework1 to 100 100 in 2 seconds
+        then
+        advance firework1 by 1
         darken main:left-tree to 50 in 1 second
         darken main:right-tree to 50 in 1 second
-    after 3 seconds
+        resize firework1 to ${big-size} ${big-size} in 1 seconds
+        then 
+        advance firework1 by 1
+        // scale firework1 by 120% in 1 second
+        then
+        advance firework1 by 1
         darken main:left-tree to 70 in 1 second
         darken main:right-tree to 70 in 1 second
-        darken firework1 to 90 in 1 second
-    after 4 seconds
-        fade firework1 to 0 in 1 second
-    after 7 seconds
+        // fade firework1 to 0 in 2 second
+    
+    after 20 seconds
+        delete scene
+
+    when ${firework1.landed}
+        log landed!
         delete scene
 end scene

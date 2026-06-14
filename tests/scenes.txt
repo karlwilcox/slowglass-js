@@ -4,11 +4,11 @@ begin
 log hello world
 perform scene test wobble
 log lastid is $LASTID
-pause 2 seconds
+wait for 2 seconds
 log ${LAST:test_var}
 perform scene test wibble
 log lastid is $LASTID
-pause 2 seconds
+wait for 2 seconds
 log ${LAST:test_var}
 
 scene test

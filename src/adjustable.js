@@ -1,10 +1,7 @@
 
 
 export class Adjustable {
-    constructor(inValue, minValue = Number.MIN_SAFE_INTEGER, maxValue = Number.MAX_SAFE_INTEGER, wrap = true) {
-        if (arguments.length < 4) {
-            wrap = false;
-        }
+    constructor(inValue, minValue = Number.MIN_SAFE_INTEGER, maxValue = Number.MAX_SAFE_INTEGER, wrap = false) {
         // values and limits
         this.currentValue = inValue;
         this.targetValue = inValue;
@@ -206,6 +203,20 @@ export class Adjustable {
                 }
             }
             this.currentValue += this.deltaValue * (thisAdjustment - this.lastAdjustment);
+            // Clamp to given limits
+            if (this.currentValue < this.lowerLimit) {
+                if (this.wrap) {
+                    this.currentValue = this.upperLimit;
+                } else {
+                    this.currentValue = this.lowerLimit;
+                }
+            } else if (this.currentValue > this.upperLimit) {
+                if (this.wrap) {
+                    this.currentValue = this.lowerLimit;
+                } else {
+                    this.currentValue = this.upperLimit;
+                }
+            }
             this.lastAdjustment = thisAdjustment;
         }
         return true;

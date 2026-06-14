@@ -487,6 +487,9 @@ export class VarList {
                     case 'falling':
                         value = Utils.boolAsString(sgSprite.falling);
                         break;
+                    case 'landed':
+                        value = Utils.boolAsString(sgSprite.landed);
+                        break;
                     case 'visible':
                         value = Utils.boolAsString(sgSprite.visible);
                         break;
@@ -498,7 +501,8 @@ export class VarList {
                         }
                         break;
                     case 'frame':
-                        return sgSprite.currentFrame;
+                        value = sgSprite.currentFrame;
+                        break;
                     case 'bounds':
                         const bounds = sgSprite.piSprite.getBounds();
                         value = `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;

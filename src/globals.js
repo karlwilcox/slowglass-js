@@ -32,6 +32,8 @@ export class Globals {
     static uniqueCount = 1;
     static lastId = 0;
     static dataScene = null;
+    static completionCallback = false;
+    static breakpointCondition = false;
 
     constructor() {
 

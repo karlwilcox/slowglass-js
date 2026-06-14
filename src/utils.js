@@ -177,7 +177,7 @@ export class ActionGroup {
     }
 
     allPriorFinished() {
-        return (this.unfinishedCount);
+        return (this.unfinishedCount <= 0);
     }
 
     allActionsFinished() {

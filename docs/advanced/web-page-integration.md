@@ -72,6 +72,13 @@ You can use the browser "location" object to get the user's latitude and
 longitude, or use any values you wish. If you set the advanced evaluator
 option you need to make sure that the lexp object is available on the page.
 
+### onCompletion(callback)
+
+If the script finishes (it may not) then this callback will be invoked. It
+may include an argument which is typically a URL suggesting the next script
+to be run. You are free to do anything that you like with the notification
+and the URL, including ignoring it completely.
+
 ## Interaction
 
 In order to respond to keyboard inputs you will need to give focus to the

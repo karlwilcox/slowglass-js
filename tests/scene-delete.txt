@@ -4,9 +4,9 @@ stage size 800 600
 
 begin
     start testscene 200
-    pause 2
+    wait for 2
     start testscene 400
-    pause 2
+    wait for 2
     start testscene 600
 
 scene testscene
@@ -14,7 +14,7 @@ scene testscene
      log $SCENENAME $INSTANCE Starting
     graphic create rect as rectangle 100 100
     place rect at $PARAMS 300
-    pause 5
+    wait for 5
     delete scene
 
 atend

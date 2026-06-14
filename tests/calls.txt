@@ -13,15 +13,15 @@ begin
 on call tester
     log I am tester $ARGS
     call inner hi there
-    pause 1
+    wait for 1
     log 1
-    pause 1
+    wait for 1
     log 2
-    pause 1
+    wait for 1
     log 3
 
 on call inner
     log inner called with $ARGS
-    pause 1
+    wait for 1
     log inner 1
     

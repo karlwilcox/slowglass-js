@@ -10,8 +10,8 @@ import { Parser } from "./parser.js";
 import { WordList } from "./wordlist.js";
 
 class SlowGlass {
-    static nextAction_run = 0;
-    static next_spriteUpdate = 0;
+    static nextGroupsRun = 0;
+    static nextSpriteUpdate = 0;
     static sg_id = "body";
     static clean = true;
 
@@ -413,6 +413,10 @@ class SlowGlass {
 
 
     update(ticker) {
+        if (Globals.breakpointCondition == "update") {
+            Globals.breakpointCondition = false;
+            debugger;
+        }
         // Action granularity is only 1 second, so only update every 0.5 seconds
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"
         // Could adjust this if needed in defaults
@@ -420,7 +424,7 @@ class SlowGlass {
         let updateState = true;
         let nextRun = Defaults.TRIGGER_RATE;
         let deletedScenes = [];
-        if (SlowGlass.nextAction_run < millis) {
+        if (SlowGlass.nextGroupsRun < millis) {
             // why is this here?
             // if (Globals.app.screen.width != Globals.displayWidth) {
             //     Globals.app.screen.width = Globals.displayWidth;
@@ -433,9 +437,9 @@ class SlowGlass {
                 if (current.state != constants.SCENE_PAUSED) {
                     // we are only interested in running scenes 
                     // Found an active scene, now go through each action group
-                    let firstAction = 0;
                     for ( let j = 0; j < current.actionGroups.length; j++ ) {
                         let doRun = false;
+                        let firstAction = 0;
                         const actionGroup = current.actionGroups[j];
                         // Is this a suspended group that can be restarted?
                         if (actionGroup.suspended) {
@@ -523,7 +527,7 @@ class SlowGlass {
                     }
                 }
             }
-            SlowGlass.nextAction_run = millis + nextRun;
+            SlowGlass.nextGroupsRun = millis + nextRun;
         }
         // delete any scenes that have finished
         for (let j = 0; j < deletedScenes.length; j++) {
@@ -538,7 +542,7 @@ class SlowGlass {
         }
 
         // But sprites can be updated up to every frame if we want...
-        if (SlowGlass.next_spriteUpdate < millis) {
+        if (SlowGlass.nextSpriteUpdate < millis) {
             Globals.frameNo += 1;
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
@@ -550,7 +554,7 @@ class SlowGlass {
                     current.sprites[j].update(current.name, millis);
                 }
             }
-            SlowGlass.next_spriteUpdate = millis + Defaults.SPRITE_RATE;
+            SlowGlass.nextSpriteUpdate = millis + Defaults.SPRITE_RATE;
         }
     }
 
@@ -611,6 +615,10 @@ class SlowGlass {
 
     setMessageParent(elementID) {
         Globals.log.messageParent(elementID);
+    }
+
+    onCompletion(callback) {
+        Globals.completionCallback = callback;
     }
 
     setOption(optionName, optionValue) {
