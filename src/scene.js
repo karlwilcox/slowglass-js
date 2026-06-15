@@ -2268,6 +2268,99 @@ export class Scene {
                 }
                 break;                   
 
+            case "string":
+                {
+                    wordList.testWord("create");
+                    const varName = wordList.getWord();
+                    let value = "";
+                    let success = true;
+
+                    if (!varName) {
+                        Globals.log.error("Missing string variable name at line " + action.number);
+                        break;
+                    }
+
+                    if (wordList.testWord("as")) {
+                        value = wordList.joinWords();
+                    } else if (wordList.testWord("from")) {
+                        const stringType = wordList.getWord("").toLowerCase();
+                        switch (stringType) {
+                            case "upper":
+                                wordList.testWord("case");
+                                value = wordList.joinWords().toUpperCase();
+                                break;
+
+                            case "lower":
+                                wordList.testWord("case");
+                                value = wordList.joinWords().toLowerCase();
+                                break;
+
+                            case "title":
+                                wordList.testWord("case");
+                                value = wordList.joinWords().toLowerCase().replace(/\b[a-z]/g, char => char.toUpperCase());
+                                break;
+
+                            case "character":
+                            case "characters":
+                                {
+                                    const first = wordList.getInt(false, 1);
+                                    let last = first;
+                                    if (wordList.testWord("to")) {
+                                        last = wordList.getInt(false, 1);
+                                    }
+                                    wordList.testWord("of");
+                                    const source = wordList.joinWords();
+
+                                    if (first === false || last === false) {
+                                        Globals.log.error("Missing character position at line " + action.number);
+                                        success = false;
+                                    } else {
+                                        value = source.slice(first - 1, last);
+                                    }
+                                }
+                                break;
+
+                            case "repeat":
+                                {
+                                    const text = wordList.getWord("");
+                                    const count = wordList.getInt(0, 0);
+                                    wordList.testWord("times");
+                                    value = text.repeat(count);
+                                }
+                                break;
+
+                            default:
+                                Globals.log.error("Unknown string type at line " + action.number);
+                                success = false;
+                                break;
+                        }
+                    } else if (wordList.testWord("by")) {
+                        if (!wordList.testWord("replacing")) {
+                            Globals.log.error("Missing string replacement command at line " + action.number);
+                            break;
+                        }
+                        const searchText = wordList.getWord("");
+                        if (!wordList.testWord("with")) {
+                            Globals.log.error("Missing string replacement 'with' at line " + action.number);
+                            break;
+                        }
+                        const replacementText = wordList.getWord("");
+                        if (!wordList.testWord("in")) {
+                            Globals.log.error("Missing string replacement 'in' at line " + action.number);
+                            break;
+                        }
+                        value = wordList.joinWords().split(searchText).join(replacementText);
+                    } else {
+                        Globals.log.error("Missing string assignment type at line " + action.number);
+                        break;
+                    }
+
+                    if (success) {
+                        this.varList.setValue(varName, value);
+                    }
+                }
+                break;
+
             case "assign":
                 {
                     const assignIndex = wordList.indexOfWord("as");
