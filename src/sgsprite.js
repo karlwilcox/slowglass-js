@@ -61,14 +61,14 @@ export class SGImage {
         this.origHeight = this.height;
     }
 
-    static getImage(scene, name) {
+    static getImage(sceneName, name) {
         let parts = name.split(":");
         if (parts.length > 1) {
-            scene = parts[0];
+            sceneName = parts[0];
             name = parts[1];
         }
         for ( let i = 0; i < Globals.scenes.length; i++ ) {
-            if (Globals.scenes[i].name == scene) {
+            if (Globals.scenes[i].name == sceneName) {
                 for ( let j = 0; j < Globals.scenes[i].images.length; j++ ) {
                     if (Globals.scenes[i].images[j].name == name) {
                         if (Globals.scenes[i].images[j].loading) {
@@ -79,7 +79,7 @@ export class SGImage {
                 }
             }
         }
-        Globals.log.error("No image found- " + scene + ":" + name);
+        Globals.log.error("No image found- " + sceneName + ":" + name);
         return(null);
     }
 
@@ -253,17 +253,17 @@ export class SGSprite {
         }
     }
 
-    setPosition(x, y, depth = 0) {
-        this.locX.setTargetValue(x)
-        this.locY.setTargetValue(y);
-        this.setDepth("to", depth);
-    }
+    // setPosition(x, y, depth = 0) {
+    //     this.locX.setTargetValue(x)
+    //     this.locY.setTargetValue(y);
+    //     this.setDepth("to", depth);
+    // }
 
-    updatePosition() {
-        if (this.piSprite !== null ) { // image has been loaded
-            this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
-        }
-    }
+    // updatePosition() {
+    //     if (this.piSprite !== null ) { // image has been loaded
+    //         this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
+    //     }
+    // }
 
     setDepth(depth_type, value="to") {
         if (depth_type == "by") {
@@ -366,15 +366,17 @@ export class SGSprite {
             this.viewHeight.forceValue(this.viewHeight.value());
         } else {
             this.windowed = true;
-        // we set in motion up to 4 changes
-        if (callback) {
-            callback(4)
-        }
+            // we set in motion up to 4 changes
+            if (callback) {
+                callback(4)
+            }
             this.viewX.setTargetValue(x, duration, now, callback);
             this.viewY.setTargetValue(y, duration, now, callback);
             this.viewWidth.setTargetValue(w, duration, now, callback);
             this.viewHeight.setTargetValue(h, duration, now, callback);
         }
+        this.origX = w;
+        this.origY = h;
     }
 
     setScroll(dx, dy) {
@@ -527,7 +529,7 @@ export class SGSprite {
         }
     }
 
-    throw(angle, initialVelocity, now, callback = false) {
+    throw(angle, initialVelocity, now = 0, callback = false) {
         if (callback) {
             callback(1)
             this.throwCallback = callback;
@@ -535,7 +537,7 @@ export class SGSprite {
         if (angle == "stop") {
             this.falling = false;
             if (this.throwCallback != null) {
-                this.throwCallback();
+                this.throwCallback(-1);
             }
         } else {
             const radians = angle * Math.PI / 180;
@@ -836,19 +838,19 @@ export class SGSprite {
 
 **************************************************************************************************/
         
-    update(scene, now, loadOnly = false) {
+    update(sceneName, now, loadOnly = false) {
         if (!this.enabled) {
             return;
         }
         // First, do we need to load an image (and can we?)
         if (this.type == constants.SPRITE_IMAGE && this.placed &&
                 (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) { // no image loaded
-            let image = SGImage.getImage(scene, this.imageName);
+            let image = SGImage.getImage(sceneName, this.imageName);
             if (image === null) { // doesn't exist, give up
                 this.enabled = false;
                 return;
             }
-            if (image != "loading" && this.sizeType) { // now ready and we have a size request pending
+            if (image != "loading" && (this.sizeType || this.role)) { // now ready and we have a size request pending
                 const imgWidth = image.piImage.width;
                 const imgHeight = image.piImage.height;
                 this.sizeX.setTargetValue(imgWidth); // might get overwritten later
@@ -1021,7 +1023,6 @@ export class SGSprite {
             }
             // Do we need to update the frame?
             if (this.currentFrame != this.lastFrame) {
-                Globals.log.report(`Advancing from ${this.lastFrame} to ${this.currentFrame}`);
                 if (this.image.cols < 1) {
                     Globals.log.error("Image has no frames in sprite " + this.name);
                 } else {
@@ -1240,18 +1241,18 @@ export class SGSprite {
         }
     }
 
-    static getSprite(scene, name, report = true) {
+    static getSprite(sceneName, name, report = true) {
         if (!name) {
             Globals.log.error("bad sprite name - ");
             return false;
         }
         let parts = name.split(":");
         if (parts.length > 1) {
-            scene = parts[0];
+            sceneName = parts[0];
             name = parts[1];
         }
         for ( let i = 0; i < Globals.scenes.length; i++ ) {
-            if (Globals.scenes[i].name == scene) {
+            if (Globals.scenes[i].name == sceneName) {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
                     // Only return sprites from scenes that are currently running
                     if (!(Globals.scenes[i].state == constants.SCENE_PAUSED) && Globals.scenes[i].sprites[j].name == name) {
@@ -1268,22 +1269,22 @@ export class SGSprite {
             }
         }
         if (report) {
-            Globals.log.error("No sprite found- " + scene + ":" + name);
+            Globals.log.error("No sprite found- " + sceneName + ":" + name);
         }
         return(false);
     }
 
-    static deleteSprite(scene, name, report = false) {
+    static deleteSprite(sceneName, name, report = false) {
         if (!name) {
             return false;
         }
         let parts = name.split(":");
         if (parts.length > 1) {
-            scene = parts[0];
+            sceneName = parts[0];
             name = parts[1];
         }
         for ( let i = 0; i < Globals.scenes.length; i++ ) {
-            if (Globals.scenes[i].name == scene) {
+            if (Globals.scenes[i].name == sceneName) {
                 for ( let j = 0; j < Globals.scenes[i].sprites.length; j++ ) {
                     if (Globals.scenes[i].sprites[j].name == name) {
                         Globals.scenes[i].sprites[j].piSprite.destroy();
@@ -1294,7 +1295,7 @@ export class SGSprite {
             }
         }
         if (report) {
-            Globals.log.error("No sprite found- " + scene + ":" + name);
+            Globals.log.error("No sprite found- " + sceneName + ":" + name);
         }
         return false;
     }

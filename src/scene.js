@@ -960,7 +960,7 @@ export class Scene {
                         const w = wordList.getInt(0);
                         const h = wordList.getInt(0);
                         if (w > 0 && h > 0) {
-                            sgSprite.setView(x, y, w, h, "in", 0, now);
+                            sgSprite.setView(x, y, w, h, "in", 0);
                             sgSprite.sizeX.setTargetValue(w);
                             sgSprite.sizeY.setTargetValue(h);
                         }
@@ -1083,7 +1083,6 @@ export class Scene {
                     }
                     const byOrTo = wordList.testWord(["to", "by"],"by");
                     let frame = wordList.getInt(1);
-                    const oldFrame = sgSprite.currentFrame;
                     if (byOrTo == "by") {
                         if (command == "reverse") {
                             frame *= -1;
@@ -1092,7 +1091,6 @@ export class Scene {
                     } else {
                         sgSprite.currentFrame = frame;
                     }
-                    Globals.log.report("Advance from " + oldFrame + " to " + sgSprite.currentFrame);
                 }
                 break;
 
@@ -1176,7 +1174,7 @@ export class Scene {
                         Globals.root.addChild(sgSprite.piSprite);
                     }
                     sgSprite.placed = true;
-                    sgSprite.update(this, now);
+                    sgSprite.update(this.name, now);
                     if (sgSprite.type == constants.SPRITE_GROUP) {
                         actionGroup.suspend("placeGroup", actionIndex, sgSprite);
                     }
@@ -1300,11 +1298,9 @@ export class Scene {
                                 group.enableRenderGroup();
                                 sgSprite.depth = Globals.nextZ(0);
                                 group.zIndex = sgSprite.depth;
-                                // sgSprite.loaded = true;
                                 sgSprite.piSprite = group;
                                 sgSprite.setVisibility(!hidden);
                                 sgSprite.tags.addTag(wordList.getTags());
-                                // sgSprite.placed = true; // groups are always "placed"
                                 this.sprites.push(sgSprite);                           
                             }
                             break;
@@ -1313,7 +1309,6 @@ export class Scene {
                                 const spriteName = wordList.getSpriteName();
                                 const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                                 if (!sgSprite) {
-                                    Globals.log.error("Sprite not found" + action.number);
                                     break;
                                 }
                                 const groupSprite = wordList.getInGroup(this.spriteScene);
@@ -1485,31 +1480,32 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
-                    let callback = false;
-                    if (timeValue > 0) {
-                        callback = actionGroup.callback()
-                    }
                     switch ( direction ) {
                         case "horizontally":
                         case "hor":
                         case "h":
                         case "right":
-                            sgSprite.move(delta, false, byOrTo, inOrAt, timeValue, now, callback);
+                            sgSprite.move(delta, false, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
+                    );
                             break;
                         case "left":
-                            sgSprite.move(delta * -1, false, byOrTo, inOrAt, timeValue, now, callback);
+                            sgSprite.move(delta * -1, false, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
+                    );
                             break;
                         case "vertically":
                         case "vert":
                         case "v":
                         case "down":
-                            sgSprite.move(false, delta, byOrTo, inOrAt, timeValue, now, callback);
+                            sgSprite.move(false, delta, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
+                    );
                             break;
                         case "up":
-                            sgSprite.move(false, delta * -1, byOrTo, inOrAt, timeValue, now, callback);
+                            sgSprite.move(false, delta * -1, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
+                    );
                             break;
                         default:
-                            sgSprite.move(x, y, byOrTo, inOrAt, timeValue, now, callback);
+                            sgSprite.move(x, y, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
+                    );
                             break;
                     }
                 }
@@ -1921,7 +1917,7 @@ export class Scene {
                     if (stop_or_at == "stop") {
                         sgSprite.throw("stop");
                     } else {
-                        sgSprite.throw(angle, initialVelocity, now);
+                        sgSprite.throw(angle, initialVelocity);
                     }
                 }
                 break;
@@ -1957,7 +1953,7 @@ export class Scene {
                     if (wordList.testWord( "stop")) {
                         sgSprite.throw("stop");
                     } else {
-                        sgSprite.throw(180, 0, now,actionGroup.callback());
+                        sgSprite.throw(180, 0);
                     }
                 }
                 break;
