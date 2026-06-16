@@ -27,7 +27,7 @@ word capitalised).
 
 ## Selecting Characters from Text
 
-`string \[create\] {variable-name} from character {position1} \[to {position2}] of {text...}`
+`string \[create\] {variable-name} from character {position1} \[to {position2}\] of {text...}`
 
 The variable {variable-name} is created from either a single character of the text
 at {position1} or from {position1} to {position2} inclusive. Both positions are one

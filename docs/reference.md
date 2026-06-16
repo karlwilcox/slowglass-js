@@ -237,6 +237,13 @@ supported:
 * **increment** {variable-name} - if it looks like a number
 * **deccrement** {variable-name} - if it looks like a number
 
+### String Manipulation
+
+* **string** create {variable-name} **from** (upper | lower | title) case {text...}
+* **string** create {variable-name} **from** character {position1} to {position2} of {text...}
+* **string** create {variable-name} **from** repeat {text} {number} times
+* **string** create {variable-name} **by** replacing {text1} with {text2} in {text...}
+
 All variables start with $, use braces '{}' to isolate variable names within strings
 or if the variable name contains a '.' character. Unset variables evaluate to "NONE".
 
