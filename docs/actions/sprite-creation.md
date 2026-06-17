@@ -140,13 +140,6 @@ This creates a sprite containing the specified content in the previously
 selected font, size and colour. When placing text be aware that you are
 placing the _*centre*_ of the text
 
-### Text Modification
-
-`text add {sprite-name} {content...}`
-
-Adds the content as an additional line to the existing content. The height and width
-of the text sprite will be updated to take account of the new content.
-
 ### Future Intentions
 
 I might think about some more sophisticated text formatting commands
@@ -182,7 +175,7 @@ over-written with a new value.
 
 `(shape | graphic) create {sprite-name} [as] circle {radius}`
 
-`(shape | graphic) create {sprite-name} [as] polygon {radius} {sides}`
+`(shape | graphic) create {sprite-name} [as] polygon {sides} {radius} `
 
 `(shape | graphic) create {sprite-name} [as] ellipse {width-radius} {height-radius}`
 

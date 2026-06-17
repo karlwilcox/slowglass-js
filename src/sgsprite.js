@@ -72,6 +72,7 @@ export class SGImage {
                 for ( let j = 0; j < Globals.scenes[i].images.length; j++ ) {
                     if (Globals.scenes[i].images[j].name == name) {
                         if (Globals.scenes[i].images[j].loading) {
+                            return("loading");
                         } else {
                             return(Globals.scenes[i].images[j]);
                         }
@@ -243,7 +244,7 @@ export class SGSprite {
         this.dimension1 = x;
         this.dimension2 = y;
         this.sizeRelative = relative;
-        this.sizeRate = 0;
+        this.sizeRate = rate;
         this.sizeDuration = duration;
         this.sizeStart = now;
         this.sizeCallback = callback;
@@ -311,8 +312,8 @@ export class SGSprite {
             newX += this.locX.value();
             newY += this.locY.value();
         } else if (toOrBy == "at") {
-            this.locX.setSpeed(newX);
-            this.locY.setSpeed(newY);
+            this.locX.setSpeed(newX, now);
+            this.locY.setSpeed(newY, now);
             this.locX.hasTarget = false;
             this.locY.hasTarget = false;
             return;
@@ -352,9 +353,9 @@ export class SGSprite {
         this.enabled = true;
     }
 
-    accelerate(accelX, accelY, duration, callback = false) {
-        this.locX.setAcceleration(accelX, duration, callback);
-        this.locY.setAcceleration(accelY, duration, callback);
+    accelerate(accelX, accelY, duration = 0, now = 0, callback = false) {
+        this.locX.setAcceleration(accelX, duration, now, callback);
+        this.locY.setAcceleration(accelY, duration, now, callback);
     }
 
     setView(x, y, w, h, dur_type, duration, now, callback = false) {
@@ -509,7 +510,7 @@ export class SGSprite {
         if (chance < 1 || max < 1) {
             this.skewY.swayStop();
         } else {
-            this.skewY.swayStart(max, chance);
+            this.skewY.swayStart(max, rate, chance);
         }
     }
 
@@ -541,9 +542,9 @@ export class SGSprite {
             }
         } else {
             const radians = angle * Math.PI / 180;
-            this.locX.setSpeed(initialVelocity * Math.sin(radians));
-            this.locY.setSpeed(initialVelocity * Math.cos(radians) * -1); // y grows downwards
-            this.locY.setAcceleration(this.scene.gravity); // y grows downwards
+            this.locX.setSpeed(initialVelocity * Math.sin(radians), now);
+            this.locY.setSpeed(initialVelocity * Math.cos(radians) * -1, now); // y grows downwards
+            this.locY.setAcceleration(this.scene.gravity, now); // y grows downwards
             this.falling = true;
             this.landed = false;
         }
@@ -751,7 +752,7 @@ export class SGSprite {
             case "size":
                 width = this.dimension1;
                 height = this.dimension2;
-                if (this.relative) {
+                if (this.sizeRelative) {
                     width += this.sizeX.value();
                     height += this.sizeY.value();
                 }
@@ -843,14 +844,12 @@ export class SGSprite {
             return;
         }
         // First, do we need to load an image (and can we?)
-        if (this.type == constants.SPRITE_IMAGE && this.placed &&
-                (this.piSprite === null || this.piSprite.texture == PIXI.Texture.EMPTY)) { // no image loaded
+        if (this.type == constants.SPRITE_IMAGE && this.placed && !this.loaded) { // no image loaded yet
             let image = SGImage.getImage(sceneName, this.imageName);
-            if (image === null) { // doesn't exist, give up
+            if (image === null) { // no image found, disable this sprite
                 this.enabled = false;
                 return;
-            }
-            if (image != "loading" && (this.sizeType || this.role)) { // now ready and we have a size request pending
+            } else if (image != "loading") { // now ready
                 const imgWidth = image.piImage.width;
                 const imgHeight = image.piImage.height;
                 this.sizeX.setTargetValue(imgWidth); // might get overwritten later
@@ -862,8 +861,8 @@ export class SGSprite {
                     // Yes, but we need the image size to work out scaling
                     const targetWidth = Globals.scriptWidth;
                     const targetHeight = Globals.scriptHeight;
-                    const aspectY = imgHeight / targetHeight ;
-                    const aspectX = imgWidth / targetWidth ;
+                    const aspectX = targetWidth / imgWidth;
+                    const aspectY = targetHeight / imgHeight;
                     let depth = null;
                     switch ( this.role ) {
                         case "background": // centre, and scale to window size
@@ -940,7 +939,7 @@ export class SGSprite {
                     texture.source.wrapMode = "mirror-repeat";
                     this.origX = this.viewWidth.value();
                     this.origY = this.viewHeight.value();
-                    if (this.dimensionType && this.dimensionType != "image") { // been given a different size
+                    if (this.sizeType && this.sizeType != "image") { // been given a different size
                         this.applySize(this.dimensionType, this.dimension1, this.dimension2,
                                     "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
                     } else { // use window size
@@ -1207,7 +1206,9 @@ export class SGSprite {
                 this.visible = true;
             } 
             this.nextFlash = now + 100;
-            this.piSprite.visible = this.visible;
+            if (this.piSprite !== null ) { // image has been loaded
+                this.piSprite.visible = this.visible;
+            }
         }
 
         // Or are we blurring?
@@ -1216,7 +1217,9 @@ export class SGSprite {
                 if (this.piSprite.filters == null) {
                     this.piSprite.filters = [ this.blurFilter ];
                 } // need to modity this if we need more filter types
-                this.blurFilter.strength = this.bluriness.value() / 10;
+                if (this.piSprite.blurFilter != null) {
+                    this.blurFilter.strength = this.bluriness.value() / 10;
+                }
             }
         }
 

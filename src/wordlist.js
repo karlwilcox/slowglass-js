@@ -130,13 +130,13 @@ export class WordList {
             const compareTo = this.currentWord.toLowerCase();
             if (target instanceof Array) {
                 for ( let i = 0; i < target.length; i++ ) {
-                    if (compareTo == target[i]) {
+                    if (compareTo == target[i].toLowerCase()) {
                         result = this.currentWord;
                         this.nextWord();
                         break;
                     }
                 }
-            } else if (compareTo == target) {
+            } else if (compareTo == target.toLowerCase()) {
                 result = this.currentWord;
                 this.nextWord();
             }
@@ -165,7 +165,7 @@ export class WordList {
         let result = def;
         if (this.wordsLeft()) {
             const candidate = this.currentWord;
-            const digits = candidate.match(/[0-9]+/);
+            const digits = candidate.match(/-?[0-9]+/);
             if (digits) {
                 result = parseInt(digits[0]);
                 this.nextWord();
@@ -216,7 +216,7 @@ export class WordList {
         while (this.wordsLeft()) {
             const candidate = this.getWord();
             if (needHash) {
-                if (!candidate.charAt(0) == '#') {
+                if (candidate.charAt(0) != '#') {
                     continue;
                 }
             }
@@ -345,6 +345,8 @@ export class WordList {
             if (value !== false) { // yes
                 // by default duration is in seconds
                 value *= this.getTimeUnitMultiplier();
+            } else {
+                value = def;
             }
         }
         return value;
@@ -360,6 +362,7 @@ export class WordList {
 
     getInGroup(sceneName) {
         let groupSprite = null;
+        const hold = this.index;
         this.testWord(["in","to"]);
         if (this.testWord("group")) {
             const groupName = this.getWord();
@@ -370,6 +373,8 @@ export class WordList {
                     Globals.log.error("Not a group at line " + this.lineNo);
                 }
             }
+        } else {
+            this.rewind(hold);
         }
         return groupSprite;
     }

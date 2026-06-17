@@ -13,6 +13,7 @@ export class GraphicFactory {
 
     makeIcon(wordList) {
         const iconName = wordList.getWord()
+        wordList.testWord("size");
         const size = wordList.getInt(100);
         let svgContent = false;
         let graphic = false;
@@ -41,7 +42,7 @@ export class GraphicFactory {
                 C17.8334949,17.4996253 17.4977085,17.1638388
                 17.4977085,16.7496253 L17.4977085,7.25037474
                 C17.4977085,6.83616118 17.8334949,6.50037474
-                18.2477085,6.50037474 L21.2477085,6.50037474 Z">`;
+                18.2477085,6.50037474 L21.2477085,6.50037474 Z"/>`;
                 break;
             case "soundon":
                 svgX = 28;
@@ -133,7 +134,7 @@ export class GraphicFactory {
                 L11.29112,4.15794799 C11.7838024,3.77481559 12.5015268,4.12596134
                 12.5015268,4.75008179 L12.5,9.82661094 L19.79112,4.15794799
                 C20.2838024,3.77481559 21.0015268,4.12596134 21.0015268,4.75008179
-                Z" <path d="M21.0015268,4.75008179 L21,18.7500818
+                Z"/> <path d="M21.0015268,4.75008179 L21,18.7500818
                 C20.9999319,19.374155 20.2821581,19.7251581 19.7895445,19.3420142
                 L12.5,13.6726109 L12.5,18.7500818 C12.4999319,19.374155
                 11.7821581,19.7251581 11.2895445,19.3420142 L2.28954454,12.3420142
@@ -151,7 +152,7 @@ export class GraphicFactory {
             Globals.log.report(credit);
             const shiftX = svgX / -2;
             const shiftY = svgY / -2;
-            graphic = new PIXI.Graphics().translateTransform(shiftX,shiftY).svg('<svg>' + svgContent + "</svg>");
+            graphic = new PIXI.Graphics().scaleTransform(size/svgX).translateTransform(shiftX,shiftY).svg('<svg>' + svgContent + "</svg>");
         }
         return graphic;
     }
@@ -209,6 +210,11 @@ export class GraphicFactory {
                                 let XorY = "X";
                                 while (wordList.wordsLeft()) {
                                     const value = wordList.getFloat();
+                                    if (!value) {
+                                        Globals.log.error("Expected coordinate for polyline");
+                                        wordList.getWord(); // eat the offender
+                                        break;
+                                    }
                                     coords.push(value);
                                     if (XorY == "X") {
                                         maxX = Math.max(maxX, value);
@@ -225,8 +231,8 @@ export class GraphicFactory {
                                     coords.pop();
                                 }
                                 // Rewrite coordinates to draw around the origin
-                                const xAdj = (maxX - minX) / 2;
-                                const yAdj = (maxY - minY) / 2;
+                                const xAdj = (maxX + minX) / 2;
+                                const yAdj = (maxY + minY) / 2;
                                 for (let i = 0; i < coords.length; i += 2) {
                                     coords[i] -= xAdj;
                                     coords[i+1] -= yAdj;
@@ -236,8 +242,8 @@ export class GraphicFactory {
                             break;
                         case "line":
                             {
-                                const r = wordList.getInt(0);
-                                if (r > 0) {
+                                const l = wordList.getInt(0);
+                                if (l > 0) {
                                     graphic = new PIXI.Graphics().moveTo(l / -2, 0).lineTo(l/2, 0);
                                 }
                             }
@@ -318,6 +324,7 @@ export class GraphicFactory {
                                 }
                                 graphic.closePath();
                             }
+                            break;
                         case "star":
                             {
                                 const p = wordList.getInt(0);

@@ -108,28 +108,29 @@ export class VarList {
     setValue(name, value) {
         if (name.match(/:/)) { // this is a different scene
             const colonParts = name.split(/:/);
-            varName = colonParts[1];
-            sceneName = colonParts[0];
+            const varName = colonParts[1];
+            const sceneName = colonParts[0];
             const scene = Scene.find(sceneName);
             if (!scene) {
                 Globals.log.error(`Scene not found: ${sceneName}`);
-            }
-            scene.varList.setValue(varName, value);
-            return;
-        } // else set this ourselves
-        const reference = this.parseArrayReference(name);
-        if (this.built_in(reference.name)) {
-            Globals.log.error("Cannot create built-in variable " + name);
-        } else if (reference.name.match(/\./) || reference.property !== false) {
-            Globals.log.error("Cannot create variable with dot in name " + name);
-        } else {
-            const index = this.find(reference.name);
-            if (index !== false) {
-                this.variables[index].setValue(value, reference.key);
             } else {
-                const variable = new Variable(reference.name);
-                variable.setValue(value, reference.key);
-                this.variables.push(variable);
+                scene.varList.setValue(varName, value);
+            }
+        } else {
+            const reference = this.parseArrayReference(name);
+            if (this.built_in(reference.name)) {
+                Globals.log.error("Cannot create built-in variable " + name);
+            } else if (reference.name.match(/\./) || reference.property !== false) {
+                Globals.log.error("Cannot create variable with dot in name " + name);
+            } else {
+                const index = this.find(reference.name);
+                if (index !== false) {
+                    this.variables[index].setValue(value, reference.key);
+                } else {
+                    const variable = new Variable(reference.name);
+                    variable.setValue(value, reference.key);
+                    this.variables.push(variable);
+                }
             }
         }
     }
@@ -231,7 +232,7 @@ export class VarList {
             case "YEAR":
                 return date.getFullYear();
             case "TIMEZONE":
-                return new Intl.DateTimeFormat.resolvedOptions().timezone;
+                return new Intl.DateTimeFormat().resolvedOptions().timeZone;
             case "HEMISPHERE":
                 return Globals.location.hemisphere();
             case "SEASON":
@@ -281,13 +282,13 @@ export class VarList {
             case "WEEKEND":
                 return Utils.boolAsString(date.getDay() == 0 || date.getDay() == 6);
             case "MORNING":
-                return Utils.boolAsString(date.getHours() > 6 && date.getHour() < 13);
+                return Utils.boolAsString(date.getHours() > 6 && date.getHours() < 13);
             case "AFTERNOON":
-                return Utils.boolAsString(date.getHours() > 11 && date.getHour() < 18);
+                return Utils.boolAsString(date.getHours() > 11 && date.getHours() < 18);
             case "EVENING":
-                return Utils.boolAsString(date.getHours() > 18 && date.getHour() < 22);
+                return Utils.boolAsString(date.getHours() > 18 && date.getHours() < 22);
             case "NIGHT":
-                return Utils.boolAsString(date.getHours() > 22 || date.getHour() < 6);
+                return Utils.boolAsString(date.getHours() > 22 || date.getHours() < 6);
             case "KEY":
                 return Globals.key == null ? defaults.NOTFOUND : Globals.key;
             case "LASTKEY":
@@ -373,7 +374,7 @@ export class VarList {
         // First, find out which scene we are looking at
         const scene = Scene.find(sceneName);
         if (!scene) {
-            value = defaults.NOTFOUND;
+            return defaults.NOTFOUND;
         }
         if (reference.property === false) {
             // Is this a list request?
@@ -388,9 +389,9 @@ export class VarList {
                 case "VARIABLES":
                 case "VARNAMES":
                     if (tagName) {
-                        value = this.listTags(tagName);
+                        value = scene.listTags(tagName);
                     } else {
-                        value = this.listNames();
+                        value = scene.listNames();
                     }
                     break;
                 case 'SPRITES':
@@ -424,92 +425,91 @@ export class VarList {
             const parts = reference.name.split(/\./, 2);
             const sgSprite = SGSprite.getSprite(sceneName, parts[0], false);
             if (!sgSprite) {
-                if (sgSprite.type == constants.SPRITE_IMAGE && (sgSprite.image === null || sgSprite.image == "loading")) {
-                    return constants.NOT_LOADED;
-                }
                 return constants.NOT_FOUND;
-            } else {
-                switch(parts[1]) {
-                    case 'x':
-                    case 'loc.x':
-                    case 'location.x':
-                    case 'pos.x':
-                    case 'position.x':
-                        value = sgSprite.locX.value();
-                        break;
-                    case 'y':
-                    case 'loc.y':
-                    case 'location.y':
-                    case 'pos.y':
-                    case 'position.y':
-                        value = sgSprite.locY.value();
-                        break;
-                    case 'speed.x':
-                    case 'dx':
-                        value = sgSprite.locX.speed();
-                        break;
-                    case 'speed.y':
-                    case 'dy':
-                        value = sgSprite.locY.speed();
-                        break;
-                    case 'z':
-                    case 'depth':
-                        value = sgSprite.depth;
-                        break;
-                    case 'sx':
-                    case 'size.x':
-                        value = sgSprite.sizeX.value();
-                        break;
-                    case 'sy':
-                    case 'size.y':
-                        value = sgSprite.sizeY.value();
-                        break;
-                    case 'cx':
-                    case 'click.x':
-                        value = sgSprite.clickX;
-                        break;
-                    case 'cy':
-                    case 'click.y':
-                        value = sgSprite.clickY;
-                        break;
-                    case 'pivot.x':
-                    case 'px':
-                        value = sgSprite.piSprite.pivot.x;
-                        break;
-                    case 'pivot.y':
-                    case 'py':
-                        value = sgSprite.piSprite.pivot.y;
-                        break;
-                    case 'angle':
-                    case 'rotation':
-                        value = sgSprite.angle.value();
-                        break;
-                    case 'falling':
-                        value = Utils.boolAsString(sgSprite.falling);
-                        break;
-                    case 'landed':
-                        value = Utils.boolAsString(sgSprite.landed);
-                        break;
-                    case 'visible':
-                        value = Utils.boolAsString(sgSprite.visible);
-                        break;
-                    case 'role':
-                        if (sgSprite.role == null) {
-                            value = defaults.NOTFOUND;
-                        } else {
-                            value = sgSprite.role;
-                        }
-                        break;
-                    case 'frame':
-                        value = sgSprite.currentFrame;
-                        break;
-                    case 'bounds':
-                        const bounds = sgSprite.piSprite.getBounds();
-                        value = `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;
-                        break;
-                        // More still to do
-                    default:
-                }
+            }
+            if (sgSprite.type == constants.SPRITE_IMAGE && !sgSprite.loaded) {
+                return constants.NOT_LOADED;
+            }
+            switch(parts[1]) {
+                case 'x':
+                case 'loc.x':
+                case 'location.x':
+                case 'pos.x':
+                case 'position.x':
+                    value = sgSprite.locX.value();
+                    break;
+                case 'y':
+                case 'loc.y':
+                case 'location.y':
+                case 'pos.y':
+                case 'position.y':
+                    value = sgSprite.locY.value();
+                    break;
+                case 'speed.x':
+                case 'dx':
+                    value = sgSprite.locX.speed();
+                    break;
+                case 'speed.y':
+                case 'dy':
+                    value = sgSprite.locY.speed();
+                    break;
+                case 'z':
+                case 'depth':
+                    value = sgSprite.depth;
+                    break;
+                case 'sx':
+                case 'size.x':
+                    value = sgSprite.sizeX.value();
+                    break;
+                case 'sy':
+                case 'size.y':
+                    value = sgSprite.sizeY.value();
+                    break;
+                case 'cx':
+                case 'click.x':
+                    value = sgSprite.clickX;
+                    break;
+                case 'cy':
+                case 'click.y':
+                    value = sgSprite.clickY;
+                    break;
+                case 'pivot.x':
+                case 'px':
+                    value = sgSprite.piSprite.pivot.x;
+                    break;
+                case 'pivot.y':
+                case 'py':
+                    value = sgSprite.piSprite.pivot.y;
+                    break;
+                case 'angle':
+                case 'rotation':
+                    value = sgSprite.angle.value();
+                    break;
+                case 'falling':
+                    value = Utils.boolAsString(sgSprite.falling);
+                    break;
+                case 'landed':
+                    value = Utils.boolAsString(sgSprite.landed);
+                    break;
+                case 'visible':
+                    value = Utils.boolAsString(sgSprite.visible);
+                    break;
+                case 'role':
+                    if (sgSprite.role == null) {
+                        value = defaults.NOTFOUND;
+                    } else {
+                        value = sgSprite.role;
+                    }
+                    break;
+                case 'frame':
+                    value = sgSprite.currentFrame;
+                    break;
+                case 'bounds':
+                    const bounds = sgSprite.piSprite.getBounds();
+                    value = `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;
+                    break;
+                    // More still to do
+                default:
             }
         }
         if (value === false && reference.property === false) {
@@ -622,7 +622,7 @@ export class VarList {
                     }
                 }
 
-                const property = input.slice(j).match(/^\.(length|keys)(?![a-zA-Z0-9_])/);
+                const property = input.slice(j).match(/^\.(length|keys|values)(?![a-zA-Z0-9_])/);
                 if (property) {
                     varName += property[0];
                     j += property[0].length;

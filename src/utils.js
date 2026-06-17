@@ -3,7 +3,7 @@
 import { Globals } from "./globals.js";
 import { VarList, TagList } from "./vars.js";
 import * as constants from './constants.js';
-import defaults from "./defaults";
+import defaults from "./defaults.js";
 
 export function boolAsString(value) {
     return value ? constants.TRUE_VALUE : constants.FALSE_VALUE;
@@ -226,6 +226,9 @@ export class ActionGroup {
     callback() {
         return (delta) => {
             this.unfinishedCount += delta;
+            if (this.unfinishedCount < 0) {
+                Globals.log.error("Internal error on action callbacks");
+            }
         };
     }
 
@@ -245,7 +248,7 @@ export class ActionGroup {
 **************************************************************************************************/
 
 
-export function evaluate(input) {
+export function evaluate(input) { // Silently drops content after unmatched '(' TBD
     let str = ""; // holds the output string
     // find a bracketed expression in the input
     let i = 0;
@@ -329,7 +332,7 @@ export function logical(words) {
             result = true;
         }
     } else if (words.length == 2) { // string compare the two things
-        result = words[0].toLowerCase == words[1].toLowerCase;
+        result = words[0].toLowerCase() == words[1].toLowerCase();
     } else if (words.length > 2) { // middle thing is a logical comparison
         let lvalue = words[0].toLowerCase();
         let rvalue = words[2].toLowerCase();
@@ -457,15 +460,15 @@ export class Location {
             case 3:
             case 4:
             case 5:
-                return this.this >= 0 ?  "spring" : "autumn";
+                return this.lat >= 0 ?  "spring" : "autumn";
             case 6:
             case 7:
             case 8:
-                return this.this >= 0 ?  "summer" : "winter";
+                return this.lat >= 0 ?  "summer" : "winter";
             case 9:
             case 10:
             case 11:
-                return this.this >= 0 ?  "autumn" : "spring";
+                return this.lat >= 0 ?  "autumn" : "spring";
         }
     }
 
@@ -516,20 +519,24 @@ export class Location {
 
     setLat(input) {
         const digits = input.match(/[0-9]+/);
-        let lat = parseInt(digits[0]);
-        if ((input.includes("s") || input.includes("S")) && lat > 0) {
-            lat *= -1;
+        if (digits) {
+            let lat = parseInt(digits[0]);
+            if ((input.includes("s") || input.includes("S")) && lat > 0) {
+                lat *= -1;
+            }
+            this.lat = lat;
         }
-        this.lat = lat;
     }
 
     setLon(input) {
         const digits = input.match(/[0-9]+/);
-        let lon = parseInt(digits[0]);
-        if ((input.includes("w") || input.includes("W")) && lon > 0) {
-            lon *= -1;
+        if (digits) {
+            let lon = parseInt(digits[0]);
+            if ((input.includes("w") || input.includes("W")) && lon > 0) {
+                lon *= -1;
+            }
+            this.lon = lon;
         }
-        this.lon = lon;
     }
 }
 

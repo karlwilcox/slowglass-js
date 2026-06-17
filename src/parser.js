@@ -78,6 +78,7 @@ export class Parser {
                     if (words[0] == word[i]) {
                         retval = words[0];
                         words.shift();
+                        break;
                     }
                 }
             } else if (words[0] == word) {
@@ -85,35 +86,42 @@ export class Parser {
                 words.shift();
             }
         } // else
-        if (retval == false && arguments > 2) {
+        if (retval == false && arguments.length > 2) {
             retval = def;
         }
         return(retval);
     }
 
     static getInt(words, def, min, max) {
+        let retval = def;
         if (words.length > 0) {
             let word = words.shift();
-            if (!word.match(/^[0-9-\.]+$/)) {
+            if (!word.match(/^-?[0-9][0-9\.]*$/)) {
                 Globals.log.error("Expected integer - " + word);
+            } else {
+                let retval = Math.floor(parseFloat(word));
+                if (arguments.length > 2 && retval < min) {
+                    retval = min;
+                }
+                if (arguments.length > 3 && retval > max) {
+                    retval = max;
+                }
             }
-            let retval = Math.floor(parseFloat(word));
-            if (arguments.length > 2 && retval < min) {
-                retval = min;
-            }
-            if (arguments.length > 3 && retval > max) {
-                retval = max;
-            }
-            return(retval);
         }
-        return(def);
+        return retval;
     }
 
     static getFloat(words, def) {
+        let retval = def;
         if (words.length > 0) {
-            return(parseFloat(words.shift()));
+            let word = words.shift();
+            if (!word.match(/^-?[0-9][0-9\.]*$/)) {
+                Globals.log.error("Expected float - " + word);
+            } else {
+                retval = parseFloat(words.shift());
+            }
         }
-        return(def);
+        return retval;
     }
 
     static getWord(words, def) {
@@ -127,17 +135,36 @@ export class Parser {
         // return a multiplier that gives seconds
         let mult = 1;
         let units = Parser.getWord(words, def);
-        if (units.startsWith("s")) {
+        switch(units) {
+            case "s":
+            case "sec":
+            case "secs":
+            case "second":
+            case "seconds":
                 // no need to change anything
-                ;
-        } else if (units.startsWith("m")) {
-            mult = 60;
-        } else if (units.startsWith("h")) {
-            mult = 3600;
-        } else if (units.startsWith("t")) {
-            mult = 0.1;
-        } else {
-            Globals.log.error("Unknown time unit - " + units );
+                break; 
+            case "m":
+            case "min":
+            case "mins":
+            case "minute":
+            case "minutes":
+                mult = 60;
+                break;
+            case "h":
+            case "hr":
+            case "hrs":
+            case "hour":
+            case "hours":
+                mult = 3600;
+                break;
+            case "t":
+            case "tenth":
+            case "tenths":
+                mult = 0.1;
+                break;
+            default:
+                Globals.log.error("Unknown time unit - " + units );
+                break;
         }
         return mult;
     }

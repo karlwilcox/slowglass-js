@@ -1,4 +1,4 @@
-import { Parser } from "./parser";
+import { Parser } from "./parser.js";
 import * as Utils from "./utils.js";
 import { Globals } from "./globals.js";
 import * as constants from "./constants.js";
@@ -107,9 +107,12 @@ export class After extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
-            this.triggerTime = this.createTime + Parser.getDuration(this.expanded,1) * 1000;
+            const duration = Parser.getDuration(this.expanded,1);
+            if (duration) {
+                this.triggerTime = this.createTime + (duration * 1000);
+            }
         }
-        if (timestamp > this.triggerTime) {
+        if (this.triggerTime !== null && timestamp > this.triggerTime) {
             this.triggered = true;
             this.expired = true;
             return true;
@@ -145,9 +148,12 @@ export class Every extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
-            this.triggerRate = Parser.getDuration(this.expanded,1) * 1000;
+            const duration = Parser.getDuration(this.expanded,1);
+            if (duration) {
+                this.triggerRate = this.createTime + (duration * 1000);
+            }
         }
-        if (timestamp - this.last_triggered > this.triggerRate) {
+        if (this.triggerRate !== null && timestamp - this.last_triggered > this.triggerRate) {
             this.triggered = true;
             this.last_triggered = timestamp;
             return true;
@@ -237,16 +243,16 @@ export class AtClass extends Trigger {
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
             if (this.expanded.length > 0) {
-                const timeofDay = this.expanded[0];
-                if (timeofDay.match(/^[0-9]+:[0-9]+(:[0-9]+)?$/)) { // HH:MM:SS
-                    const parts = timeofDay.split(":");
+                const timeOfDay = this.expanded[0];
+                if (timeOfDay.match(/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/)) { // HH:MM:SS only
+                    const parts = timeOfDay.split(":");
                     this.hours = parseInt(parts[0]);
                     this.minutes = parseInt(parts[1]);
                     if (parts.length > 2) {
                         this.seconds = parseInt(parts[2]);
                     }
                 } else {
-                    Globals.log.error("Incorrect time format " + timeofDay);
+                    Globals.log.error("Incorrect time format " + timeOfDay);
                     this.valid = false;
                 }
             } else {
@@ -297,7 +303,7 @@ export class Each extends Trigger {
     }
 
     fired(timestamp) {
-        if (this.scene.state != constants.SCENE_RUNNING) {
+        if (this.expired || this.scene.state != constants.SCENE_RUNNING) {
             return false;
         }
         // expand on first use
@@ -306,8 +312,9 @@ export class Each extends Trigger {
             let temp;
             if (this.expanded.length > 0) {
                 const candidate = this.expanded[0];
-                if (!candidate.match(/^[*0-2][*0-9]:[*0-5][*0-9](:[*0-5][*0-9])?$/)) {
+                if (!candidate.match(/^(?:[01*][0-9*]|2[0-3*]|\*[0-9*]):[0-5*][0-9*]:[0-5*][0-9*]$/)) {
                     Globals.log.error("Incorrect time format- " + candidate);
+                    this.expired = true; // prevent running if not valid time
                     return false;
                 }
                 if (candidate.length == 5) {
@@ -395,7 +402,7 @@ export class OnClick extends Trigger {
         }
         if (!this.sgSprite) {
             this.sgSprite = SGSprite.getSprite(this.scene.name, this.params, false);
-            if (this.sgSprite) {
+            if (this.sgSprite && this.sgSprite.piSprite) {
                 this.sgSprite.piSprite.eventMode = "dynamic";
                 this.sgSprite.piSprite.onclick = this.sgSprite.callback();
             }
@@ -434,7 +441,7 @@ export class OnKey extends Trigger {
             return false;
         }
         if (this.key == Globals.lastKey) {
-            Globals.lastKey = null;
+            Globals.lastKey = null; // only supports one trigger per key - TBD
             return true;
         } // else
         return false;

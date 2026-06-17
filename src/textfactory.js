@@ -1,6 +1,4 @@
 
-import { WordList } from "./wordlist.js";
-import { Globals } from "./globals.js";
 
 export class TextFactory {
     constructor() {
@@ -8,7 +6,7 @@ export class TextFactory {
         this.textStroke = "black";
         this.textFont = "Arial";
         this.textSize = "24";
-        this.textAlign = "centre";
+        this.textAlign = "center";
         this.textWrap = 0;
     }
 

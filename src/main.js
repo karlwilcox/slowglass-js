@@ -116,7 +116,7 @@ class SlowGlass {
                     Globals.log.error(`Scene name must contain at least one letter ${lineCount}`);
                 } else {
                     if (holding != null) {
-                        Globals.scenesTexts.push(holding);
+                        Globals.sceneTexts.push(holding);
                     }
                     holding = new SceneText(argument, URLFolder);
                     if (argument == constants.MAIN_NAME) {
@@ -421,7 +421,6 @@ class SlowGlass {
         // (to ensure we catch triggers that are accurate to 1 second, e.g. "at"
         // Could adjust this if needed in defaults
         let millis = Date.now();
-        let updateState = true;
         let nextRun = Defaults.TRIGGER_RATE;
         let deletedScenes = [];
         if (SlowGlass.nextGroupsRun < millis) {
@@ -434,6 +433,7 @@ class SlowGlass {
             // }
             for ( let i = 0; i < Globals.scenes.length; i++ ) {
                 let current = Globals.scenes[i];
+                current.updateState = true; // let's assume we need to move on
                 if (current.state != constants.SCENE_PAUSED) {
                     // we are only interested in running scenes 
                     // Found an active scene, now go through each action group
@@ -458,7 +458,7 @@ class SlowGlass {
                                 case "while":
                                     const expanded = current.varList.expandVars(actionGroup.waitClause);
                                     const evaluated = Utils.evaluate(expanded)
-                                    doRun = Utils.logical(expanded.split(/ +/));
+                                    doRun = Utils.logical(evaluated.split(/ +/));
                                     if (actionGroup.waitType == "while") {
                                         doRun = !doRun;
                                     }
@@ -499,12 +499,12 @@ class SlowGlass {
                                 if (triggers[k].fired(millis)) {
                                     current.varList.trigger = triggers[k].constructor.name;
                                     doRun = true;
-                                    if (actionGroup.any_trigger) {
+                                    if (actionGroup.anyTrigger) {
                                         break;
                                     }
                                 } else {
                                     doRun = false;
-                                    if (!actionGroup.any_trigger) {
+                                    if (!actionGroup.anyTrigger) {
                                         break;
                                     }
                                 }
@@ -513,14 +513,14 @@ class SlowGlass {
                         if (doRun) {
                             current.runGroup(j, millis, firstAction);
                             if (actionGroup.suspended) {
-                                updateState = false;
+                                current.updateState = false;
                                 continue;
                             }
                         }
                     }
-                    if (updateState) {
+                    if (current.updateState) {
                         if (Scene.manageLifecycle(current, constants.SCENE_NEXT_STATE)) {
-                            deletedScenes.push(i);
+                            deletedScenes.push(current);
                         }
                     } else {
                         nextRun = Defaults.SPRITE_RATE; // next frame
@@ -529,16 +529,19 @@ class SlowGlass {
             }
             SlowGlass.nextGroupsRun = millis + nextRun;
         }
-        // delete any scenes that have finished
+        // delete any scenes that have finished 
         for (let j = 0; j < deletedScenes.length; j++) {
-            const sceneNumber = deletedScenes[j];
-            const scene = Globals.scenes[sceneNumber];
-            for (let i = 0; i < scene.sprites.length; i++) {
-                if (scene.sprites[i]) {
-                    scene.sprites[i].piSprite.destroy();
+            for ( let k = 0; k < Globals.scenes.length; k++) {
+                if (Globals.scenes[k] === deletedScenes[j]) {
+                    const scene = Globals.scenes[k];
+                    for (let i = 0; i < scene.sprites.length; i++) {
+                        if (scene.sprites[i]) {
+                            scene.sprites[i].piSprite.destroy();
+                        }
+                    }
+                    Globals.scenes.splice(k,1);
                 }
             }
-            Globals.scenes.splice(sceneNumber,1);
         }
 
         // But sprites can be updated up to every frame if we want...
@@ -580,12 +583,13 @@ class SlowGlass {
         const response = await fetch(url);
         if (!response.ok) {
             Globals.log.error(`Failed to fetch file: ${response.status} ${response.statusText}`);
-        }
-        const text = await response.text();
-        if (this.readFromText(text, include, url.slice(0,url.lastIndexOf('/')))) {
-            if (!include) {
-                this.run();
-            } // include file just adds scenes to the existing list
+        } else {
+            const text = await response.text();
+            if (this.readFromText(text, include, url.slice(0,url.lastIndexOf('/')))) {
+                if (!include) {
+                    this.run();
+                } // include file just adds scenes to the existing list
+            }
         }
     }
 
