@@ -226,6 +226,7 @@ export class ActionGroup {
     callback() {
         return (delta) => {
             this.unfinishedCount += delta;
+            // Globals.log.error(`Unfinished count is ${this.unfinishedCount}`);
             if (this.unfinishedCount < 0) {
                 Globals.log.error("Internal error on action callbacks");
             }

@@ -22,11 +22,14 @@ begin
     place star2 at 881 60 202
     place star3 at 346 11 203
     place lamp at 367 1014 204
+    fade star1 to 50
+    fade star2 to 50
+    fade star3 to 50
 
     # Twinkle those stars
-    flicker star1
-    flicker star2
-    flicker star3
+    flicker star1 50 80
+    flicker star2 50 80
+    flicker star3 50 80
 
     # Jiggle that candle
     flicker lamp with chance 30

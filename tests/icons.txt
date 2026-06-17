@@ -4,7 +4,7 @@ stage size 800 600
 
 setup
     graphic fill red
-    graphic create play as icon playwait for 100
+    graphic create play as icon play
 
 begin
     place play at centre

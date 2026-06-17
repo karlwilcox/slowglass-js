@@ -1422,7 +1422,7 @@ export class Scene {
             case "graphic":
             case "shape":
                 const { graphicName, graphic } = this.graphicFactory.create(wordList);
-                if (graphic != null) {
+                if (graphic) {
                     const sgSprite = new SGSprite(this, null, graphicName, constants.SPRITE_GRAPHIC, this.defaultTags);
                     sgSprite.piSprite = graphic;
                     const size = graphic.getSize();
