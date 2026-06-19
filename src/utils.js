@@ -317,27 +317,23 @@ export function evaluate(input) { // Silently drops content after unmatched '(' 
 
 export function logical(words) {
     let result = false;
-    let inverted = false;
-    if (words[0] == "not") {
-        words.shift();
-        inverted = true;
-    }
-    if (words.length == 0) { // no arguments, just return something
+    let inverted = words.testWord("not");
+    const lvalue = words.getWord().toLowerCase();
+    const comparison = words.getWord().toLowerCase();
+    const rvalue = words.getWord().toLowerCase();
+    if (!lvalue) { // no arguments, just return something
         result = !inverted;
-    } else if (words.length == 1) { // check it for truthiness / falseiness
-        if (words[0].match(/^[-0-9\.\+]+$/)) { // looks like a number
-            result = !(Math.abs(parseFloat(words[0])) < 0.001); // zero is false, all else true
-        } else if ( ["false","no","n","none","invalid"].includes(words[0].toLowerCase())) {
+    } else if (!comparison) { // check it for truthiness / falseiness
+        if (lvalue.match(/^[-0-9\.\+]+$/)) { // looks like a number
+            result = !(Math.abs(parseFloat(lvalue)) < 0.001); // zero is false, all else true
+        } else if ( ["false","no","n","none","invalid"].includes(lvalue)) {
             result = false;
         } else {
             result = true;
         }
-    } else if (words.length == 2) { // string compare the two things
-        result = words[0].toLowerCase() == words[1].toLowerCase();
-    } else if (words.length > 2) { // middle thing is a logical comparison
-        let lvalue = words[0].toLowerCase();
-        let rvalue = words[2].toLowerCase();
-        let comparison = words[1].toLowerCase();
+    } else if (!rvalue) { // string compare the two things
+        result = lvalue == comparison;
+    } else { // middle thing is a logical comparison
         switch(comparison) {
             case "is":
             case "equals":

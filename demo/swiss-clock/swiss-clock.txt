@@ -10,7 +10,7 @@ setup
 
 
 begin
-    run swiss-clock  118 263 83 40  // size, x, y, darkness
+    run swiss-clock  188 263 83 40  // size, x, y, darkness
 
 
 scene swiss-clock

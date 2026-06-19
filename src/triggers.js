@@ -1,4 +1,4 @@
-import { Parser } from "./parser.js";
+import { WordList } from "./wordlist.js";
 import * as Utils from "./utils.js";
 import { Globals } from "./globals.js";
 import * as constants from "./constants.js";
@@ -23,7 +23,7 @@ export class Trigger {
     expandAll(input) {
         let expanded = this.scene.varList.expandVars(input);
         expanded = Utils.evaluate(expanded);
-        return Parser.splitWords(expanded);
+        return new WordList(expanded, 0);
     }
 }
 
@@ -107,7 +107,7 @@ export class After extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
-            const duration = Parser.getDuration(this.expanded,1);
+            const duration = this.expanded.getDuration(1);
             if (duration) {
                 this.triggerTime = this.createTime + (duration * 1000);
             }
@@ -148,12 +148,12 @@ export class Every extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
-            const duration = Parser.getDuration(this.expanded,1);
+            const duration = this.expanded.getDuration(1);
             if (duration) {
-                this.triggerRate = this.createTime + (duration * 1000);
+                this.triggerRate = duration * 1000;
             }
         }
-        if (this.triggerRate !== null && timestamp - this.last_triggered > this.triggerRate) {
+        if (this.triggerRate !== null && (timestamp - this.last_triggered) > this.triggerRate) {
             this.triggered = true;
             this.last_triggered = timestamp;
             return true;
@@ -242,22 +242,17 @@ export class AtClass extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
-            if (this.expanded.length > 0) {
-                const timeOfDay = this.expanded[0];
-                if (timeOfDay.match(/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/)) { // HH:MM:SS only
-                    const parts = timeOfDay.split(":");
-                    this.hours = parseInt(parts[0]);
-                    this.minutes = parseInt(parts[1]);
-                    if (parts.length > 2) {
-                        this.seconds = parseInt(parts[2]);
-                    }
-                } else {
-                    Globals.log.error("Incorrect time format " + timeOfDay);
-                    this.valid = false;
+            const timeOfDay = this.expanded.getWord();
+            if (timeOfDay.match(/^(?:[01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)) { // HH:MM:SS only
+                const parts = timeOfDay.split(":");
+                this.hours = parseInt(parts[0]);
+                this.minutes = parseInt(parts[1]);
+                if (parts.length > 2) {
+                    this.seconds = parseInt(parts[2]);
                 }
             } else {
-                Globals.log.error("Missing time for at ");
-                    this.valid = false;
+                Globals.log.error("Incorrect time format " + timeOfDay);
+                this.valid = false;
             }
         }
         if (this.nextCheck > timestamp) {
@@ -309,21 +304,17 @@ export class Each extends Trigger {
         // expand on first use
         if (this.expanded == null) {
             this.expanded = this.expandAll(this.params);
-            let temp;
-            if (this.expanded.length > 0) {
-                const candidate = this.expanded[0];
-                if (!candidate.match(/^(?:[01*][0-9*]|2[0-3*]|\*[0-9*]):[0-5*][0-9*]:[0-5*][0-9*]$/)) {
-                    Globals.log.error("Incorrect time format- " + candidate);
-                    this.expired = true; // prevent running if not valid time
-                    return false;
-                }
+            const candidate = this.expanded.getWord();
+            if (candidate.match(/^(?:[01*][0-9*]|2[0-3*]|\*[0-9*]):[0-5*][0-9*](:[0-5*][0-9*])?$/)) {
                 if (candidate.length == 5) {
                     this.matchString = candidate + ":00";
                 } else {
                     this.matchString = candidate;
                 }
             } else {
-                Globals.log.error("Missing time for each ");
+                    Globals.log.error("Incorrect time format- " + candidate);
+                    this.expired = true; // prevent running if not valid time
+                    return false;
             }
         }
         // Do we need to run yet?

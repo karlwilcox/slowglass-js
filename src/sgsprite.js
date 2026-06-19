@@ -455,21 +455,30 @@ export class SGSprite {
         this.bluriness.setTargetValue(target, duration, now, callback);
     }
 
-    setTint(target, duration, now, callback = false) {
-        if (arguments.length == 1) {
-        if (callback) {
-            callback(1)
-        }
-            if (target == "stop") {
-                this.tintColour = null;
-                this.tintValue.setTargetValue(100, 0, now, callback);
-            } else {
-                this.tintColour = target;
-            }
-            this.newTint = true;
+    setTintColour(value) {
+        if (value == "stop") {
+            this.tintColour = null;
         } else {
-            this.tintValue.setTargetValue(target, duration, now, callback);
+            this.tintColour = value;
         }
+        this.newTint = true;
+    }
+
+    setTintLevel(target, duration, now, callback = false) {
+        if (target == "stop") {
+            this.tintColour = null;
+            this.tintValue.setTargetValue(0);
+        } else {
+            if (duration > 0) {
+                if (callback) {
+                    callback(1)
+                }
+                this.tintValue.setTargetValue(target, duration, now, callback);
+            } else {
+                this.tintValue.setTargetValue(target);
+            }
+        }
+        this.newTint = true;
     }
 
     flip(axis) {

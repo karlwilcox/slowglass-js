@@ -1,4 +1,4 @@
-
+import { Globals } from "./globals.js";
 
 export class Adjustable {
     constructor(inValue, minValue = Number.MIN_SAFE_INTEGER, maxValue = Number.MAX_SAFE_INTEGER, wrap = false) {
@@ -220,20 +220,24 @@ export class Adjustable {
                     this.accelerationRate = 0;
                 }
             }
-            this.currentValue += this.deltaValue * (thisAdjustment - this.lastValueAdjustment);
-            // Clamp to given limits
-            if (this.currentValue < this.lowerLimit) {
-                if (this.wrap) {
-                    this.currentValue = this.upperLimit;
-                } else {
-                    this.currentValue = this.lowerLimit;
+            if (this.deltaValue != 0) {
+                this.currentValue += this.deltaValue * (thisAdjustment - this.lastValueAdjustment);
+                // Clamp to given limits
+                if (this.currentValue < this.lowerLimit) {
+                    if (this.wrap) {
+                        this.currentValue = this.upperLimit;
+                    } else {
+                        this.currentValue = this.lowerLimit;
+                    }
+                } else if (this.currentValue > this.upperLimit) {
+                    if (this.wrap) {
+                        this.currentValue = this.lowerLimit;
+                    } else {
+                        this.currentValue = this.upperLimit;
+                    }
                 }
-            } else if (this.currentValue > this.upperLimit) {
-                if (this.wrap) {
-                    this.currentValue = this.lowerLimit;
-                } else {
-                    this.currentValue = this.upperLimit;
-                }
+            } else {
+                this.changing = false;
             }
         }
         this.lastValueAdjustment = thisAdjustment;
@@ -254,3 +258,205 @@ export class Adjustable {
     }
 
 }
+
+export class Adjustable2 {
+    constructor() {
+        // Modifier stack
+        this.modifiers = [];
+        this.currentValue = 0;
+    }
+
+    addModifier(modifier) {
+        this.modifiers.push(modifier);
+    }
+
+    removeModifier(id) {
+        for (let i = 0; i < this.modifiers.length; i++) {
+            if (this.modifiers[i].id == id) {
+                this.modifiers.splice(i,1);
+                break;
+            }
+        }
+    }
+}
+
+class Modifier {
+    constructor(now) {
+        this.currentValue = 0;
+        this.lastUpdate = Date.now();
+        this.id = Globals.unique("mod");
+        this.expired = false;
+        this.startTime = now;
+    }
+
+    getValue() {
+        return this.value;
+    }
+
+    setLast(now) {
+        this.lastUpdate = now;
+    }
+}
+
+export class Sawtooth extends Modifier {
+    constructor(now, limit, period) {
+        super(now);
+        this.limit = limit;
+        this.period = period;
+    }
+
+    update(now, current = false) {
+        const delta = (this.limit * 2) * ((now - this.lastUpdate) / this.period);
+        this.value += delta;
+        if (this.value > this.limit) {
+            this.value = this.limit * -1;
+        }
+        this.setLast(now);
+        return true;
+    }
+}
+
+export class TriangleWave extends Modifier {
+    constructor(now, limit, period) {
+        super(now);
+        this.limit = limit;
+        this.period = period;
+        this.rising = true;
+    }
+
+    update(now, current = false) {
+        const delta = (this.limit * 2) * ((now - this.lastUpdate) / (this.period / 2));
+        if (this.rising) {
+            this.value += delta;
+            if (this.value >= this.limit) {
+                this.value = this.limit;
+                this.rising = false;
+            }
+        } else { // falling
+            this.value -= delta;
+            if (this.value <= this.limit * -1) {
+                this.value = this.limit * -1;
+                this.rising = true;
+            }
+        }
+        this.setLast(now);
+        return true;
+    }
+}
+
+export class RandomWalk extends Modifier {
+    constructor(now, limit, stepSize, frequency, chance = 100) {
+        this.limit = limit;
+        this.stepSize = stepSize;
+        this.frequency = frequency;
+        this.chance = chance;
+        super(now);
+    }
+
+    update(now, current = false) {
+        if ((now - this.lastUpdate) > this.frequency) {
+            if ((chance < 100) && ((Math.random() * 100) > this.chance)) {
+                this.setLast(now);
+                return false;
+            }
+            const step = (this.stepSize * -1) + (Math.Random() * (this.stepSize * 2));
+            this.value += step;
+            if (this.value >= this.limit) {
+                this.value = this.limit;
+            } else if (this.value <= this.limit * -1) {
+                this.value = this.limit * -1;
+            }
+        }
+        this.setLast(now)
+        return true;
+    }
+}
+
+export class Linear extends Modifier {
+    constructor(now, speed, target = false, duration = false, callback = false) {
+        // speed is pixels per second, convert to millis
+        this.speed = speed / 1000;
+        this.target = target;
+        // duration is seconds, convert to millis
+        this.duration = 0 / 1000;
+        this.callback = callback;
+        super(now);
+    }
+
+    update(now, current = false) {
+        if (this.expired) {
+            return false;
+        }
+        let delta = (now - this.lastUpdate) * this.speed;
+        if (current) {
+            const newValue = current + delta;
+            if (target) { // if we have the current value, check target
+                if (this.speed < 0) {
+                    if (newValue < this.target) {
+                        delta = this.target - current;
+                        this.expired = true;
+                    }
+                } else {
+                    if (newValue > this.target) {
+                        delta = current - this.target;
+                        this.expired = true;
+                    }
+                }
+            }
+        }
+        if ((this.startTime - now) > this.duration) {
+            this.expired = true;
+        }
+        if (this.expired && this.callback) {
+            this.callback();
+        }
+        this.value = delta;
+        return true;
+    }
+}
+
+export class Accel {
+    constructor(now, rate, speed, target = false, duration = false, callback = false) {
+        // rate is pixels per second per second, convert to millis
+        this.rate = rate / 1000;
+        this.speed = speed;
+        this.target = target;
+        // duration is seconds, convert to millis
+        this.duration = 0 / 1000;
+        this.callback = callback;
+        super(now);
+    }
+
+    update(now, current = false) {
+        if (this.expired) {
+            return false;
+        }
+        const deltaSquared = (now - this.lastUpdate) * this.rate;
+        if (current) {
+            if (target) { // if we have the current value, check target
+                if (this.speed < 0) {
+                    if (this.speed < this.target) {
+                        deltaSquared = this.target - this.speed;
+                        this.expired = true;
+                    }
+                } else {
+                    if (this.speed > this.target) {
+                        deltaSquared = this.speed - this.target;
+                        this.expired = true;
+                    }
+                }
+            }
+        }
+        const delta = this.speed + deltaSquared;
+        if ((this.startTime - now) > this.duration) {
+            this.expired = true;
+        }
+        if (this.expired && this.callback) {
+            this.callback();
+        }
+        this.value = delta;
+        return true;
+    }
+}
+
+

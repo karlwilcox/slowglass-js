@@ -80,25 +80,20 @@ The stop option will end the pulsing and reset the transparency value to 100, i.
 
 ## Darken / Lighten / Tint
 
-`(darken | lighten) {sprite-name} [to] {number} [in] [{duration}]`
+`(darken | lighten) {sprite-name} [to] {value} [in] [{duration}]`
 
-`set (darkness | lightness) [of] {sprite-name} [to] {number} [in] [{duration}]`
-
-`tint {sprite-name} [to] {colour}`
-
-`[set] tint [of] {sprite-name} [to] {colour}`
+`tint {sprite-name} [to] {colour} \[strength {value}\]`
 
 `tint stop`
 
 These commands are related so are dealt with together.
 
-Darken and lighten affect the overall tone of the sprite, between 0 representing a normal tone and 100 which is completely black. Darken and lighten are effectively the same command but reverse the meaning of the number. You can also gradually darken or lighten by specifying a duration.
+Darken and lighten affect the overall tone of the sprite, darken tints the sprite with black, lighten with white,
+the strength determined by the following value (100 if not provided);
+
+The **tint** command allows you to give an overall colour cast to the sprite. The colour parameter can be any of the named web colors, with the value provided, or the word **stop** which will remove any colour tint or lightening or darkening, restoring the sprite to its original colours.
 
 These commands complete when the tone change is finished.
-
-The **tint** command allows you to give an overall colour cast to the sprite. The colour parameter can be any of the named web colors, or the word **stop** which will remove any colour tint or lightening or darkening, restoring the sprite to its original colours.
-
-The tint command completes immediately.
 
 ## Flip
 

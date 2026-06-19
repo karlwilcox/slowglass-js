@@ -881,7 +881,7 @@ export class Scene {
                             sgSprite.blink(0,0); // stop blinking (makes invisible)
                             sgSprite.pulse(0); // Also sets transparency
                             sgSprite.flip("r"); // go back to original orientation
-                            sgSprite.setTint("stop"); // original colour
+                            sgSprite.setTintColour("stop"); // original colour
                             sgSprite.setBlur(0); // unblur
                             sgSprite.setSkew(0,0); // unskew
                             // sgSprite.setTransparency(100); // solid, but already done
@@ -2798,8 +2798,15 @@ export class Scene {
                     const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { break; }
                     wordList.testWord( ["to", "by", "at"]);
-                    const value = wordList.getWord( "red");
-                        sgSprite.setTint(value);
+                    const colour = wordList.getWord( "red");
+                    if (colour) {
+                        sgSprite.setTintColour(colour);
+                        wordList.testWord( ["strength", "by", "at"]);
+                        const value = wordList.getInt(100);
+                        sgSprite.setTintLevel(value);
+                    } else {
+                        Globals.log.error("Missing tint colour on line " + action.number);
+                    }
                 }
                 break;
 
@@ -2814,10 +2821,12 @@ export class Scene {
                     wordList.testWord( ["to", "by", "at"]);
                     let value = wordList.getInt( 0, 0, 100);
                     if (command == "lighten") {
-                        value = 100 - value;
+                        sgSprite.setTintColour("white");
+                    } else {
+                        sgSprite.setTintColour("black");
                     }
                     const duration = wordList.getDuration(0);
-                    sgSprite.setTint(value, duration, now, actionGroup.callback());
+                    sgSprite.setTintLevel(value, duration, now, actionGroup.callback());
                 }
                 break;
 

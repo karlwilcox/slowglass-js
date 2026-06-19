@@ -6,7 +6,6 @@ import { AudioManager } from "./audio.js";
 import defaults from "./defaults.js";
 import * as Utils from "./utils.js";
 import * as constants from './constants.js';
-import { Parser } from "./parser.js";
 import { WordList } from "./wordlist.js";
 
 class SlowGlass {
@@ -85,29 +84,16 @@ class SlowGlass {
             }
             // ignore any punctuation used to show indenting
             currentLine = currentLine.replace(/^[^a-zA-Z0-9"\$]+/,"");
-            let words = Parser.splitWords(currentLine.toLowerCase());
+            const wordList = new WordList(currentLine, lineCount);
             // ignore and as the first word (syntactic sugar)
-            if (words[0] == 'and') {
-                words.shift();
-            }
+            wordList.testWord("and");
             // Handle scene management commands
-            let command = words[0];
+            const command = wordList.getWord();
             if (command == "notes") {
                 inDescription = true;
                 continue;
             }
-            let argument = "";
-            let argument2 = "";
-            let argument3 = "";
-            if (words.length > 1) {
-                argument = words[1];
-            }
-            if (words.length > 2) {
-                argument2 = words[2];
-            }
-            if (words.length > 3) {
-                argument3 = words[3];
-            }
+            const argument = wordList.getWord();
             // Look for a new scene
             if (command == 'scene') {
                 if (argument == null) {
@@ -123,18 +109,7 @@ class SlowGlass {
                         main = holding;
                     }
                     // Any other content on the line is assumed to be tags
-                    let index = 3;
-                    if (words.length > 3) {
-                        if (words[3] == "with") {
-                            index = 4;
-                        }
-                        if (words.length > 4) {
-                            if (words[4] == "tag" || words[4] == "tags") {
-                                index = 5;
-                            }
-                        }
-                        holding.tags.addTag(words.slice(index));
-                    }
+                    holding.tags.addTag(wordList.getTags());
                 }
             // look for an explicit scene end
             } else if (command == 'end') {
@@ -166,7 +141,7 @@ class SlowGlass {
                 }
                 switch (argument) {
                     case 'width': {
-                            let displayWidth = parseInt(argument2);
+                            let displayWidth = wordList.getInt();
                             if (displayWidth < 50 || displayWidth > 5000) {
                                 Globals.log.error("silly display width");
                                 displayWidth = defaults.DISPLAY_WIDTH;
@@ -175,7 +150,7 @@ class SlowGlass {
                         }
                         break;
                     case 'height':{
-                            let displayHeight = parseInt(argument2);
+                            let displayHeight = wordList.getInt();
                             if (displayHeight < 50 || displayHeight > 5000) {
                                 Globals.log.error("silly display height");
                                 displayHeight = defaults.DISPLAY_HEIGHT;
@@ -184,13 +159,13 @@ class SlowGlass {
                         }
                         break;
                     case 'size': {
-                            let displayWidth = parseInt(argument2);
+                            let displayWidth = wordList.getInt();
                             if (displayWidth < 50 || displayWidth > 5000) {
                                 Globals.log.error("silly display width");
                                 displayWidth = defaults.DISPLAY_WIDTH;
                             }
                             Globals.displayWidth = displayWidth;
-                            let displayHeight = parseInt(argument3);
+                            let displayHeight = wordList.getInt();
                             if (displayHeight < 50 || displayHeight > 5000) {
                                 Globals.log.error("silly display height");
                                 displayHeight = defaults.DISPLAY_HEIGHT;
@@ -216,21 +191,21 @@ class SlowGlass {
                     continue;
                 }
                 if (argument == 'width') {
-                    let scriptWidth = parseInt(argument2);
+                    let scriptWidth = wordList.getInt();
                     if (scriptWidth < 50 || scriptWidth > 5000) {
                         Globals.log.error("silly script width");
                         scriptWidth = defaults.DISPLAY_WIDTH;
                     }
                     Globals.scriptWidth = scriptWidth;
                 } else if (argument == 'height') {
-                    let scriptHeight = parseInt(argument2);
+                    let scriptHeight = wordList.getInt();
                     if (scriptHeight < 50 || scriptHeight > 5000) {
                         Globals.log.error("silly script height");
                         scriptHeight = defaults.DISPLAY_HEIGHT;
                     }
                     Globals.scriptHeight = scriptHeight;
                 } else if (argument == "scale") {
-                    switch (argument2) {
+                    switch (wordList.getWord()) {
                         case "fit":
                             Globals.scriptScaleType = constants.SCALE_FIT;
                             break;
@@ -247,14 +222,15 @@ class SlowGlass {
                 switch(argument) {
                     case "lat":
                     case "latitude":
-                        Globals.location.setLat(argument2);
+                        Globals.location.setLat(wordList.getWord());
                         break;
                     case "lon":
                     case "long":
                     case "longitude":
-                        Globals.location.setLon(argument2);
+                        Globals.location.setLon(wordList.getWord());
                         break;
                     case "evaluator":
+                        const argument2 = wordList.getWord();
                         if (argument2 == "basic" && Globals.basicEvaluator) {
                             Globals.evaluator = argument2;
                         } else if (argument2 == "advanced" && Globals.advancedEvaluator) {
