@@ -1,5 +1,6 @@
 
-import { Adjustable } from "./adjustable.js";
+import { Adjustable, Adjustable2 } from "./adjustable.js";
+import * as Modifiers from "./modifiers.js";
 import defaults from "./defaults.js";
 import { Globals } from "./globals.js";
 import * as constants from './constants.js';
@@ -144,8 +145,8 @@ export class SGSprite {
         this.piSprite = null;
         this.enabled = true;
         // location
-        this.locX = new Adjustable(0);
-        this.locY = new Adjustable(0);
+        this.locX = new Adjustable2(0);
+        this.locY = new Adjustable2(0);
         this.falling = false;
         this.landed = false;
         // rotation
@@ -299,10 +300,68 @@ export class SGSprite {
         this.locY.stop();
     }
 
-    move(newX, newY, toOrBy, inOrAt, duration, now, callback = false) {
+    speed(deltaX, deltaY, duration, now, callback = false) {
+        if (deltaX) {
+            if (callback) { callback(1); }
+            this.locX.addValueModifier(new Modifiers.LinearRate(now, deltaX, duration, callback));
+        }
+        if (deltaY) {
+            if (callback) { callback(1); }
+            this.locY.addValueModifier(new Modifiers.LinearRate(now, deltaY, duration, callback));
+        }
+    }
+
+    move(newX, newY, relative, speed, duration, now, callback = false) {
+        if (duration == 0) {
+            duration = false;
+        }
+        // ensure correct coordinates
+        if (relative) {
+            if (newX !== false) { newX += this.locX.value() };
+            if (newY !== false) { newY += this.locY.value() };
+        }
+        if (speed === false && duration === false) { // just a plain move
+            if (newX !== false) { this.locX.setValue(newX) };
+            if (newY !== false) { this.locY.setValue(newY) };
+        } else if (duration) { // calculate the required rates
+            if (newX !== false) { 
+                const rateX = (newX - this.locX.value()) / duration;
+                this.locX.addValueModifier(new Modifiers.LinearRate(now, rateX, duration, callback));
+            }
+            if (newY !== false) { 
+                const rateY = (newY - this.locY.value()) / duration;
+                this.locY.addValueModifier(new Modifiers.LinearRate(now, rateY, duration, callback));
+            }
+        } else { // speed !== false, calculate the required duration and component speeds
+            let duration = 0;
+            if (newX === false) {
+                duration = Math.abs((this.locY.value() - newY) / speed);
+                if (callback) { callback(1); }
+                this.locX.addValueModifier(new Modifiers.LinearRate(now, speed, duration, callback));
+            } else if (newY === false) {
+                duration = Math.abs((this.locX.value() - newX) / speed);
+                if (callback) { callback(1); }
+                this.locY.addValueModifier(new Modifiers.LinearRate(now, speed, duration, callback));
+            } else { // need to split the speed into x and y components
+                // first calculate the duration, based on the distance and speed
+                const moveDistance = Math.sqrt((newX - this.locX.value())**2 + (newY - this.locY.value())**2);
+                duration = Math.abs(moveDistance / speed);
+                // now calculate the x and y components based on this duration
+                const xSpeed = (newX - this.locX.value()) / duration;
+                const ySpeed = (newY - this.locY.value()) / duration;
+                if (callback) { callback(2); }
+                this.locX.addValueModifier(new Modifiers.LinearRate(now, xSpeed, duration, callback));
+                this.locY.addValueModifier(new Modifiers.LinearRate(now, ySpeed, duration, callback));
+            }
+        }
+    }
+
+
+
+    move2(newX, newY, toByAt, inAtFor, duration, now, callback = false) {
         this.locX.hasTarget = true;
         this.locY.hasTarget = true;
-        if (toOrBy == "by") {
+        if (toByAt == "by") {
             if (newX === false) {
                 newX = 0;
             }
@@ -311,10 +370,11 @@ export class SGSprite {
             }
             newX += this.locX.value();
             newY += this.locY.value();
-        } else if (toOrBy == "at") {
-            this.locX.setSpeed(newX, now);
+        } else if (toByAt == "at") {
+            // this.locX.setSpeed(newX, now);
+            this.locX.addValueModifier(new Linear(now, newX));
             this.locY.setSpeed(newY, now);
-            this.locX.hasTarget = false;
+            // this.locX.hasTarget = false;
             this.locY.hasTarget = false;
             return;
         } else { // to
@@ -326,26 +386,29 @@ export class SGSprite {
             }
         }
         if (duration) {
-            if (inOrAt == "at") { // duration is really rate here
+            if (inAtFor == "at") { // duration is really rate here
                 const xDuration = Math.abs(this.locX.value() - newX) / duration; 
                 const yDuration = Math.abs(this.locY.value() - newY) / duration; 
                 const newDuration = Math.max(xDuration, yDuration);
-                this.locX.setTargetValue(newX, newDuration, now, callback);
+                // this.locX.setTargetValue(newX, newDuration, now, callback);
+                this.locX.addValueModifier(new Linear(now, newX, false, newDuration, callback)); 
                 this.locY.setTargetValue(newY, newDuration, now, callback);
                 // we set in motion up to two changes
                 if (callback) {
                     callback(2)
                 }
-            } else if (inOrAt == "in") {
+            } else if (inAtFor == "in" || inAtFor == "for") {
                 // we set in motion up to two changes
                 if (callback) {
                     callback(2)
                 }
-                this.locX.setTargetValue(newX, duration, now, callback);
+                // this.locX.setTargetValue(newX, duration, now, callback);
+                this.locX.addValueModifier(new Linear(now, newX, false, duration, callback));
                 this.locY.setTargetValue(newY, duration, now, callback);
             }
         } else { // just change it
-            this.locX.setTargetValue(newX);
+            // this.locX.setTargetValue(newX);
+            this.locX.setValue(newX);
             this.locY.setTargetValue(newY);
             this.locX.hasTarget = false;
             this.locY.hasTarget = false;

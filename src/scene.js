@@ -1135,16 +1135,17 @@ export class Scene {
                     switch(location) {
                         case "centre":
                         case "center":
-                            sgSprite.locX.setTargetValue(Globals.app.screen.width / 2);
-                            sgSprite.locY.setTargetValue(Globals.app.screen.height / 2);
+                            // sgSprite.locX.setTargetValue(Globals.app.screen.width / 2);
+                            sgSprite.locX.setValue(Globals.app.screen.width / 2);
+                            sgSprite.locY.setValue(Globals.app.screen.height / 2);
                             break;
                         case "origin":
-                            sgSprite.locX.setTargetValue(0);
-                            sgSprite.locY.setTargetValue(0);
+                            sgSprite.locX.setValue(0);
+                            sgSprite.locY.setValue(0);
                             break;
                         default:
-                            sgSprite.locX.setTargetValue(wordList.getInt(0));
-                            sgSprite.locY.setTargetValue(wordList.getInt(0));
+                            sgSprite.locX.setValue(wordList.getInt(0));
+                            sgSprite.locY.setValue(wordList.getInt(0));
                             break;
                     }
                     // is there a depth provided?
@@ -1450,57 +1451,78 @@ export class Scene {
 
             case "move":
                 {
+                    // Set defaults
+                    let delta = 0;
+                    let duration = false;
+                    let rate = false;
+                    let speed = false;
+                    let flipSpeed = 1;
+                    let relative = false;
+                    let targetX = false;
+                    let targetY = false;
+                    // Get instructions
                     let spriteName = wordList.getSpriteName();
                     const direction = wordList.testWord(["horizontally","hor","h","vertically","vert","v","up","down","left","right"]);
-                    let delta = 0;
-                    let timeValue = 0;
-                    let x = 0;
-                    let y = 0;
-                    let byOrTo = wordList.testWord( ["by","to","at"], "by");
+                    let byToAt = wordList.testWord( ["by","to","at"], "by");
+                    if (byToAt == "by") {
+                        relative = true;
+                    }
+                    // Get coordinate values
                     if (direction !== false) {
                         delta = wordList.getInt(0);
+                        switch ( direction ) {
+                            case "horizontally":
+                            case "hor":
+                            case "h":
+                            case "right":
+                                targetX = delta;
+                                targetY = false;
+                                break;
+                            case "left":
+                                targetX = delta * -1;
+                                targetY = false;
+                                flipSpeed = -1;
+                                break;
+                            case "vertically":
+                            case "vert":
+                            case "v":
+                            case "down":
+                                targetX = false;
+                                targetY = delta;
+                                break;
+                            case "up":
+                                targetX = false;
+                                targetY = delta * -1;
+                                flipSpeed = -1;
+                                break;
+                        }
                     } else {
-                        x = wordList.getInt(0);
-                        y = wordList.getInt(0);
+                        targetX = wordList.getInt(0);
+                        targetY = wordList.getInt(0);
                     }
-                    const inOrAt = wordList.testWord( ["in","at"]);
-                    if (inOrAt == "in") {
-                        timeValue = wordList.getDuration(0, false);
-                    } else { // == "at"
-                        timeValue = wordList.getRate(0);
+                    const inAtFor = wordList.testWord( ["in","at","for"]);
+                    if (inAtFor == "at" ) {
+                        wordList.testWord("speed");
+                        speed = wordList.getRate(0);
+                        if (speed < 0) {
+                            Globals.log.error("Speed cannot be negative");
+                            speed = false;
+                        } else {
+                            speed *= flipSpeed;
+                        }
+                    } else { // for or in
+                        duration = wordList.getDuration(0, false);
                     }
-
+                    // Check for sprite existence
                     const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
                     }
-                    switch ( direction ) {
-                        case "horizontally":
-                        case "hor":
-                        case "h":
-                        case "right":
-                            sgSprite.move(delta, false, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
-                    );
-                            break;
-                        case "left":
-                            sgSprite.move(delta * -1, false, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
-                    );
-                            break;
-                        case "vertically":
-                        case "vert":
-                        case "v":
-                        case "down":
-                            sgSprite.move(false, delta, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
-                    );
-                            break;
-                        case "up":
-                            sgSprite.move(false, delta * -1, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
-                    );
-                            break;
-                        default:
-                            sgSprite.move(x, y, byOrTo, inOrAt, timeValue, now, actionGroup.callback()
-                    );
-                            break;
+                    // Send appropriate instructions
+                    if (byToAt == "at") {
+                        sgSprite.speed(targetX, targetY, duration, now, actionGroup.callback());
+                    } else {
+                        sgSprite.move(targetX, targetY, relative, speed, duration, now, actionGroup.callback());
                     }
                 }
                 break;
@@ -1550,11 +1572,12 @@ export class Scene {
                     wordList.testWord("to");
                     const speedX = wordList.getInt(0);
                     const speedY = wordList.getInt(0);
+                    wordList.testWord("for");
+                    const duration = wordList.getDuration(0);
                     const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (sgSprite) {
-                        sgSprite.move(speedX, speedY, "at", "", 0, now);
+                        sgSprite.speed(speedX, speedY, now, actionGroup.callback());
                     }
-                    // speed change is instantaneous
                 }
                 break;
 

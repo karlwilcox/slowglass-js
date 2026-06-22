@@ -224,7 +224,7 @@ export class ActionGroup {
     }
 
     callback() {
-        return (delta) => {
+        return (delta = -1) => {
             this.unfinishedCount += delta;
             // Globals.log.error(`Unfinished count is ${this.unfinishedCount}`);
             if (this.unfinishedCount < 0) {
