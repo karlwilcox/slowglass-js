@@ -955,8 +955,8 @@ export class Scene {
                         const h = wordList.getInt(0);
                         if (w > 0 && h > 0) {
                             sgSprite.setView(x, y, w, h, "in", 0);
-                            sgSprite.sizeX.setTargetValue(w);
-                            sgSprite.sizeY.setTargetValue(h);
+                            sgSprite.sizeX.setValue(w);
+                            sgSprite.sizeY.setValue(h);
                         }
                     }
                     const piSprite = new PIXI.Sprite({
@@ -1035,22 +1035,22 @@ export class Scene {
                     const dy = wordList.getFloat(0);
                     switch (direction) {
                         case "stop":
-                            sgSprite.setScroll(0,0);
+                            sgSprite.setScroll(0,0, now);
                             break;
                         case "right":
-                            sgSprite.setScroll(dx,0);
+                            sgSprite.setScroll(dx,0, now);
                             break;
                         case "left":
-                            sgSprite.setScroll(dx * -1,0);
+                            sgSprite.setScroll(dx * -1,0, now);
                             break;
                         case "up":
-                            sgSprite.setScroll(0, dy * -1);
+                            sgSprite.setScroll(0, dy * -1, now);
                             break;
                         case "down":
-                            sgSprite.setScroll(0, dy);
+                            sgSprite.setScroll(0, dy, now);
                             break;
                         default:
-                            sgSprite.setScroll(dx, dy);
+                            sgSprite.setScroll(dx, dy, now);
                     }
                 }
                 break;
@@ -1135,7 +1135,6 @@ export class Scene {
                     switch(location) {
                         case "centre":
                         case "center":
-                            // sgSprite.locX.setTargetValue(Globals.app.screen.width / 2);
                             sgSprite.locX.setValue(Globals.app.screen.width / 2);
                             sgSprite.locY.setValue(Globals.app.screen.height / 2);
                             break;
@@ -1199,11 +1198,11 @@ export class Scene {
                     if (!sgSprite1) { break; }
                     const sgSprite2 = SGSprite.getSprite(this.spriteScene, newSprite);
                     if (!sgSprite2) { break; }
-                    sgSprite2.locX.setTargetValue(sgSprite1.locX.value());
-                    sgSprite2.locY.setTargetValue(sgSprite1.locY.value());
+                    sgSprite2.locX.setValue(sgSprite1.locX.value());
+                    sgSprite2.locY.setValue(sgSprite1.locY.value());
                     if (matched) {
-                        sgSprite2.sizeX.setTargetValue(sgSprite1.sizeX.value());
-                        sgSprite2.sizeY.setTargetValue(sgSprite1.sizeY.value());
+                        sgSprite2.sizeX.setValue(sgSprite1.sizeX.value());
+                        sgSprite2.sizeY.setValue(sgSprite1.sizeY.value());
                     }
                     SGSprite.deleteSprite(this.spriteScene, spriteName);
                 }
@@ -1398,8 +1397,8 @@ export class Scene {
                         sgSprite = new SGSprite(this, null, textName, constants.SPRITE_TEXT, this.defaultTags);
                         sgSprite.piSprite = textImage;
                         sgSprite.piSprite.anchor.set(0.5);
-                        sgSprite.sizeX.setTargetValue(textImage.width);
-                        sgSprite.sizeY.setTargetValue(textImage.height);                            
+                        sgSprite.sizeX.setValue(textImage.width);
+                        sgSprite.sizeY.setValue(textImage.height);                            
                         sgSprite.origX = textImage.width;
                         sgSprite.origY = textImage.height;
                         sgSprite.loaded = true;
@@ -1569,14 +1568,38 @@ export class Scene {
             case "speed":
                 {
                     const spriteName = wordList.getSpriteName();
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (wordList.testWord("stop")) {
+                        sgSprite.speed("stop");
+                        break;
+                    }
                     wordList.testWord("to");
                     const speedX = wordList.getInt(0);
                     const speedY = wordList.getInt(0);
                     wordList.testWord("for");
                     const duration = wordList.getDuration(0);
-                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (sgSprite) {
-                        sgSprite.speed(speedX, speedY, now, actionGroup.callback());
+                        sgSprite.speed(speedX, speedY, duration, now, actionGroup.callback());
+                    }
+                }
+                break;
+
+            case "shimmy":
+                {
+                    const spriteName = wordList.getSpriteName();
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (wordList.testWord("stop")) {
+                        sgSprite.speed("stop");
+                        break;
+                    }
+                    wordList.testWord("to");
+                    const speedX = wordList.getInt(0);
+                    const speedY = wordList.getInt(0);
+                    const limit = wordList.getInt(0);
+                    wordList.testWord("for");
+                    const duration = wordList.getDuration(0);
+                    if (sgSprite) {
+                        sgSprite.shimmy(speedX, speedY, limit, duration, now, actionGroup.callback());
                     }
                 }
                 break;
@@ -1584,15 +1607,27 @@ export class Scene {
             case "accelerate":
             case "accel":
                 {
+                    let targetX = false;
+                    let targetY = false;
+                    let duration = false;
                     const spriteName = wordList.getSpriteName();
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (wordList.testWord("stop")) {
+                        sgSprite.accelerate("stop");
+                        break;
+                    }
                     wordList.testWord("at");
                     const accelX = wordList.getInt(0);
                     const accelY = wordList.getInt(0);
-                    wordList.testWord("for");
-                    const duration = wordList.getDuration(0);
-                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    const forTo = wordList.testWord(["for", "to"]);
+                    if (forTo == "to") {
+                        targetX = wordList.getFloat(0);
+                        targetY = wordList.getFloat(0);
+                    } else {
+                        duration = wordList.getDuration(0);
+                    }
                     if (sgSprite) {
-                        sgSprite.accelerate(accelX, accelY, duration, now, actionGroup.callback());
+                        sgSprite.accelerate(accelX, accelY, targetX, targetY, duration, now, actionGroup.callback());
                     }
                 }
                 break;
@@ -1645,12 +1680,16 @@ export class Scene {
             case "resize":
                 {
                     const spriteName = wordList.getSpriteName();
-                    const toOrBy = wordList.testWord( ["to","by"], "to");
-                    const relative = (toOrBy == "by");
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
                     }
+                    if (wordList.testWord("stop")) {
+                        sgSprite.requestSize("stop");
+                        break;
+                    }
+                    const toOrBy = wordList.testWord( ["to","by"], "to");
+                    const relative = (toOrBy == "by");
                     const {dimensionType, dimension1, dimension2 } = wordList.getSizeRequest("size");
                     const inOrAt = wordList.testWord( ["in","at"]);
                     let duration = 0;
@@ -1692,8 +1731,7 @@ export class Scene {
                     }
                     // sgSprite.update(this.name, now);
                     if  (toOrBy == "reset") {
-                        sgSprite.scaleX.setTargetValue(1);
-                        sgSprite.scaleY.setTargetValue(1);
+                        sgSprite.setScale("reset");
                         if (sgSprite.type == constants.SPRITE_GROUP) {
                             sgSprite.resetSize(); // pick up any new bounds
                         }
@@ -1827,16 +1865,74 @@ export class Scene {
             case "rotation":
             case "turn":
                 {
-                    let spriteName = wordList.getSpriteName();
-                    let turn_type = wordList.testWord( ["to","by","at"], "to");
-                    let value = wordList.getInt(0);
-                    let dur_type = wordList.testWord( ["in", "per"], "in");
-                    let duration = wordList.getDuration(0);
-                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    const spriteName = wordList.getSpriteName();
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { 
                         break; 
                     }
+                    const turn_type = wordList.testWord( ["to","by","at","stop"], "to");
+                    const value = wordList.getInt(0);
+                    const dur_type = wordList.testWord( ["in", "per"], "in");
+                    const duration = wordList.getDuration(0);
                     sgSprite.rotate(turn_type, value, dur_type, duration, now, actionGroup.callback());
+                }
+                break;
+
+            case "spin":
+                {
+                    const spriteName = wordList.getSpriteName();
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) { 
+                        break; 
+                    }
+                    if (wordList.testWord("stop")) {
+                        sgSprite.setSpin("stop");
+                        break;
+                    }
+                    const direction = wordList.testWord(["clockwise","anticlockwise","counterclockwise"],"clockwise");
+                    wordList.testWord(["in","every"]);
+                    let spins = wordList.getFloat(1);
+                    if (direction != "clockwise") {
+                        spins *= -1;
+                    }
+                    const mult = wordList.getTimeUnitMultiplier();
+                    // we want the spin rate in degrees per second
+                    // e.g. 1 per minute is 360/60 = 6 degrees per second
+                    const spinRate = (spins * 360) / mult;
+                    sgSprite.setSpin(spinRate, now);
+                }
+                break;
+
+
+/**************************************************************************************************
+
+    ######  #### ########   ######  ##       ######## 
+   ##    ##  ##  ##     ## ##    ## ##       ##       
+   ##        ##  ##     ## ##       ##       ##       
+   ##        ##  ########  ##       ##       ######   
+   ##        ##  ##   ##   ##       ##       ##       
+   ##    ##  ##  ##    ##  ##    ## ##       ##       
+    ######  #### ##     ##  ######  ######## ######## 
+
+**************************************************************************************************/
+
+            case "circle":
+                {
+                    const spriteName = wordList.getSpriteName();
+                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) { 
+                        break; 
+                    }
+                    if (wordList.testWord("stop")) {
+                        sgSprite.setCircle("stop");
+                        break;
+                    }
+                    wordList.testWord("radius");
+                    const radius = wordList.getInt(0);
+                    const direction = wordList.testWord(["clockwise","anticlockwise","counterclockwise"],"clockwise");
+                    wordList.testWord(["in","every"]);
+                    let period = wordList.getDuration(0);
+                    sgSprite.setCircle(radius, period, direction, now);
                 }
                 break;
 
@@ -2566,13 +2662,13 @@ export class Scene {
                     if (!sgSprite) { break; }
                     const on_off = wordList.testWord(["by","stop"]);
                     if (on_off == "stop") {
-                        sgSprite.flicker(0,0);
+                        sgSprite.flicker("stop");
                     } else {
                         const flickerStrength = wordList.getInt(0,0,50);
                         wordList.testWord("with");
                         wordList.testWord("chance");
                         const flickerChance = wordList.getInt(50);
-                        sgSprite.flicker(flickerStrength, flickerChance);
+                        sgSprite.flicker(flickerStrength, flickerChance, now);
                     }
                 }
                 break;                   
@@ -2601,15 +2697,18 @@ export class Scene {
                     if (!sgSprite) { break; }
                     const on_off = wordList.testWord(["by","stop"]);
                     if (on_off == "stop") {
-                        sgSprite.jiggle(0,0,0);
+                        sgSprite.jiggle("stop");
                     } else {
-                        const jiggleX = wordList.getInt(0);
-                        const jiggleY = wordList.getInt(0);
-                        const jiggle_r = wordList.getInt(0);
+                        const limitX = wordList.getInt(0);
+                        const limitY = wordList.getInt(0);
+                        let stepSize = wordList.getInt(0);
+                        // wordList.testWord("at");
+                        // wordList.testWord("frequency");
+                        // const frequency = wordList.getInt(1);
                         wordList.testWord("with");
                         wordList.testWord("chance");
-                        const jiggleChance = wordList.getInt(50);
-                        sgSprite.jiggle(jiggleX, jiggleY, jiggle_r, jiggleChance);
+                        const chance = wordList.getInt(50);
+                        sgSprite.jiggle(now, limitX, limitY, stepSize, chance);
                     }
                 }
                 break;                   
@@ -2655,7 +2754,7 @@ export class Scene {
                     if (!sgSprite) { break; }
                     const on_off = wordList.testWord(["at","stop"]);
                     if (on_off == "stop") {
-                        sgSprite.blink(0, 0, now);
+                        sgSprite.blink("stop");
                     } else {
                         const blinkRate = wordList.getInt(0,1,10);
                         wordList.testWord("per");
@@ -2663,7 +2762,7 @@ export class Scene {
                         wordList.testWord("with");
                         wordList.testWord("chance");
                         const blinkChance = wordList.getInt(100,0,100);
-                        sgSprite.blink(blinkRate, blinkChance, now);
+                        sgSprite.blink(now, blinkRate, blinkChance);
                     }
                 }
                 break;                   
@@ -2688,17 +2787,21 @@ export class Scene {
                     if (!sgSprite) { break; }
                     const on_off = wordList.testWord("stop");
                     if (on_off == "stop") {
-                        sgSprite.pulse(0, 0, 100, now);
+                        sgSprite.pulse("stop");
                     } else {
                         wordList.testWord("at");
-                        const pulseRate = wordList.getInt(0,1,10);
+                        const pulseRate = wordList.getFloat();
+                        if (!pulseRate) {
+                            Globals.log.error("rate must be a number at line " + action.number);
+                            break;
+                        }
                         wordList.testWord("per");
                         wordList.testWord("second");
                         wordList.testWord("from");
                         const pulseMin = wordList.getInt(0,0,100);
                         wordList.testWord("to");
                         const pulseMax = wordList.getInt(100,0,100);
-                        sgSprite.pulse(pulseRate, pulseMin, pulseMax, now);
+                        sgSprite.pulse(now, pulseRate, pulseMin, pulseMax);
                     }
                 }
                 break;                   
@@ -2723,7 +2826,7 @@ export class Scene {
                     if (!sgSprite) { 
                         break; 
                     }
-                    const fade_type = wordList.testWord(["to","by", "up", "down"],"to");
+                    const fade_type = wordList.testWord(["to","by", "up", "down","stop"],"to");
                     const value = wordList.getPercent(100);
                     const duration = wordList.getDuration(0);
                     if (sgSprite) {
@@ -2755,9 +2858,9 @@ export class Scene {
                     const on_off = wordList.testWord(["to","stop"]);
                     if (on_off == "stop") {
                         if (command == "wave") {
-                            sgSprite.wave(0, 0, 0);
+                            sgSprite.wave("stop");
                         } else {
-                            sgSprite.sway(0, 0, 0);
+                            sgSprite.sway("stop");
                         }
                     } else {
                         const waveMax = wordList.getInt(0,1,10);
@@ -2766,9 +2869,9 @@ export class Scene {
                         wordList.testWord("chance");
                         const waveChance = wordList.getInt(100,0,100);
                         if (command == "wave") {
-                            sgSprite.wave(waveMax, waveRate, waveChance);
+                            sgSprite.wave(waveMax, waveRate, waveChance, now);
                         } else {
-                            sgSprite.sway(waveMax, waveRate, waveChance);
+                            sgSprite.sway(waveMax, waveRate, waveChance, now);
                         }
                     }
                 }
@@ -2794,7 +2897,7 @@ export class Scene {
                     if (!sgSprite) {
                         break;
                     }
-                    const blur_type = wordList.testWord(["to","by", "up", "down"],"to");
+                    const blur_type = wordList.testWord(["to","by", "up", "down", "reset"],"to");
                     const value = wordList.getInt(100);
                     const duration = wordList.getDuration(0);
                     if (sgSprite) {
@@ -2820,13 +2923,14 @@ export class Scene {
                     const spriteName = wordList.getSpriteName();
                     const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (!sgSprite) { break; }
-                    wordList.testWord( ["to", "by", "at"]);
+                    const tintType = wordList.testWord( ["to", "by", "at", "reset"]);
+                    if (tintType == "reset") {
+                        sgSprite.setTintColour(null);
+                        break;
+                    } // else
                     const colour = wordList.getWord( "red");
                     if (colour) {
                         sgSprite.setTintColour(colour);
-                        wordList.testWord( ["strength", "by", "at"]);
-                        const value = wordList.getInt(100);
-                        sgSprite.setTintLevel(value);
                     } else {
                         Globals.log.error("Missing tint colour on line " + action.number);
                     }
@@ -2845,6 +2949,7 @@ export class Scene {
                     let value = wordList.getInt( 0, 0, 100);
                     if (command == "lighten") {
                         sgSprite.setTintColour("white");
+                        value = 100 - value;
                     } else {
                         sgSprite.setTintColour("black");
                     }

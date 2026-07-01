@@ -105,6 +105,12 @@ It is not possible to change the order of this list, other
 than by removing all the members and recreating them in
 a different order.
 
+A further important consideration is that the "chain" of
+modifiers for the reference value starts with the current
+reference value, and that is what is modified by the Modifier
+object. The offset chain of modifiers starts with a value
+of 0, **NOT** the previous offset.
+
 ### What is a Modifier?
 
 Modifiers can be thought of as small "function generators".
@@ -132,25 +138,18 @@ than the other
 Most modifiers accept the following three parameters in their
 constructor so these are described here.
 
-The **target** parameter checks the current value of the object
-against the target and if the target is exceeded then the
-modifier will expire and no further changes will come from
-this modifier. At some future update the modifier itself
-will be automatically deleted and removed from the modifier
-list. If a **callback** parameter is provided then this
-will be invoked when the limit is reached.
-
-Note that if the current value is already beyond the target
-nothing will be changed.
+All modifier constructors and the update method start with a
+**now** parameter which is the current time in milliseconds.
+Although it would be possible for each object to use Date.now()
+parameter passing is preferred as it avoids the expense of
+multiple calls to the Date object and also ensure that all
+sprite updates share the same "moment" for the purposes of
+calculation.
 
 The **duration** parameter specifies a time in seconds during
 which the changes will occur. At the end of the time the
 modifier will expire and at some future time will be deleted
 and removed from the modifier list.
-
-It is possible to set both a limit and a duration in which
-case whichever event occurs first will cause the modifier
-to expire.
 
 The **callback** parameter, if present, will be called
 without arguments when the modifier expires.
@@ -164,21 +163,32 @@ hence have no effect if not provided.
 
 #### Linear Change
 
-`new Linear(now, rate, target, duration, callback)`
+`new LinearRate(now, rate, duration = false, callback = false)`
 
 This modifier applies a constant rate of change to its value,
 rate being given in the required change per second. So at its
 simplest, we can for example move a sprite at a constant speed
 along the positive x direction (i,e. left to right) with:
 
-`sprite.logX.addRefefenceModifier(new Linear(Date.Now(), 10)`
+`sprite.logX.addRefefenceModifier(new Linear(now, 10)`
 
 This will cause the sprite to move 10 pixels per second to the
 right indefinetely (including moving it off the stage completely).
 
+`new LinearTarget(now, target, duration, callback = false)`
+
+This is similar to the above except that we provide a target
+value instead of a rate of change. Unlike the above we
+**must** provide a duration so the required rate can be
+calculated.
+
+Having these two forms is a convience function as one can
+be derived from the other but it simplifies code if we
+keep them separate.
+
 #### Acceleration
 
-`new Acceleration(now, rate, target, duration, callback)`
+`new Acceleration(now, rate, speed, target, duration, callback)`
 
 This will cause the returned value to increase at **rate** pixels
 per second per second - e.g. a rate of 10 means that after 1 second
@@ -200,33 +210,39 @@ This modifier is continuous until it is removed.
 
 #### Triangle Wave
 
-`new TriangleWave(now, limit, period)`
+`new TriangleWave(now, limit, rate, period = false)`
 
-Produces a triangular wave form that varies from plus **limit** to
-minus **limit** over **period** seconds. The initial movement direction
-is positive.
+Produces a triangular wave form that varies from 0 to **limit**
+and back to 0 at the given **rate**.
+If the period is given instead the supplied
+rate will be ignored recalculated based on the limit and the
+required period.
 
 This modifier is continuous until it is removed.
 
 #### Sawtooth Wave
 
-`new SawtoothWave(now, limit, period)`
+`new SawtoothWave(now, limit, rate, period = false)`
 
-Produces a sawtooth wave form that rises smoothly from minus **limit**
-to plus **limit** over **period** seconds and then return immediately
-to the lower value. The initial movement direction is positive.
+Produces a sawtooth wave form that rises smoothly from 0
+to **limit** at the given **rate** and then returns in a single step
+to the lower value. If the period is given instead the supplied
+rate will be ignored recalculated based on the limit and the
+required period.
 
 This modifier is continuous until it is removed.
 
-#### Sine Wave
+#### Sine / Cosine Wave
 
 `new SineWave(now, limit, period, offset = 0)`
 
-Produces a smoothly varying sine wave ranging in value from minus
-**limit** to plus **limit** over **period** seconds. The initial
+`new CosineWave(now, limit, period, offset = 0)`
+
+Produces a smoothly varying sine wave ranging in value from 0
+to **limit** over **period** seconds. The initial
 direction is rising towards the upper limit. If the optional
 **offset** paramter is present the start of movement will be
-delayed by that number of degrees, e.g. an offset of 90 will 
+delayed by that number of degrees, e.g. an offset of 90 will
 delay the start of movement by 1/4 of the period, and an offset
 of 180 will delay the start of movement by half the period. So
 for example setting one Adjustable to a plain sine wave and another
@@ -237,13 +253,18 @@ This modifier is continuous until it is removed.
 
 #### Square Wave
 
-`new SquareWave(now, limit, period)`
+`new SquareWave(now, onTime, offTime, height = 100, count = false)`
 
-Produces a square wave jumping from plus **limit** to minus
-**limit** over **period**. The initial jump is to the upper
-value.
+This modifier produces a wave which remains at
+0 for **offtime** seconds, then has a value of **height**
+for **onTime** seconds and repeats. This will happen
+indefinitely unless the **count** parameter is provided
+in which case the sequence will repeat count times and
+the modifier will then expire, leaving the value at 0.
 
-This modifier is continuous until it is removed.
+No completion callback is offered as this is really intended
+to run continuously (like a beacon light) or for a short
+number of "flashes" like a lightning strike.
 
 #### Constant
 
@@ -252,23 +273,44 @@ This modifier is continuous until it is removed.
 This simply returns the constructor **value** on each update. This
 can be used to bias any of the other modifier, for example if you want
 to have a sine wave that varies between, say 50 and 100 then set up
- a SineWave object with a limit of 25 and add a constant modifier
- of +50.
+a SineWave object with a limit of 25 and add a constant modifier
+of +50.
+
+#### Multiplier
+
+`new Multiplier(now, value)`
+
+ Multiples the current value by the value supplied to the constructor.
+ Not sure what it might be used for but easy to implement!
 
 #### Random Wave
 
- `new RandomWave(now, valueLimit, timeLimit, shape = "step")`
+`new RandomWave(now, valueLimit, timeLimit, shape = "step")`
 
- At initiation a random value is chosen between 0 and **limit**
- and a random time is chosen between 0 and
- **timeLimit** seconds. When the randomly chosen time has
- elapsed the supplied value will be equal to the randomly
- chosen value.
+At initiation a random value is chosen between 0 and **limit**
+and a random time is chosen between 0 and
+**timeLimit** seconds. When the randomly chosen time has
+elapsed the supplied value will be equal to the randomly
+chosen value.
 
- The **shape** parameter determines how the values change
- over time - the default "step" makes a single step
- change in value (so the wave form would look a bit like
- a city skyline), the alternative "line" makes a smooth
- straight line transition to the new value (so the wave
- form would like a bit like a mountain range). Other
- options may be added in future.
+The **shape** parameter determines how the values change
+over time - the default "step" makes a single step
+change in value (so the wave form would look a bit like
+a city skyline), the alternative "line" makes a smooth
+straight line transition to the new value (so the wave
+form would like a bit like a mountain range). Other
+options may be added in future.
+
+#### Chance
+
+`new Chance(now, percentage)`
+
+This is a very simple modifier, on every update a random
+number between 0 and 100 is generated. If it is less
+than **percentage** the current value is passed on
+unchanged, otherwise 0 is passed on.
+
+This can be useful to vary offset values, for example
+to make something flicker you could apply a triangle
+wave modifier and use a chance modifier at 50% to
+make the wave values more "jumpy".

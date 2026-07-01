@@ -1,5 +1,5 @@
 
-import { Adjustable, Adjustable2 } from "./adjustable.js";
+import { Adjustable2 } from "./adjustable.js";
 import * as Modifiers from "./modifiers.js";
 import defaults from "./defaults.js";
 import { Globals } from "./globals.js";
@@ -150,12 +150,12 @@ export class SGSprite {
         this.falling = false;
         this.landed = false;
         // rotation
-        this.angle = new Adjustable(0,0,360);
+        this.angle = new Adjustable2(0);
         // depth
         this.depth = 0;
         // Current size
-        this.sizeX = new Adjustable(0);
-        this.sizeY = new Adjustable(0);
+        this.sizeX = new Adjustable2(0);
+        this.sizeY = new Adjustable2(0);
         // Original size
         this.origX = 0; // set on creation
         this.origY = 0;
@@ -169,63 +169,47 @@ export class SGSprite {
         this.sizeRelative = false;
         this.sizeRate = 0;
         // scale
-        this.scaleX = new Adjustable(1);
-        this.scaleY = new Adjustable(1);
+        this.scaleX = new Adjustable2(1);
+        this.scaleY = new Adjustable2(1);
         // flipping
         this.flipH = false;
         this.flipV = false;
         this.flipChange = false;
         // View window
         this.windowed = false;
-        this.viewX = new Adjustable(0);
-        this.viewY = new Adjustable(0);
-        this.viewWidth = new Adjustable(0);
-        this.viewHeight = new Adjustable(0);
-        this.scrollX = 0;
-        this.scrollY = 0;
-        this.lastScrollX = 0;
-        this.lastScrollY = 0;
+        this.viewX = new Adjustable2(0);
+        this.viewY = new Adjustable2(0);
+        this.viewWidth = new Adjustable2(0);
+        this.viewHeight = new Adjustable2(0);
         // Frame based animation
         this.currentFrame = 1;
         this.lastFrame = 0;
         this.animationRate = 0;
         this.lastFrameChange = 0;
         // rotation point
-        this.pivotX = new Adjustable(50,0,100);
-        this.pivotY = new Adjustable(50,0,100);
+        this.pivotX = new Adjustable2(50,0,100);
+        this.pivotY = new Adjustable2(50,0,100);
         // visibility
-        this.visible = true;
-        this.transparency = new Adjustable(100,0,100);
-        this.tintValue = new Adjustable(0,0,100);
+        this.visible = new Adjustable2(1,0,1); // like a boolean
+        this.transparency = new Adjustable2(100,0,100);
+        this.tintValue = new Adjustable2(0,0,100);
         this.tintColour = null;
         this.newTint = false;
         // usage
         this.role = null;
-        // blinking
-        this.next_blink = 0;
-        this.blinkRate = 0;
-        this.blinkChance = 0;
-        // pulsing
-        this.pulseRate = 0;
-        this.pulseMin = 0;
-        this.pulseMax = 0;
-        this.pulseUp = true;
-        // flashing
-        this.flashCount = 0;
-        this.nextFlash = 0;
         // bluriness
-        this.bluriness = new Adjustable(0,0,100);
+        this.bluriness = new Adjustable2(0,0,100);
         this.blurFilter = null;
         // skewiness
-        this.skewX = new Adjustable(0);
-        this.skewY = new Adjustable(0);
+        this.skewX = new Adjustable2(0);
+        this.skewY = new Adjustable2(0);
         // perspective warp corners, stored relative to the sprite position
         this.warped = false;
         this.warpCorners = [
-            new Adjustable(0), new Adjustable(0),
-            new Adjustable(0), new Adjustable(0),
-            new Adjustable(0), new Adjustable(0),
-            new Adjustable(0), new Adjustable(0)
+            new Adjustable2(0), new Adjustable2(0),
+            new Adjustable2(0), new Adjustable2(0),
+            new Adjustable2(0), new Adjustable2(0),
+            new Adjustable2(0), new Adjustable2(0)
         ];
         // debugging
         // this.logged = false;
@@ -255,18 +239,6 @@ export class SGSprite {
         }
     }
 
-    // setPosition(x, y, depth = 0) {
-    //     this.locX.setTargetValue(x)
-    //     this.locY.setTargetValue(y);
-    //     this.setDepth("to", depth);
-    // }
-
-    // updatePosition() {
-    //     if (this.piSprite !== null ) { // image has been loaded
-    //         this.piSprite.position.set(this.locX.value() * Globals.scriptScaleX, this.locY.value() * Globals.scriptScaleY);
-    //     }
-    // }
-
     setDepth(depth_type, value="to") {
         if (depth_type == "by") {
             this.depth += value;
@@ -287,12 +259,17 @@ export class SGSprite {
             newX += this.skewX.value();
             newY += this.skewY.value();
         }       
-        // we set in motion up to two changes
-        if (callback) {
-            callback(2)
+        if (duration == 0) {
+            this.skewX.setValue(newX);
+            this.skewY.setValue(newY);
+        } else {
+            // we set in motion up to two changes
+            if (callback) { callback(2) }
+            const rateX = (newX - this.skewX.value()) / duration;
+            const rateY = (newY - this.skewY.value()) / duration;
+            this.skewX.addReferenceModifier(new Modifiers.LinearRate(now, rateX, duration, callback));
+            this.skewY.addReferenceModifier(new Modifiers.LinearRate(now, rateY, duration, callback));
         }
-        this.skewX.setTargetValue(newX, duration, now, callback);
-        this.skewY.setTargetValue(newY, duration, now, callback);
     }
 
     stop() {
@@ -300,14 +277,33 @@ export class SGSprite {
         this.locY.stop();
     }
 
+    shimmy(deltaX, deltaY, limit, duration, now) {
+	if (deltaX == "stop") {
+             this.stop();
+             return;
+        } // else
+        if (deltaX) {
+            this.locX.addReferenceModifier(new Modifiers.LinearRate(now, deltaX));
+            this.locY.addOffsetModifier(new Modifiers.SineWave(now, limit, duration));
+        }
+        if (deltaY) {
+            this.locY.addReferenceModifier(new Modifiers.LinearRate(now, deltaY));
+            this.locX.addOffsetModifier(new Modifiers.SineWave(now, limit, duration));
+        }
+    }
+
     speed(deltaX, deltaY, duration, now, callback = false) {
+	if (deltaX == "stop") {
+             this.stop();
+             return;
+        } // else
         if (deltaX) {
             if (callback) { callback(1); }
-            this.locX.addValueModifier(new Modifiers.LinearRate(now, deltaX, duration, callback));
+            this.locX.addReferenceModifier(new Modifiers.LinearRate(now, deltaX, duration, callback));
         }
         if (deltaY) {
             if (callback) { callback(1); }
-            this.locY.addValueModifier(new Modifiers.LinearRate(now, deltaY, duration, callback));
+            this.locY.addReferenceModifier(new Modifiers.LinearRate(now, deltaY, duration, callback));
         }
     }
 
@@ -326,22 +322,24 @@ export class SGSprite {
         } else if (duration) { // calculate the required rates
             if (newX !== false) { 
                 const rateX = (newX - this.locX.value()) / duration;
-                this.locX.addValueModifier(new Modifiers.LinearRate(now, rateX, duration, callback));
+                if (callback) { callback(1); }
+                this.locX.addReferenceModifier(new Modifiers.LinearRate(now, rateX, duration, callback));
             }
             if (newY !== false) { 
+                if (callback) { callback(1); }
                 const rateY = (newY - this.locY.value()) / duration;
-                this.locY.addValueModifier(new Modifiers.LinearRate(now, rateY, duration, callback));
+                this.locY.addReferenceModifier(new Modifiers.LinearRate(now, rateY, duration, callback));
             }
         } else { // speed !== false, calculate the required duration and component speeds
             let duration = 0;
             if (newX === false) {
                 duration = Math.abs((this.locY.value() - newY) / speed);
                 if (callback) { callback(1); }
-                this.locX.addValueModifier(new Modifiers.LinearRate(now, speed, duration, callback));
+                this.locX.addReferenceModifier(new Modifiers.LinearRate(now, speed, duration, callback));
             } else if (newY === false) {
                 duration = Math.abs((this.locX.value() - newX) / speed);
                 if (callback) { callback(1); }
-                this.locY.addValueModifier(new Modifiers.LinearRate(now, speed, duration, callback));
+                this.locY.addReferenceModifier(new Modifiers.LinearRate(now, speed, duration, callback));
             } else { // need to split the speed into x and y components
                 // first calculate the duration, based on the distance and speed
                 const moveDistance = Math.sqrt((newX - this.locX.value())**2 + (newY - this.locY.value())**2);
@@ -350,131 +348,123 @@ export class SGSprite {
                 const xSpeed = (newX - this.locX.value()) / duration;
                 const ySpeed = (newY - this.locY.value()) / duration;
                 if (callback) { callback(2); }
-                this.locX.addValueModifier(new Modifiers.LinearRate(now, xSpeed, duration, callback));
-                this.locY.addValueModifier(new Modifiers.LinearRate(now, ySpeed, duration, callback));
+                this.locX.addReferenceModifier(new Modifiers.LinearRate(now, xSpeed, duration, callback));
+                this.locY.addReferenceModifier(new Modifiers.LinearRate(now, ySpeed, duration, callback));
             }
         }
     }
 
-
-
-    move2(newX, newY, toByAt, inAtFor, duration, now, callback = false) {
-        this.locX.hasTarget = true;
-        this.locY.hasTarget = true;
-        if (toByAt == "by") {
-            if (newX === false) {
-                newX = 0;
-            }
-            if (newY === false) {
-                newY = 0;
-            }
-            newX += this.locX.value();
-            newY += this.locY.value();
-        } else if (toByAt == "at") {
-            // this.locX.setSpeed(newX, now);
-            this.locX.addValueModifier(new Linear(now, newX));
-            this.locY.setSpeed(newY, now);
-            // this.locX.hasTarget = false;
-            this.locY.hasTarget = false;
-            return;
-        } else { // to
-            if (newX === false) {
-                newX = this.locX.value();
-            }
-            if (newY === false) {
-                newY = this.locY.value();
-            }
+    accelerate(accelX, accelY, targetX = false, targetY = false, duration = 0, now = 0, callback = false) {
+        if (accelX == "stop") {
+            this.locX.removeModifier(this.accelXModifier);
+            this.locY.removeModifier(this.accelYModifier);
+            // We set these to null so the garbage collecter can remove the objects
+            this.accelXModifier = null;
+            this.accelYModifier = null;
+            return; 
         }
-        if (duration) {
-            if (inAtFor == "at") { // duration is really rate here
-                const xDuration = Math.abs(this.locX.value() - newX) / duration; 
-                const yDuration = Math.abs(this.locY.value() - newY) / duration; 
-                const newDuration = Math.max(xDuration, yDuration);
-                // this.locX.setTargetValue(newX, newDuration, now, callback);
-                this.locX.addValueModifier(new Linear(now, newX, false, newDuration, callback)); 
-                this.locY.setTargetValue(newY, newDuration, now, callback);
-                // we set in motion up to two changes
-                if (callback) {
-                    callback(2)
-                }
-            } else if (inAtFor == "in" || inAtFor == "for") {
-                // we set in motion up to two changes
-                if (callback) {
-                    callback(2)
-                }
-                // this.locX.setTargetValue(newX, duration, now, callback);
-                this.locX.addValueModifier(new Linear(now, newX, false, duration, callback));
-                this.locY.setTargetValue(newY, duration, now, callback);
-            }
-        } else { // just change it
-            // this.locX.setTargetValue(newX);
-            this.locX.setValue(newX);
-            this.locY.setTargetValue(newY);
-            this.locX.hasTarget = false;
-            this.locY.hasTarget = false;
+        if (accelX) {
+            if (callback) { callback(1); }
+            this.accelXModifier = new Modifiers.Acceleration(now, accelX, targetX, duration, callback);
+            this.locX.addReferenceModifier(this.accelXModifier);
         }
-        this.enabled = true;
-    }
-
-    accelerate(accelX, accelY, duration = 0, now = 0, callback = false) {
-        this.locX.setAcceleration(accelX, duration, now, callback);
-        this.locY.setAcceleration(accelY, duration, now, callback);
+        if (accelY) {
+            if (callback) { callback(1); }
+            this.accelYModifier = new Modifiers.Acceleration(now, accelY, targetY, duration, callback);
+            this.locY.addReferenceModifier(this.accelYModifier);
+        }
     }
 
     setView(x, y, w, h, dur_type, duration, now, callback = false) {
         if (dur_type == "stop") {
             this.windowed = false;
+// TBD Why are we doing this ForceValue...? Does removeModifier change values?
+            this.viewX.removeModifier(this.viewXModifier);
             this.viewX.forceValue(this.viewX.value());
+            this.viewY.removeModifier(this.viewYModifier);
             this.viewY.forceValue(this.viewY.value());
             this.viewWidth.forceValue(this.viewWidth.value());
+            this.viewWidth.removeModifier(this.viewWidthModifier);
             this.viewHeight.forceValue(this.viewHeight.value());
+            this.viewHeight.removeModifier(this.viewHeightModifier);
+            this.viewXModifier = null;
+            this.viewYModifier = null;
+            this.viewWidthModifier = null;
+            this.viewHeightModifier = null;
         } else {
             this.windowed = true;
             // we set in motion up to 4 changes
-            if (callback) {
-                callback(4)
-            }
-            this.viewX.setTargetValue(x, duration, now, callback);
-            this.viewY.setTargetValue(y, duration, now, callback);
-            this.viewWidth.setTargetValue(w, duration, now, callback);
-            this.viewHeight.setTargetValue(h, duration, now, callback);
+            if (callback) { callback(4) }
+            this.viewXModifier = new Modifiers.LinearTarget(now, x, duration, callback);
+            this.viewX.addReferenceModifier(this.viewXModifier);
+            this.viewYModifier = new Modifiers.LinearTarget(now, y, duration, callback);
+            this.viewX.addReferenceModifier(this.viewXModifier);
+            this.viewWidthModifier = new Modifiers.LinearTarget(now, w, duration, callback);
+            this.viewWidth.addReferenceModifier(this.viewWidthModifier);
+            this.viewHeightModifier = new Modifiers.LinearTarget(now, h, duration, callback);
+            this.viewHeight.addReferenceModifier(this.viewHeightModifier);
         }
         this.origX = w;
         this.origY = h;
     }
 
-    setScroll(dx, dy) {
-        this.scrollX = dx;
-        this.scrollY = dy;
+    setScroll(dx, dy, now) {
+        if (dx == 0) {
+            this.viewX.removeModifier(this.scrollXModifier);
+            this.scrollXModifier = null;
+        } else {
+            // we need to move dx pixels per second until we get to
+            // twice the size of the image (as we mirror it)
+            // then reset to 0. This is a sawtooth wave
+            const period = (this.origX * 2) / dx;
+            this.scrollXModifier = new Modifiers.Sawtooth(now, this.origX * 2, period);
+            this.viewX.addOffsetModifier(this.scrollXmodifier);
+        }
+        if (dy == 0) {
+            this.viewY.removeModifier(this.scrollYModifier);
+            this.scrollYModifier = null;
+        } else {
+            const period = (this.origY * 2) / dx;
+            this.scrollYModifier = new Modifiers.Sawtooth(now, this.origY * 2, period);
+            this.viewY.addOffsetModifier(this.scrollYmodifier);
+        }
     }
 
     rotate(turn_type, value, dur_type, duration, now, callback = false) {
+        if  (turn_type == "stop") {
+            this.angle.removeModifier(this.angleModifier);
+            this.angleModifier = null;
+            return;
+        } // else
         let newValue = 0;
         if (turn_type == "to") {
             newValue = value;
         } else if (turn_type == "by") {
             newValue = this.angle.value() + value;
         } // add "at"
-        if (callback) {
-            callback(1)
-        }
-        if (dur_type == "in") {
-            this.angle.setTargetValue(newValue, duration, now, callback);
+        if (duration) {
+            if (callback) { callback(1) }
+            this.angleModifier =  new Modifiers.LinearTarget(now, newValue, duration, callback); 
+            this.angle.addReferenceModifier(this.angleModifier);
         } else {
-            this.angle.setTargetValue(newValue, 0);
+            this.angle.setValue(newValue);
         }
     }
 
     pivotPoint(pivotX, pivotY, duration, now, callback = false) {
-        if (callback) {
-            callback(2)
-        }
-        this.pivotX.setTargetValue(pivotX, duration, now, callback);
-        this.pivotY.setTargetValue(pivotY, duration, now, callback); 
+        if (callback) { callback(2) }
+        this.pivotX.stop();
+        this.pivotY.stop();
+        this.pivotX.addReferenceModifier(new Modifiers.LinearTarget( now, pivotX, duration, callback));
+        this.pivotY.addReferenceModifier(new Modifiers.LinearTarget( now, pivotY, duration, callback)); 
     }
 
     setTransparency(target, duration, fade_type, now, callback = false) {
         switch (fade_type) {
+            case "stop":
+                this.transparency.removeModifier(this.fadeModifier);
+                this.fadeModifier = null;
+                return;
             case "by":
             case "down":
                 target = this.transparency.value() - target;
@@ -486,14 +476,23 @@ export class SGSprite {
             default:
                 break;
         }
-        if (callback) {
-            callback(1)
+        if (duration) {
+            if (callback) { callback(1) }
+            this.fadeModifier = new Modifiers.LinearTarget(now, target, duration, callback);
+            this.transparency.addReferenceModifier(this.fadeModifier);
+        } else {
+            this.transparency.setValue(target);
         }
-        this.transparency.setTargetValue(target, duration, now, callback);
     }
 
     setBlur(target, duration, blur_type, now, callback = false) {
         switch (blur_type) {
+            case "reset":
+                this.bluriness.removeModifier(this.blurinessModifier);
+                this.blurinessModifier = null;
+                this.blurFilter = null;
+                this.bluriness.setValue(0);
+                return;
             case "by":
             case "down":
                 target = this.bluriness.value() - target;
@@ -505,17 +504,16 @@ export class SGSprite {
             default:
                 break;
         }
-        if (target > 0) {
-            if (this.blurFilter == null) {
-                this.blurFilter = new PIXI.BlurFilter();
-            }
+        if (this.blurFilter == null) {
+            this.blurFilter = new PIXI.BlurFilter();
+        }
+        if (duration) {
+            if (callback) { callback(1) }
+            this.blurinessModifier = new Modifiers.LinearTarget(now, target, duration, callback);
+            this.bluriness.addReferenceModifier(this.blurinessModifier);
         } else {
-            this.blurFilter = null;
+            this.bluriness.setValue(target);
         }
-        if (callback) {
-            callback(1)
-        }
-        this.bluriness.setTargetValue(target, duration, now, callback);
     }
 
     setTintColour(value) {
@@ -530,15 +528,18 @@ export class SGSprite {
     setTintLevel(target, duration, now, callback = false) {
         if (target == "stop") {
             this.tintColour = null;
-            this.tintValue.setTargetValue(0);
+            this.tintValue.setValue(0);
+            this.tint.removeModifier(this.tintModifier);
+            this.tintModifier = null;
         } else {
             if (duration > 0) {
                 if (callback) {
                     callback(1)
                 }
-                this.tintValue.setTargetValue(target, duration, now, callback);
+                this.tintModifier = new Modifiers.LinearTarget(now, target, duration, callback);
+                this.tintValue.addReferenceModifier(this.tintModifier);
             } else {
-                this.tintValue.setTargetValue(target);
+                this.tintValue.setValue(target);
             }
         }
         this.newTint = true;
@@ -562,107 +563,159 @@ export class SGSprite {
     }
 
     flash(flashCount, now) {
-        this.flashCount = flashCount;
-        this.nextFlash = now + 100; // 1/10th of second
+        this.blinkModifier = new Modifiers.SquareWave(now, 0.1, 0.1, 1, flashCount);
+        this.visible.setValue(0);
+        this.visible.addOffsetModifier(this.blinkModifier);
     }
 
-    jiggle(x, y, rot, chance) {
-        if (chance > 0 ) {
-            this.locX.jiggle_start(x, chance);
-            this.locY.jiggle_start(y, chance);
-            this.angle.jiggle_start(rot, chance);
-        } else {
-            this.locX.jiggle_stop();
-            this.locY.jiggle_stop();
-            this.angle.jiggle_stop();
+    jiggle(now, x, y, step, chance) {
+        if (now == "stop") {
+            this.locX.removeModifier(this.jiggleXmodifier);
+            this.locY.removeModifier(this.jiggleYmodifier);
+            this.jiggleXModifier = null;
+            this.jiggleYModifier = null;
+            return;
         }
+        if (x > 0) {
+            this.jiggleXmodifier = new Modifiers.RandomWalk(now, x, step, defaults.SPRITE_RATE, chance);
+            this.locX.addOffsetModifier(this.jiggleXmodifier);
+        } 
+        if (y > 0) {
+            this.jiggleYmodifier = new Modifiers.RandomWalk(now, y, step, defaults.SPRITE_RATE, chance);
+            this.locY.addOffsetModifier(this.jiggleYmodifier);
+        } 
     }
 
-    wave(max, rate, chance) {
-        if (chance < 1 || max < 1) {
-            this.skewY.swayStop();
-        } else {
-            this.skewY.swayStart(max, rate, chance);
-        }
+    wave (max, rate, chance, now) {
+        if (max == "stop") {
+            this.skewY.removeModifier(this.waveModifier);
+            this.waveModifier = null;
+            return;
+        } // else 
+        this.swayModifier = new Modifiers.RandomWalk(now, max, max / 4, defaults.SPRITE_RATE, chance);
+        this.skewY.addOffsetModifier(this.waveModifier);
     }
 
-    sway(max, rate, chance) {
-        if (chance < 1 || max < 1) {
-            this.skewX.swayStop();
-        } else {
-            this.skewX.swayStart(max, rate, chance);
-        }
+    sway(max, rate, chance, now) {
+        if (max == "stop") {
+            this.skewX.removeModifier(this.swayModifier);
+            this.swayModifier = null;
+            return;
+        } // else 
+        this.swayModifier = new Modifiers.RandomWalk(now, max, max / 4, defaults.SPRITE_RATE, chance);
+        this.skewX.addOffsetModifier(this.swayModifier);
     }
 
-    flicker(d, chance) {
-        if (chance > 0) {
-            this.transparency.jiggle_start(d, chance);
-        } else {
-            this.transparency.jiggle_stop();
-        }
+    flicker(d, chance, now) {
+        if (d == "stop" || d == 0) {
+            this.transparency.removeModifier(this.flickerModifier);
+            this.flickerModifier = null;
+            return;
+        } // else
+        this.flickerModifier = new Modifiers.RandomWalk(now, d, d/4, 10, defaults.SPRITE_RATE, chance);
+        this.transparency.addOffsetModifier(this.flickerModifier);
     }
 
     throw(angle, initialVelocity, now = 0, callback = false) {
-        if (callback) {
-            callback(1)
-            this.throwCallback = callback;
-        }
         if (angle == "stop") {
             this.falling = false;
-            if (this.throwCallback != null) {
-                this.throwCallback(-1);
-            }
-        } else {
-            const radians = angle * Math.PI / 180;
-            this.locX.setSpeed(initialVelocity * Math.sin(radians), now);
-            this.locY.setSpeed(initialVelocity * Math.cos(radians) * -1, now); // y grows downwards
-            this.locY.setAcceleration(this.scene.gravity, now); // y grows downwards
-            this.falling = true;
-            this.landed = false;
-        }
+            this.removeModifier(this.throwModifier);
+            this.throwModifier = null;
+            this.stop();
+            return;
+        } // else
+        const radians = angle * Math.PI / 180;
+        const componentX = initialVelocity * Math.sin(radians);
+        const componentY = initialVelocity * Math.cos(radians) * -1; // grows downwards
+        this.speed(componentX, componentY, false, now, callback);
+        this.throwModifier = new Modifiers.Acceleration(now, this.scene.gravity, false, false, callback);
+        this.falling = true;
+        this.landed = false;
     }
 
-    blink(rate, chance, now) {
-        this.blinkRate = rate;
-        this.blinkChance = chance;
-        if ( rate <= 0 ) { // disappear when turning off
-            this.visible = false;
+    blink(now, rate, chance) {
+        if (now == "stop") {
+            this.visible.removeModifier(this.blinkModifier);
+            this.blinkModifier = null;
+            this.visible.setValue(1);
+            return;
         }
-        this.next_blink = now + (1000 / this.blinkRate);
+        this.blinkModifier = new Modifiers.SquareWave(now, 1/rate, 1/rate, 1);
+        this.visible.setValue(0);
+        this.visible.addOffsetModifier(this.blinkModifier);
     }
 
-    pulse(rate, pulseMin, pulseMax, now) {
-        if (rate == 0) {
-            this.pulseRate = 0;
-            this.transparency.setTargetValue(100);
-        } else {
-            this.pulseRate = 1 / rate;
-            this.pulseMin = pulseMin;
-            this.pulseMax = pulseMax;
-            this.transparency.setTargetValue(this.pulseMin);
-            this.transparency.setTargetValue(this.pulseMax, this.pulseRate, now);
+    pulse(now, rate, pulseMin, pulseMax) {
+        if (now == "stop") {
+            this.transparency.removeModifier(this.pulseModifier);
+            this.pulseModifier = null;
+            this.transparency.setValue(100);
+            return;
         }
+        // this.constantModifier = new Modifiers.Constant(now, pulseMin + ((pulseMax - pulseMin) / 2));
+        const limit = (pulseMax - pulseMin) / 2;
+        this.transparency.setValue(pulseMin + limit);
+        // this.transparency.addOffsetModifier(this.constantModifier);
+        this.pulseModifier = new Modifiers.TriangleWave(now, limit, 1 / rate);
+        this.transparency.addOffsetModifier(this.pulseModifier);
     }
 
     setVisibility( visible ) {
         if (visible === true) {
-            this.visible = true;
+            this.visible.setValue(1);
         } else if (visible === false) {
-            this.visible = false;
+            this.visible.setValue(0);
         } else if (visible == "toggle") {
-            this.visible = !this.visible;
+            if (this.visible.value() == 0) {
+                this.visible.setValue(1);
+            } else {
+                this.visible.setValue(0);
+            }
         }
         if (this.enabled && this.piSprite != null) {
-            this.piSprite.visible = this.visible;
+            this.piSprite.visible = this.visible.value();
         }
+    }
+
+    setCircle(radius, period, direction, now) {
+        if (radius == "stop") {
+            this.locX.removeModifier(this.locXCircleModifier);
+            this.locY.removeModifier(this.locYCircleModifier);
+            return;
+        } // else
+            // TBD How to do the rotation counterclockwise?
+        this.locXCircleModifier = new Modifiers.CosineWave(now, radius, period);
+        this.locX.addOffsetModifier(this.locXCircleModifier);
+        this.locYCircleModifier = new Modifiers.SineWave(now, radius, period);
+        this.locY.addOffsetModifier(this.locYCircleModifier);
+    }
+        
+
+    setSpin(spinRate, now) {
+        if (spinRate == "stop") {
+            this.angle.removeModifier(this.spinModifier);
+            this.spinModifier = null;
+            return;
+        } // else
+        this.spinModifier = new Modifiers.Sawtooth(now, 360, spinRate);
+        this.angle.addOffsetModifier(this.spinModifier);
     }
 
     resetSize() {
-        this.sizeX.setTargetValue(this.origX);
-        this.sizeY.setTargetValue(this.origY);
+        this.sizeX.setValue(this.origX);
+        this.sizeY.setValue(this.origY);
     }
 
     setScale(scaleX, scaleY, command, toOrBy, duration, now, callback = false) {
+        if (scaleX == "reset") {
+            this.scaleX.removeModifier(this.scaleXModifier);
+            this.scaleY.removeModifier(this.scaleYModifier);
+            this.scaleXModifier = null;
+            this.scaleYModifier = null;
+            this.scaleX.setValue(1);
+            this.scaleY.setValue(1);
+            return;
+        } // else
         const currentX = this.scaleX.value() * 100;
         const currentY = this.scaleY.value() * 100;
         switch (command) {
@@ -696,11 +749,16 @@ export class SGSprite {
         }
         // convert percentages to float values
         // we set in motion up to two changes
-        if (callback) {
-            callback(2)
+        if (duration) {
+		if (callback) { callback(2) }
+		this.scaleXModifier = new Modifiers.LinearTarget(now, scaleX / 100, duration, callback);
+		this.scaleYModifier = new Modifiers.LinearTarget(now, scaleY / 100, duration, callback);
+		this.scaleX.addReferenceModifier(this.scaleXModifier);
+		this.scaleY.addReferenceModifier(this.scaleYModifier);
+        } else {
+                this.scaleX.setValue(scaleX / 100);
+                this.scaleY.setValue(scaleY / 100);
         }
-        this.scaleX.setTargetValue(scaleX / 100, duration, now, callback);
-        this.scaleY.setTargetValue(scaleY / 100, duration, now, callback);
     }
 
     getDefaultWarpCorners() {
@@ -742,14 +800,14 @@ export class SGSprite {
         const centerX = (targetPoints[0] + targetPoints[2] + targetPoints[4] + targetPoints[6]) / 4;
         const centerY = (targetPoints[1] + targetPoints[3] + targetPoints[5] + targetPoints[7]) / 4;
         this.warped = true;
-        if (callback) {
-            callback(2);
-        }
-        this.locX.setTargetValue(centerX, duration, now, callback);
-        this.locY.setTargetValue(centerY, duration, now, callback);
+        if (callback) { callback(2); }
+        this.warpXModifier = new Modifiers.LinearTarget(now, centerX, duration, callback);
+        this.locX.addOffsetModifier(this.warpXModifier);
+        this.warpYModifier = new Modifiers.LinearTarget(now, centerY, duration, callback);
+        this.locY.addOffsetModifier(this.warpYModifier);
         for (let i = 0; i < targetPoints.length; i += 2) {
-            this.warpCorners[i].setTargetValue(targetPoints[i] - centerX, duration, now);
-            this.warpCorners[i + 1].setTargetValue(targetPoints[i + 1] - centerY, duration, now);
+            this.warpCorners[i].addReferenceModifier(new Modifiers.LinearTarget(now, targetPoints[i] - centerX, duration));
+            this.warpCorners[i + 1].addReferenceModifier(new Modifiers.LinearTarget(now, targetPoints[i + 1] - centerY, duration));
         }
         this.applyWarpCorners();
     }
@@ -768,6 +826,12 @@ export class SGSprite {
                 this.sizeY.value() * this.scaleY.value() * Globals.scriptScaleY);
             this.replacePixiSprite(replacement);
         }
+        this.warpCorners = [
+            new Adjustable2(0), new Adjustable2(0),
+            new Adjustable2(0), new Adjustable2(0),
+            new Adjustable2(0), new Adjustable2(0),
+            new Adjustable2(0), new Adjustable2(0)
+        ];
     }
 
     replacePixiSprite(replacement) {
@@ -821,6 +885,12 @@ export class SGSprite {
         let width = 0;
         let height = 0;
         switch (this.sizeType) {
+            case "stop":
+                this.sizeX.removeModifier(this.sizeXModifier);
+                this.sizeY.removeModifier(this.sizeYModifier);
+                this.sizeXModifier = null;
+                this.sizeYModifier = null;
+                return;
             case "size":
                 width = this.dimension1;
                 height = this.dimension2;
@@ -855,8 +925,15 @@ export class SGSprite {
         if (this.sizeRate) {
             // (future: rate-based resizing)
         }
-        this.sizeX.setTargetValue(width, this.sizeDuration, this.sizeStart, this.sizeCallback);
-        this.sizeY.setTargetValue(height, this.sizeDuration, this.sizeStart, this.sizeCallback);
+        if (this.sizeDuration) {
+		this.sizeXModifier = new Modifiers.LinearTarget(this.sizeStart, width, this.sizeDuration, this.sizeCallback);
+                this.sizeX.addReferenceModifier(this.sizeXModifier);
+		this.sizeYModifier = new Modifiers.LinearTarget(this.sizeStart, height, this.sizeDuration, this.sizeCallback);
+                this.sizeY.addReferenceModifier(this.sizeYModifier);
+        } else {
+                this.sizeX.setValue(width);
+                this.sizeY.setValue(height);
+        }
         this.sizeType = false; // mark as actioned
     }
 
@@ -924,8 +1001,8 @@ export class SGSprite {
             } else if (image != "loading") { // now ready
                 const imgWidth = image.piImage.width;
                 const imgHeight = image.piImage.height;
-                this.sizeX.setTargetValue(imgWidth); // might get overwritten later
-                this.sizeY.setTargetValue(imgHeight);
+                this.sizeX.setValue(imgWidth); // might get overwritten later
+                this.sizeY.setValue(imgHeight);
                 this.origX = imgWidth;
                 this.origY = imgHeight;
                 // Are we in a specific location?
@@ -939,41 +1016,41 @@ export class SGSprite {
                     switch ( this.role ) {
                         case "background": // centre, and scale to window size
                         case "backdrop": // centre, and scale to window size
-                            this.locX.setTargetValue(targetWidth / 2);
-                            this.locY.setTargetValue(targetHeight / 2);
-                            this.sizeX.setTargetValue(targetWidth);
-                            this.sizeY.setTargetValue(targetHeight);
+                            this.locX.setValue(targetWidth / 2);
+                            this.locY.setValue(targetHeight / 2);
+                            this.sizeX.setValue(targetWidth);
+                            this.sizeY.setValue(targetHeight);
                             depth = defaults.DEPTH_BACKGROUND;
                             break;
                         case "left":
-                            this.locX.setTargetValue(imgWidth / 2);
-                            this.locY.setTargetValue(targetHeight / 2);
-                            this.sizeX.setTargetValue(aspectY * imgWidth);
-                            this.sizeY.setTargetValue(aspectY * imgHeight);
+                            this.locX.setValue(imgWidth / 2);
+                            this.locY.setValue(targetHeight / 2);
+                            this.sizeX.setValue(aspectY * imgWidth);
+                            this.sizeY.setValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_LEFT;
                             break;
                         case "right":
-                            this.locX.setTargetValue(targetWidth - (imgWidth / 2));
-                            this.locY.setTargetValue(targetHeight / 2);
-                            this.sizeX.setTargetValue(aspectY * imgWidth);
-                            this.sizeY.setTargetValue(aspectY * imgHeight);
+                            this.locX.setValue(targetWidth - (imgWidth / 2));
+                            this.locY.setValue(targetHeight / 2);
+                            this.sizeX.setValue(aspectY * imgWidth);
+                            this.sizeY.setValue(aspectY * imgHeight);
                             depth = defaults.DEPTH_RIGHT;
                             break;
                         case "top":
                         case "sky":
-                            this.locX.setTargetValue(targetWidth / 2);
-                            this.locY.setTargetValue(imgHeight / 2);
-                            this.sizeX.setTargetValue(aspectX * imgWidth);
-                            this.sizeY.setTargetValue(aspectX * imgHeight);
+                            this.locX.setValue(targetWidth / 2);
+                            this.locY.setValue(imgHeight / 2);
+                            this.sizeX.setValue(aspectX * imgWidth);
+                            this.sizeY.setValue(aspectX * imgHeight);
                             depth = defaults.DEPTH_SKY;
                             break;
                         case "bottom":
                         case "ground":
                         case "foreground":
-                            this.locX.setTargetValue(targetWidth / 2);
-                            this.locY.setTargetValue(targetHeight - (imgHeight / 2));
-                            this.sizeX.setTargetValue(aspectX * imgWidth);
-                            this.sizeY.setTargetValue(aspectX * imgHeight);
+                            this.locX.setValue(targetWidth / 2);
+                            this.locY.setValue(targetHeight - (imgHeight / 2));
+                            this.sizeX.setValue(aspectX * imgWidth);
+                            this.sizeY.setValue(aspectX * imgHeight);
                             depth = this.role == "ground" ? defaults.DEPTH_GROUND : defaults.DEPTH_FOREGROUND;
                             break;
                     }
@@ -997,8 +1074,8 @@ export class SGSprite {
                         dynamic: true,
                         });
                     texture.source.wrapMode = "repeat";
-                    this.sizeX.setTargetValue(imgWidth / image.cols);
-                    this.sizeY.setTargetValue(imgHeight / image.rows);
+                    this.sizeX.setValue(imgWidth / image.cols);
+                    this.sizeY.setValue(imgHeight / image.rows);
                     this.currentFrame = 1;
                 } else if (this.windowed) {
                     const viewRectangle =  new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
@@ -1015,8 +1092,8 @@ export class SGSprite {
                         this.applySize(this.dimensionType, this.dimension1, this.dimension2,
                                     "to", null, this.deferredDuration, this.deferredNow, this.deferredCallback);
                     } else { // use window size
-                        this.sizeX.setTargetValue(this.viewWidth.value());
-                        this.sizeY.setTargetValue(this.viewHeight.value());
+                        this.sizeX.setValue(this.viewWidth.value());
+                        this.sizeY.setValue(this.viewHeight.value());
                     }
                 }
                 if (this.warped && typeof PIXI.PerspectiveMesh === "function") {
@@ -1110,31 +1187,15 @@ export class SGSprite {
         }
         // Is our window moving?
         if (this.windowed) {
-            let scrolled = false;
-            // Are we scrolling the window?
-            if (this.scrollX || this.scrollY) {
-                if (this.scrollX != 0 && (now - this.lastScrollX) > 1000 / this.scrollX) {
-                    this.viewX.tweak(this.scrollX > 0 ? 1 : -1);
-                    this.lastScrollX = now;
-                    scrolled = true;
-                }
-                if (this.scrollY != 0 && (now - this.lastScrollY) > 1000 / this.scrollY) {
-                    this.viewY.tweak(this.scrollY > 0 ? 1 : -1);
-                    this.lastScrollY = now;
-                    scrolled = true;
-                }
-            }
             const updateViewX = this.viewX.updateValue();
             const updateViewY = this.viewY.updateValue();
             const updateViewWidth = this.viewWidth.updateValue();
             const updateViewHeight = this.viewHeight.updateValue();
-            if (scrolled || updateViewHeight || updateViewWidth || updateViewX || updateViewY) {
+            if (updateViewHeight || updateViewWidth || updateViewX || updateViewY) {
                 if (this.piSprite !== null) {
                     this.piSprite.texture.frame = new PIXI.Rectangle(this.viewX.value(), this.viewY.value(),
                                     this.viewWidth.value(), this.viewHeight.value());
                     this.piSprite.texture.update();
-                    // this.sizeX.setTargetValue(this.viewWidth.value());
-                    // this.sizeY.setTargetValue(this.viewHeight.value());
                     forceUpdate = true;
                 }
             }
@@ -1195,16 +1256,6 @@ export class SGSprite {
             if (this.piSprite !== null ) { // image has been loaded
                 this.piSprite.alpha = this.transparency.value() / 100;
             }
-        } else { // if pulsing, switch directions
-            if (this.pulseRate > 0) {
-                if (this.pulseUp) {
-                    this.transparency.setTargetValue(this.pulseMin, this.pulseRate, now);
-                    this.pulseUp = false;
-                } else {
-                    this.transparency.setTargetValue(this.pulseMax, this.pulseRate, now);
-                    this.pulseUp = true;
-                }
-            }
         }
 
         // colour tint
@@ -1258,28 +1309,10 @@ export class SGSprite {
             }
         }
          
-        // Are we blinking?
-        if (this.blinkRate > 0 && this.next_blink < now) {
-            if (this.blinkChance >= 100 || Math.random() * 100 < this.blinkChance ) { // lets blink
-                this.visible = !this.visible;
-                this.next_blink += 1000 / this.blinkRate;
-                if (this.piSprite !== null ) { // image has been loaded
-                    this.piSprite.visible = this.visible;
-                }
-            }
-        }
-
-        // Or are we flashing?
-        if (this.flashCount > 0 && this.nextFlash < now) {
-            if (this.visible) {
-                this.visible = false;
-                this.flashCount -= 1;
-            } else {
-                this.visible = true;
-            } 
-            this.nextFlash = now + 100;
+        // Has our visibilty changed?
+        if (this.visible.updateValue()) {
             if (this.piSprite !== null ) { // image has been loaded
-                this.piSprite.visible = this.visible;
+                this.piSprite.visible = this.visible.value();
             }
         }
 
@@ -1297,12 +1330,11 @@ export class SGSprite {
 
         // or are we skewing?
         {
-            const change_skewX = this.skewX.updateValue();
-            const change_skewY = this.skewY.updateValue();
-            if (change_skewX || change_skewY) {
+            const changeSkewX = this.skewX.updateValue();
+            const changeSkewY = this.skewY.updateValue();
+            if (changeSkewX || changeSkewY) {
                 this.piSprite.skew.x = this.skewX.value() * (Math.PI / 180);
                 this.piSprite.skew.y = this.skewY.value() * (Math.PI / 180);
-                    // Globals.log.report("Change of skew " + this.imageName);
                 newBounds = true;
             }
         }

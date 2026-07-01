@@ -80,15 +80,34 @@ then it will be repeated as a mirror repeat and hence may appear
 seemless. If you want to take advantage of this then use tileable
 textures.
 
-## Rotate
+## Rotation Action
 
-`rotate {sprite-name} (by | to | at) {angle} [in {duration}]`
+`rotate {sprite-name} (by | to | at) {angle} \[in {duration}\]`
 
 Rotates the sprite arounds its centre by, or to the specified angle. The
 angle is in degrees with zero pointing upwards and the angle increasing
 clock wise.
 
 The command completes when the rotation is accomplished.
+
+`spin {sprite-name} \["clockwise | anticlockwise | counterclockwise\] \[in\] {rate}`
+
+`spin {sprite-name} stop`
+
+Spins the sprite at the given rate, e.g. "in 1 minute".
+
+This action continues until explicitly stopped.
+
+`circle {sprite-name} \[radius\] i\["clockwise | anticlockwise | counterclockwise\] \[in\] {rate}`
+
+`circle {sprite-name} stop`
+
+Moves the sprite with a circular motion around its current position,
+the sprite can also be moving and the circular motion will be
+superimposed, however it is important to start the motion **first**
+then apply the spin.
+
+This action continues until explicitly stopped.
 
 ## Throw / Drop
 

@@ -318,9 +318,12 @@ export function evaluate(input) { // Silently drops content after unmatched '(' 
 export function logical(words) {
     let result = false;
     let inverted = words.testWord("not");
-    const lvalue = words.getWord().toLowerCase();
-    const comparison = words.getWord().toLowerCase();
-    const rvalue = words.getWord().toLowerCase();
+    let lvalue = words.getWord();
+    let comparison = words.getWord();
+    let rvalue = words.getWord();
+    if (lvalue) { lvalue = lvalue.toLowerCase(); }
+    if (comparison) { comparison = comparison.toLowerCase(); }
+    if (rvalue) { rvalue = rvalue.toLowerCase(); }
     if (!lvalue) { // no arguments, just return something
         result = !inverted;
     } else if (!comparison) { // check it for truthiness / falseiness

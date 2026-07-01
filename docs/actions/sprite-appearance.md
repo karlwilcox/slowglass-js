@@ -82,16 +82,16 @@ The stop option will end the pulsing and reset the transparency value to 100, i.
 
 `(darken | lighten) {sprite-name} [to] {value} [in] [{duration}]`
 
-`tint {sprite-name} [to] {colour} \[strength {value}\]`
+`tint {sprite-name} [to] {colour}`
 
-`tint stop`
+`tint reset`
 
 These commands are related so are dealt with together.
 
 Darken and lighten affect the overall tone of the sprite, darken tints the sprite with black, lighten with white,
 the strength determined by the following value (100 if not provided);
 
-The **tint** command allows you to give an overall colour cast to the sprite. The colour parameter can be any of the named web colors, with the value provided, or the word **stop** which will remove any colour tint or lightening or darkening, restoring the sprite to its original colours.
+The **tint** command allows you to give an overall colour cast to the sprite. The colour parameter can be any of the named web colors, with the value provided, or the word **reset** which will remove any colour tint or lightening or darkening, restoring the sprite to its original colours.
 
 These commands complete when the tone change is finished.
 
