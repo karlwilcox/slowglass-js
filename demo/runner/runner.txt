@@ -3,6 +3,7 @@
 # Sorry, I can't remember where I found the runner
 
 begin
+from /demo/runner
     canvas width 800
     canvas height 600
     load forest.png as forest-bg
@@ -13,16 +14,14 @@ begin
     sprite create pixie from runner
     scale pixie to 65%
     animate pixie at 5
+    place pixie at -100 300 200
 
 every 25 seconds
-    place pixie at -100 300 200
     move pixie to 900 360 in 10 seconds
     then
-        wait 3 seconds
-    then
-        place pixie at 900 360 200
-        flip pixie horizontally
-        move pixie to -100 320 in 10 seconds
+        wait for 3 seconds
     then
         flip pixie horizontally
-
+        move pixie to -100 300 in 10 seconds
+    then
+        flip pixie horizontally

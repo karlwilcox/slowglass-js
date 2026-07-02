@@ -32,7 +32,7 @@ scene swiss-clock
         # Pick up the parameters passed in to us
         assign size xpos ypos darkness as $PARAMETERS
         # Clock is ready, now position it
-        place clock at $xpos $ypos depth 300 size $size $size
+        place clock at $xpos $ypos depth 300
         darken clock to $darkness
         # Now set the current time
         rotate secondhand to ($SECONDS * 6)
@@ -46,6 +46,9 @@ scene swiss-clock
 
     every 1 second
         rotate secondhand to ($SECONDS * 6)
+
+after 1 seconds // give time to load
+ resize clock $size $size
 end scene
 
 notes

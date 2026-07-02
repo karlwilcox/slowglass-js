@@ -1124,6 +1124,10 @@ export class Scene {
                     if (!sgSprite) {
                         break;
                     }
+                    if (sgSprite.placed) {
+                        Globals.log.error("Sprite already placed at line " + action.number);
+                        break;
+                    }
                     const hidden = wordList.testWord("hidden");
                     const transparent = wordList.testWord("transparent");
                     const groupSprite = wordList.getInGroup(this.spriteScene);
@@ -1149,9 +1153,11 @@ export class Scene {
                     }
                     // is there a depth provided?
                     wordList.testWord("depth");
-                    sgSprite.setDepth("to", wordList.getInt(0));
+                    const depth = wordList.getInt(0);
+                    sgSprite.setDepth("to", depth);
                     // is there a size? (or just use image size)
                     const {dimensionType, dimension1, dimension2 } = wordList.getSizeRequest("image");
+                    // If we are already placed we must have a size, so ignore the default resizing
                     sgSprite.requestSize(dimensionType, dimension1, dimension2);
                     if (hidden) {
                         sgSprite.setVisibility(false);
@@ -1170,10 +1176,10 @@ export class Scene {
                     sgSprite.placed = true;
                     sgSprite.update(this.name, now);
                     if (sgSprite.type == constants.SPRITE_GROUP) {
-                        actionGroup.suspend("placeGroup", actionIndex, sgSprite);
+                        actionGroup.suspend("placeGroup", actionIndex, sgSprite); // TBD is this why swiss-clock won't resize?
                     }
                 }
-                break;
+            break;
 
 /**************************************************************************************************
 

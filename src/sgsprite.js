@@ -143,7 +143,6 @@ export class SGSprite {
         this.clickY = 0;
         // created yet?
         this.piSprite = null;
-        this.enabled = true;
         // location
         this.locX = new Adjustable2(0);
         this.locY = new Adjustable2(0);
@@ -249,7 +248,7 @@ export class SGSprite {
         if (this.depth < 1) {
             this.depth = Globals.nextZ();
         }
-        if (this.enabled && this.piSprite != null) {
+        if (this.piSprite != null) {
             this.piSprite.zIndex = this.depth;
         }
     }
@@ -672,7 +671,7 @@ export class SGSprite {
                 this.visible.setValue(0);
             }
         }
-        if (this.enabled && this.piSprite != null) {
+        if (this.piSprite != null) {
             this.piSprite.visible = this.visible.value();
         }
     }
@@ -989,14 +988,10 @@ export class SGSprite {
 **************************************************************************************************/
         
     update(sceneName, now, loadOnly = false) {
-        if (!this.enabled) {
-            return;
-        }
         // First, do we need to load an image (and can we?)
         if (this.type == constants.SPRITE_IMAGE && this.placed && !this.loaded) { // no image loaded yet
             let image = SGImage.getImage(sceneName, this.imageName);
-            if (image === null) { // no image found, disable this sprite
-                this.enabled = false;
+            if (image === null) { // no image found, piSprite will remain null
                 return;
             } else if (image != "loading") { // now ready
                 const imgWidth = image.piImage.width;

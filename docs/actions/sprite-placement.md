@@ -146,3 +146,10 @@ If you choose to use the roles noted above then you will typically
 place your own (moving) sprites at depths between 500 and 1000 so
 that they are drawn above all of the other elements apart from
 the frame.
+
+## Note on placement vs Movement
+
+Once a sprite has been **placed** or **put** you cannot use this
+action on them again unless they are removed. Once a sprite has
+been placed use the normal **move**, **resize** and **depth**
+commands to modify its placement.
