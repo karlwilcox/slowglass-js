@@ -7,6 +7,7 @@ export default {
     LOCALE: "en-GB",
     TRIGGER_RATE: 500,  // milliseconds between trigger tests
     SPRITE_RATE: 40,    // milliseconds between sprite updates
+    CLEANUP_RATE: 960,  // milliseconds between adjustable clean up
     VOLUME_MIN: 0,
     VOLUME_MAX: 100,
     GRAVITY_PS2: 100,   // force of gravity in pixels per second per second

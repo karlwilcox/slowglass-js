@@ -21,7 +21,9 @@ class Modifier {
     stop() {
         if (this.callback) {
             this.callback();
+            this.callback = false;
         }
+        this.expired = true;
     }
 }
 
@@ -98,8 +100,8 @@ export class SineWave extends Modifier {
     }
 
     update(now, current) {
-        const radians = ((now - this.lastUpdate) / this.period) * 2 * Math.PI;
-        this.value = current + (Math.sin(radians) * this.limit) + this.offset;
+        const radians = (((now - this.lastUpdate) / this.period) * 2 * Math.PI) + (this.offset * Math.PI / 180);
+        this.value = current + (Math.sin(radians) * this.limit);
         if ((now - this.lastUpdate) > this.period) {
             this.setLast(now);
         }
@@ -118,8 +120,8 @@ export class CosineWave extends Modifier {
     }
 
     update(now, current) {
-        const radians = ((now - this.lastUpdate) / this.period) * 2 * Math.PI;
-        this.value = current + (Math.cos(radians) * this.limit) + this.offset;
+        const radians = (((now - this.lastUpdate) / this.period) * 2 * Math.PI) + (this.offset * Math.PI / 180);
+        this.value = current + (Math.cos(radians) * this.limit);
         if ((now - this.lastUpdate) > this.period) {
             this.setLast(now);
         }
@@ -147,7 +149,7 @@ export class RandomWalk extends Modifier {
             this.walkLocation += step;
             if (this.walkLocation >= this.limit) {
                 this.walkLocation = this.limit;
-            } else if (this.value <= this.limit * -1) {
+            } else if (this.walkLocation <= this.limit * -1) {
                 this.walkLocation = this.limit * -1;
             }
         }
@@ -177,11 +179,12 @@ export class LinearRate extends Modifier {
             this.expired = true;
             if (this.callback) {
                 this.callback();
+                this.callback = false;
             }
         } else {
-            this.value = current + delta;
             this.setLast(now)
         }
+        this.value = current + delta;
         return true;
     }
 }
@@ -208,11 +211,12 @@ export class LinearTarget extends Modifier {
             this.expired = true;
             if (this.callback) {
                 this.callback();
+                this.callback = false;
             }
         } else {
-            this.value = current + delta;
             this.setLast(now)
         }
+        this.value = current + delta;
         return true;
     }
 }
@@ -220,48 +224,41 @@ export class LinearTarget extends Modifier {
 export class Acceleration extends Modifier {
     constructor(now, rate, target = false, duration = false, callback = false) {
         super(now, callback);
-        this.rate = rate;
-        this.target = target;
-        this.duration = duration;
+        this.rate = rate / 1000; // convert to millis
+        this.target = target / 1000; // convert to millis
+        this.duration = duration * 1000; // convert to millis
         this.callback = callback;
-        this.initial = false;
-        this.direction = rate < 0 ? -1 : 1;
         this.constant = false;
+        this.speed = 0;
     }
 
     update(now, current) {
+        const elapsed = now - this.startTime;
+        if (!this.constant) {
+            this.speed = elapsed * this.rate;
+        }
+        if (this.target) { // if we have the current value, check target
+            if (this.rate < 0) { // Are we slowing?
+                if (this.speed < this.target) {
+                    this.constant = true;
+                }
+            } else {
+                if (this.speed > this.target) {
+                    this.constant = true;
+                }
+            }
+        }
+        if (this.duration !== false && elapsed > this.duration) {
+            this.constant = true;
+        }
+        this.value = current + this.speed;
         if (this.constant) {
             if (this.callback) {
                 this.callback();
                 this.callback = false;
             }
-            this.value += (now - this.lastUpdate) * this.constant;
-            this.setLast(now);
-            return true;
-        } // else
-        if (!this.initial) { // first run
-            this.initial = current;
         }
-        const elapsed = (now - this.startTime) / 1000;
-        const speed = ((((this.rate * elapsed) ** 2)/2) * this.direction);
-        if (this.target) { // if we have the current value, check target
-            if (this.rate < 0) { // Are we slowing?
-                if (speed < this.target) {
-                    this.constant = speed / 1000;
-                }
-            } else {
-                if (speed > this.target) {
-                    this.constant = speed / 1000;
-                }
-            }
-        }
-        if (this.duration !== false && elapsed > this.duration) {
-            this.constant = speed / 1000;
-        }
-        if (!this.constant) {
-		    this.value = this.initial + speed;
-            this.setLast(now);
-        }
+        this.setLast(now);
         return true;
     }
 }
@@ -309,6 +306,14 @@ export class SquareWave extends Modifier {
         }
         let changed = false;
         if (this.waveValue == 0 && ((now - this.lastUpdate) > this.offTime)) {
+            if (this.count !== false) {
+                if (this.count <= 0) {
+                    this.expired = true;
+                    this.value = current;
+                    return true;
+                }
+                this.count -= 1;
+            }
             this.waveValue = this.height;
             this.setLast(now);
             this.value = current + this.waveValue;
@@ -318,12 +323,6 @@ export class SquareWave extends Modifier {
             this.setLast(now);
             this.value = current + this.waveValue;
             changed = true;
-            if (this.count !== false) {
-                if (this.count <= 0) {
-                    this.expired = true;
-                }
-                this.count -= 1;
-            }
         }
         return changed;
     }

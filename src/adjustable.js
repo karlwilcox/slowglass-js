@@ -14,6 +14,9 @@ export class Adjustable2 {
         this.referenceValue = inValue;
         this.offsetValue = 0;
         this.externalUpdate = false;
+        // Housekeeping
+        this.cleanUpRate = 20 + (Math.random() * 20); // when to look for expired modifiers
+        this.cleanUpCount = this.cleanUpRate;
     }
 
     addReferenceModifier(modifier) {
@@ -109,7 +112,27 @@ export class Adjustable2 {
                 updated = true;
             }
         }
+        // Housekeeping
+        if (this.cleanUpCount < 1) {
+            this.cleanUp();
+            this.cleanUpCount = this.cleanUpRate;
+        } else {
+            this.cleanUpCount -= 1;
+        }
         return updated;
     }
-// To do - remove expired modifiers
+
+    cleanUp() {
+        // navigate the arrays backwards to preserve index values
+        for (let i = this.referenceModifiers.length - 1; i >= 0; i--) {
+            if (this.referenceModifiers[i].expired) {
+                this.referenceModifiers.splice(i,1);
+            }
+        }
+        for (let i = this.offsetModifiers.length - 1; i >= 0; i--) {
+            if (this.offsetModifiers[i].expired) {
+                this.offsetModifiers.splice(i,1);
+            }
+        }
+    }
 }

@@ -120,11 +120,9 @@ can use this information, along with paramters they were
 supplied with on creation to calculate the required function
 output.
 
-Note that this function output is applied as a delta (i.e.
-a change) to the Adjustable value - the actual modification
-of the Adjustable value is carried out outside the
-Modifier object (it is part of the Adjustable object's
-own update cycle).
+The function output becomes the new reference or offset
+value, which is then passed on to any other modifiers
+down the chain.
 
 ### Available Modifiers
 
