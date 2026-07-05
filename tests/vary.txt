@@ -1,0 +1,13 @@
+stage size 800 600
+
+setup
+    graphic create grid as grid
+    place grid at centre
+    load /assets/lego/plane.png as plane
+    sprite create plane1 from plane
+
+
+begin
+    place plane1 at 100 100
+    vary plane1 posy with sinewave 100 60 seconds
+    move plane1 right 600 in 30 seconds

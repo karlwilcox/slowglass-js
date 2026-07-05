@@ -276,23 +276,67 @@ export class SGSprite {
         this.locY.stop();
     }
 
-    shimmy(deltaX, deltaY, limit, duration, now) {
-	if (deltaX == "stop") {
-             this.stop();
-             return;
-        } // else
-        if (deltaX) {
-            this.locX.addReferenceModifier(new Modifiers.LinearRate(now, deltaX));
-            this.locY.addOffsetModifier(new Modifiers.SineWave(now, limit, duration));
+    vary(varyType, aspect, limit, period, param3, now) {
+        let modifier = false;
+        let adjustable = false;
+        switch ( varyType ) {
+            case "stop":
+                break;
+            case "random":
+            case "randomly":
+                break;
+            case "sine":
+            case "sinewave":
+                modifier = new Modifiers.SineWave(now, limit, period, param3);
+                break;
+            case "sawtooth":
+                modifier = new Modifiers.Sawtooth(now, limit, false, period);
+                break;
+            case "triangle":
+                modifier = new Modifiers.TriangleWave(now, limit, false, period);
+                break;
+            case "square":
+                modifier = new Modifiers.SquareWave(now, period / 2, period / 2, limit);
+                break;
+            default:
+                return "Unknown aspect: " + varyType;
         }
-        if (deltaY) {
-            this.locY.addReferenceModifier(new Modifiers.LinearRate(now, deltaY));
-            this.locX.addOffsetModifier(new Modifiers.SineWave(now, limit, duration));
+        switch ( aspect ) {
+            case "pos.x":
+                adjustable = this.locX;
+                break;
+            case "pos.y":
+                adjustable = this.locY;
+                break;
+            case "size.x":
+                adjustable = this.sizeX;
+                break;
+            case "size.y":
+                adjustable = this.sizeY;
+                break;
+            case "skew.x":
+                adjustable = this.skewX;
+                break;
+            case "skew.y":
+                adjustable = this.skewY;
+                break;
+            case "transparency":
+                adjustable = this.transparency;
+                break;
+                // Add blur and others...?
+            default:
+                return "Unknown waveform: " + varyType;
         }
+        if (modifier) {
+            adjustable.addOffsetModifier(modifier);
+        } else {
+            adjustable.removeOffsetModifiers();
+        }
+        return false;
     }
 
     speed(deltaX, deltaY, duration, now, callback = false) {
-	if (deltaX == "stop") {
+        if (deltaX == "stop") {
              this.stop();
              return;
         } // else
@@ -620,14 +664,19 @@ export class SGSprite {
             this.falling = false;
             this.removeModifier(this.throwModifier);
             this.throwModifier = null;
+            if (callback) {
+                callback();
+            }
             this.stop();
             return;
         } // else
         const radians = angle * Math.PI / 180;
         const componentX = initialVelocity * Math.sin(radians);
         const componentY = initialVelocity * Math.cos(radians) * -1; // grows downwards
-        this.speed(componentX, componentY, false, now, callback);
+        this.speed(componentX, componentY, false, now, false);
+        if (callback) { callback(1); }
         this.throwModifier = new Modifiers.Acceleration(now, this.scene.gravity, false, false, callback);
+        this.locY.addReferenceModifier(this.throwModifier);
         this.falling = true;
         this.landed = false;
     }

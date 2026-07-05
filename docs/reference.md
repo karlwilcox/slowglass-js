@@ -193,6 +193,11 @@ The word 'shape' can be used instead of 'graphic'.
 * **group create** {group-name} \[size {width} {height}\] - create a named empty group, needs to be placed
 * **group add** {sprite-name} to {group-name} - add named sprites to the group (removes them from scene)
 
+## Sprite Aspect Variations
+
+* **vary** {sprite-name} {aspect} \[(by \| with)\] {waveform} {limit} {period} \[{extra}\]
+* **vary** {sprite-name} {aspect} stop
+
 ## Flow Control
 
 * **wait for** {duration} - do nothing for given time (safe to use, not busy wait)
@@ -297,6 +302,8 @@ trigger is tested. Variables can **NOT** be used in stage directions
 * $VARIABLES - list of all variables in the current scene ONLY
 * $UNIQUE - incrementing number guaranteed to be unique in this run
 * $FRAME - 1 based count of frames rendered so far
+* $GRAVITY - current gravity setting for scene
+* $GROUND - current ground level setting for scene
 
 ## Sprite properties
 

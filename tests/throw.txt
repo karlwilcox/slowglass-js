@@ -1,0 +1,12 @@
+stage size 800 600
+
+setup
+    graphic create grid as grid
+    place grid at centre
+    load /assets/lego/plane.png as plane
+    sprite create plane1 from plane
+
+
+begin
+    place plane1 at 100 500
+    throw plane1 at 45 100

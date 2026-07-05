@@ -17,6 +17,10 @@ export class Adjustable2 {
         // Housekeeping
         this.cleanUpRate = 20 + (Math.random() * 20); // when to look for expired modifiers
         this.cleanUpCount = this.cleanUpRate;
+        // calculated values
+        this.speed = 0;
+        this.lastValue = 0;
+        this.lastUpdate = Date.now();
     }
 
     addReferenceModifier(modifier) {
@@ -47,6 +51,10 @@ export class Adjustable2 {
         }
     }
 
+    removeOffsetModifiers() {
+        this.offsetModifiers = [];
+    }
+
     reference() {
         return this.referenceValue;
     }
@@ -57,6 +65,10 @@ export class Adjustable2 {
 
     offset() {
         return this.offsetValue;
+    }
+
+    speed() {
+        return this.speed;
     }
 
     setValue(value) {
@@ -79,6 +91,7 @@ export class Adjustable2 {
         }
         this.offsetModifiers = [];
         this.offsetValue = 0;
+        this.speed = 0;
     }
 
     updateValue() {
@@ -105,6 +118,9 @@ export class Adjustable2 {
                 this.referenceValue = this.upperLimit;
             }
         }
+        // Calculate instantaneous speed in pixels per second
+        this.speed = (1000 / (now - this.lastUpdate)) * (this.referenceValue - this.lastValue);
+
         this.offsetValue = 0;
         for (let i = 0; i < this.offsetModifiers.length; i++) {
             if (this.offsetModifiers[i].update(now, this.offsetValue)) {

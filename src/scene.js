@@ -1590,26 +1590,6 @@ export class Scene {
                 }
                 break;
 
-            case "shimmy":
-                {
-                    const spriteName = wordList.getSpriteName();
-                    const sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
-                    if (wordList.testWord("stop")) {
-                        sgSprite.speed("stop");
-                        break;
-                    }
-                    wordList.testWord("to");
-                    const speedX = wordList.getInt(0);
-                    const speedY = wordList.getInt(0);
-                    const limit = wordList.getInt(0);
-                    wordList.testWord("for");
-                    const duration = wordList.getDuration(0);
-                    if (sgSprite) {
-                        sgSprite.shimmy(speedX, speedY, limit, duration, now, actionGroup.callback());
-                    }
-                }
-                break;
-
             case "accelerate":
             case "accel":
                 {
@@ -1667,6 +1647,48 @@ export class Scene {
                     let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
                     if (sgSprite) {
                         sgSprite.setDepth(depth_type, value);
+                    }
+                }
+                break;
+
+/**************************************************************************************************
+
+   ##     ##    ###    ########  ##    ## 
+   ##     ##   ## ##   ##     ##  ##  ##  
+   ##     ##  ##   ##  ##     ##   ####   
+   ##     ## ##     ## ########     ##    
+    ##   ##  ######### ##   ##      ##    
+     ## ##   ##     ## ##    ##     ##    
+      ###    ##     ## ##     ##    ##    
+
+**************************************************************************************************/
+
+            case "vary":
+                {
+                    const spriteName = wordList.getSpriteName();
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) { 
+                        break; 
+                    }
+                    // const aspect = wordList.testWord(["pos.x","pos.y","size.x","size.y","skew.x","skew.y","transparency"]);
+                    const aspect = wordList.getWord();
+                    if (!aspect) {
+                        Globals.log.error("missing sprite aspect on line " + action.number);
+                        break;
+                    }
+                    wordList.testWord(["by","with"]);
+                    // const varyType = wordList.testWord(["stop", "random","randomly","sine","sinewave","sawtooth","triangle","square"]);
+                    const varyType = wordList.getWord();
+                    if (!varyType) {
+                        Globals.log.error("Missing vary type on line " + action.number);
+                        break;
+                    }
+                    const limit = wordList.getInt(10);
+                    const period = wordList.getDuration(60);
+                    const param3 = wordList.getInt(0);
+                    const message = sgSprite.vary(varyType, aspect, limit, period, param3, now);
+                    if (message) {
+                        Globals.log.error(message + " on line " + action.number);
                     }
                 }
                 break;
@@ -2023,20 +2045,20 @@ export class Scene {
             case "launch":
                 {
                     let spriteName = wordList.getSpriteName();
+                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
+                    if (!sgSprite) { 
+                        break; 
+                    }
                     const stop_or_at = wordList.testWord( ["at", "stop"], "at");
                     let angle = wordList.getInt(0);
                     wordList.testWord( ["deg","degs","degrees"]);
                     wordList.testWord( "with");
                     wordList.testWord( ["force","velocity","speed"]);
                     let initialVelocity = wordList.getInt(100);
-                    let sgSprite = SGSprite.getSprite(this.spriteScene, spriteName);
-                    if (!sgSprite) { 
-                        break; 
-                    }
                     if (stop_or_at == "stop") {
                         sgSprite.throw("stop");
                     } else {
-                        sgSprite.throw(angle, initialVelocity);
+                        sgSprite.throw(angle, initialVelocity, now, actionGroup.callback());
                     }
                 }
                 break;

@@ -225,8 +225,12 @@ export class Acceleration extends Modifier {
     constructor(now, rate, target = false, duration = false, callback = false) {
         super(now, callback);
         this.rate = rate / 1000; // convert to millis
-        this.target = target / 1000; // convert to millis
-        this.duration = duration * 1000; // convert to millis
+        if (this.target) {
+            this.target = target / 1000; // convert to millis
+        }
+        if (this.duration) {
+            this.duration = duration * 1000; // convert to millis
+        }
         this.callback = callback;
         this.constant = false;
         this.speed = 0;
@@ -355,6 +359,7 @@ export class RandomWave extends Modifier {
             return true
         } else { // update existing
             this.waveValue += this.stepSize;
+            this.value = current + this.waveValue;
             this.ticks -= 1;
         }
         return false;

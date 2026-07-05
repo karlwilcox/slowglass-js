@@ -116,7 +116,7 @@ This action continues until explicitly stopped.
 `throw {sprite-name} stop`
 
 These commands work in conjunction with the directives "gravity" and
-"geound". TODO Add link
+"ground". TODO Add link
 
 This will cause the sprite to start moving as if under the influence
 of gravity. **Angle** is in degrees, with zero upwards and increasing

@@ -10,7 +10,7 @@ export default {
     CLEANUP_RATE: 960,  // milliseconds between adjustable clean up
     VOLUME_MIN: 0,
     VOLUME_MAX: 100,
-    GRAVITY_PS2: 100,   // force of gravity in pixels per second per second
+    GRAVITY_PS2: 10,   // force of gravity in pixels per second per second
     BOUNDS_X: 2,        // Multiplier for display width for bounds checking
     BOUNDS_Y: 2,        // Multiplier for display height for bounds checking
     DEPTH_BACKGROUND: 50,

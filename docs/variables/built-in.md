@@ -103,6 +103,8 @@ manage scaling for screen and canvas)
 - $PARAMETERS - space separated list of words passed to the scene\
 in the **start** command
 - $PARAMS - abbreviated version of the above
+- $GRAVITY - the force of gravity for this scene, in pixels per second per second
+- $GROUNDLEVEL - the assumed y coordinate of the ground for this scene
 
 ## System Information
 

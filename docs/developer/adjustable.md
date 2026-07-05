@@ -16,6 +16,12 @@ runAction method of the Scene object, and the implementation (i.e.
 selection of modifiers) should be done in an appropriately
 named method of the SgSprite class, called from runAction.
 
+### The vary action
+
+Having said the above, I have implemented the **vary** action
+which does expose at least some of this complexity to the
+script writer, but it remains as an advanced option.
+
 ## Adjustable Class
 
 The adjustable class is intended to hold a scalar value such as

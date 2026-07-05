@@ -323,6 +323,11 @@ export class VarList {
             case "FRAME":
             case "FRAMENO":
                 return Globals.frameNo;
+            case "GRAVITY":
+                return this.scene.gravity;
+            case "GROUND":
+            case "GROUNDLEVEL":
+                return this.scene.groundLevel;
             default:
                 return false;
         }
